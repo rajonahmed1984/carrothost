@@ -109,6 +109,167 @@
     white-space: nowrap;
 }
 
+.domain-search-result {
+    margin-top: var(--spacing-md);
+    text-align: center;
+    font-weight: 600;
+}
+
+.domain-search-result.loading {
+    color: var(--color-gray-600);
+}
+
+.domain-search-result.available {
+    color: var(--secondary-color);
+}
+
+.domain-search-result.unavailable {
+    color: var(--primary-color);
+}
+
+.domain-search-cta {
+    margin-left: 0.75rem;
+}
+
+.domain-search-price {
+    font-weight: 700;
+}
+
+.domain-pricing-browser {
+    display: grid;
+    gap: var(--spacing-lg);
+}
+
+.domain-category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.category-btn {
+    border: 1px solid var(--color-gray-300);
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    background-color: var(--color-white);
+    transition: all var(--transition-fast);
+}
+
+.category-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.category-btn.active {
+    background-color: var(--primary-color);
+    color: var(--color-white);
+    border-color: var(--primary-color);
+}
+
+.featured-tlds ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--spacing-md);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.featured-tlds li {
+    position: relative;
+    background-color: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.featured-tlds p {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.tld-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 1.25rem;
+    border-radius: 999px;
+    padding: 0.5rem 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.sale-icon {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    background-color: var(--secondary-color);
+    color: var(--color-white);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+}
+
+.tld-note {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    margin: 0;
+}
+
+/* Dedicated Server Table */
+.dedicated-table .name {
+    display: block;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.dedicated-table .subtext {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-gray-600);
+    margin-top: 0.25rem;
+}
+
+.dedicated-table .intel-logo {
+    width: 30px;
+    height: auto;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+.dedicated-table .price {
+    text-align: center;
+}
+
+.dedicated-table .price .old {
+    display: block;
+    color: var(--color-gray-500);
+    text-decoration: line-through;
+}
+
+.dedicated-table .price .new {
+    display: block;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.dedicated-table .cart-btn {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.dedicated-table .cart-btn:hover {
+    color: var(--primary-hover);
+}
+
 .popular-extensions {
     display: flex;
     gap: 1rem;
@@ -350,21 +511,18 @@
    CTA SECTION
    ========================================== */
 .cta-section {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-    color: var(--color-white);
-    padding: var(--spacing-2xl) 0;
+    color: #1a1a1a;
     text-align: center;
-    border-radius: var(--border-radius-lg);
     margin: var(--spacing-2xl) var(--container-padding);
 }
 
 .cta-section .section-title {
-    color: var(--color-white);
+    color: var(--color-dark);
     margin-bottom: var(--spacing-md);
 }
 
 .cta-section .section-description {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--color-dark);
     margin-bottom: var(--spacing-lg);
 }
 
@@ -376,19 +534,19 @@
 }
 
 .cta-section .btn {
-    background-color: var(--color-white);
+    background-color: var(--color-dark);
     color: var(--primary-color);
 }
 
 .cta-section .btn:hover {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-900);
     color: var(--primary-color);
 }
 
 .cta-section .btn-outline {
     background-color: transparent;
-    color: var(--color-white);
-    border-color: var(--color-white);
+    color: var(--color-dark);
+    border-color: var(--color-dark);
 }
 
 .cta-section .btn-outline:hover {

@@ -63,7 +63,7 @@ include 'includes/header.php';
             <!-- Domain Search Box -->
             <div class="domain-search-box">
                 <h3 class="domain-search-title">Find Your Perfect Domain</h3>
-                <form class="domain-search-form" data-whmcs-url="<?php echo WHMCS_URL; ?>">
+                <form class="domain-search-form" data-whmcs-url="<?php echo WHMCS_URL; ?>" data-check-mode="register" data-default-tld=".com">
                     <div class="domain-input-wrapper">
                         <span>www.</span>
                         <input type="text" 
@@ -76,23 +76,24 @@ include 'includes/header.php';
                         <i class="fas fa-search"></i> Search
                     </button>
                 </form>
+                <div class="domain-search-result" aria-live="polite"></div>
                 <div class="popular-extensions">
-                    <span class="extension-tag">
+                    <span class="extension-tag" data-tld=".com" data-price-type="register">
                         .com <span class="extension-price" data-price-bdt="1600">
                             <?php echo formatPrice(1600); ?>
                         </span>
                     </span>
-                    <span class="extension-tag">
+                    <span class="extension-tag" data-tld=".net" data-price-type="register">
                         .net <span class="extension-price" data-price-bdt="1900">
                             <?php echo formatPrice(1900); ?>
                         </span>
                     </span>
-                    <span class="extension-tag">
+                    <span class="extension-tag" data-tld=".org" data-price-type="register">
                         .org <span class="extension-price" data-price-bdt="1800">
                             <?php echo formatPrice(1800); ?>
                         </span>
                     </span>
-                    <span class="extension-tag">
+                    <span class="extension-tag" data-tld=".xyz" data-price-type="register">
                         .xyz <span class="extension-price" data-price-bdt="500">
                             <?php echo formatPrice(500); ?>
                         </span>
@@ -178,222 +179,6 @@ include 'includes/header.php';
     </div>
 </section>
 
-<!-- Pricing Section - cPanel Hosting -->
-<section id="pricing" class="section section-bg">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-subtitle">Hosting Plans</span>
-            <h2 class="section-title">Choose Your Perfect cPanel Hosting Plan</h2>
-            <p class="section-description">
-                Powerful, reliable, and affordable web hosting plans tailored for your needs.
-            </p>
-        </div>
-        
-        <div class="pricing-grid">
-            <!-- Basic Plan -->
-            <div class="pricing-card" data-price-bdt="500">
-                <div class="pricing-icon">
-                    <i class="fas fa-rocket"></i>
-                </div>
-                <h3 class="pricing-name">Basic</h3>
-                <p class="pricing-description">Perfect for personal websites and blogs</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                    <p class="price-note">Billed annually</p>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 20 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> 5 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(1); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="1">
-                    Order Now
-                </a>
-            </div>
-            
-            <!-- Standard Plan -->
-            <div class="pricing-card featured" data-price-bdt="800">
-                <span class="pricing-badge">Most Popular</span>
-                <div class="pricing-icon">
-                    <i class="fas fa-star"></i>
-                </div>
-                <h3 class="pricing-name">Standard</h3>
-                <p class="pricing-description">Great for small business websites</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(800)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(800)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                    <p class="price-note">Billed annually</p>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 5 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 50 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 3 Websites</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(2); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="2">
-                    Order Now
-                </a>
-            </div>
-            
-            <!-- Premium Plan -->
-            <div class="pricing-card" data-price-bdt="1500">
-                <div class="pricing-icon">
-                    <i class="fas fa-crown"></i>
-                </div>
-                <h3 class="pricing-name">Premium</h3>
-                <p class="pricing-description">Ideal for growing businesses</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(1500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(1500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                    <p class="price-note">Billed annually</p>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 10 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 100 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Websites</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Advanced Security</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(3); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="3">
-                    Order Now
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- VPS Hosting Preview -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-subtitle">VPS & Dedicated Servers</span>
-            <h2 class="section-title">Powerful Server Solutions</h2>
-            <p class="section-description">
-                Enterprise-grade VPS and dedicated servers for demanding applications and high-traffic websites.
-            </p>
-        </div>
-        
-        <div class="pricing-grid">
-            <!-- BDIX VPS -->
-            <div class="pricing-card">
-                <div class="pricing-icon">
-                    <i class="fas fa-server"></i>
-                </div>
-                <h3 class="pricing-name">BDIX VPS</h3>
-                <p class="pricing-description">Bangladesh local VPS with BDIX connectivity</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(1500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(1500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 40 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 1 TB BDIX Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> Root Access</li>
-                </ul>
-                
-                <a href="<?php echo SITE_URL; ?>/bdix-vps" class="btn btn-outline pricing-cta">
-                    View Details
-                </a>
-            </div>
-            
-            <!-- Xeon VPS -->
-            <div class="pricing-card">
-                <div class="pricing-icon">
-                    <i class="fas fa-microchip"></i>
-                </div>
-                <h3 class="pricing-name">Xeon VPS</h3>
-                <p class="pricing-description">Intel Xeon powered VPS servers</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(2500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(2500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 Xeon vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 80 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                </ul>
-                
-                <a href="<?php echo SITE_URL; ?>/xeon-vps" class="btn btn-outline pricing-cta">
-                    View Details
-                </a>
-            </div>
-            
-            <!-- Dedicated Server -->
-            <div class="pricing-card">
-                <div class="pricing-icon">
-                    <i class="fas fa-database"></i>
-                </div>
-                <h3 class="pricing-name">Dedicated Server</h3>
-                <p class="pricing-description">Fully dedicated physical servers</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(15000)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(15000)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Intel Xeon E5 Processor</li>
-                    <li><i class="fas fa-check-circle"></i> 32 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 1 TB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Gbps Port</li>
-                    <li><i class="fas fa-check-circle"></i> Full Management</li>
-                </ul>
-                
-                <a href="<?php echo SITE_URL; ?>/dedicated-server" class="btn btn-outline pricing-cta">
-                    View Details
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
 
 <!-- Stats Section -->
 <section class="section section-bg">

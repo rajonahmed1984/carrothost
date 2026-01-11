@@ -110,30 +110,28 @@ include 'includes/header.php';
         </div>
         
         <div class="pricing-grid">
-            <div class="pricing-card" data-price-bdt="2500">
+            <div class="pricing-card" data-price-bdt="607">
                 <div class="pricing-icon">
                     <i class="fas fa-bolt"></i>
                 </div>
-                <h3 class="pricing-name">Xeon-1</h3>
-                <p class="pricing-description">Entry-level Xeon VPS</p>
+                <h3 class="pricing-name">NVMe Nano4</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(2500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(2500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(607)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(607)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
+                    <p class="price-note">Starting from</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 Xeon vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 50 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unmetered Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
+                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-check-circle"></i> 15 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Threads/vCPU</li>
+                    <li><i class="fas fa-check-circle"></i> 2 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (1TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(30); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="30">
@@ -141,32 +139,32 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <div class="pricing-card featured" data-price-bdt="4500">
-                <span class="pricing-badge">Best Value</span>
+            <div class="pricing-card featured" data-price-bdt="3035">
+                <span class="pricing-badge">Popular</span>
                 <div class="pricing-icon">
                     <i class="fas fa-star"></i>
                 </div>
-                <h3 class="pricing-name">Xeon-2</h3>
-                <p class="pricing-description">Most popular plan</p>
+                <h3 class="pricing-name">NVMe Bit</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(4500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(4500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(3035)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(3035)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
+                    <p class="price-note">Starting from</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 Xeon vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 100 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unmetered Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Weekly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
+                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-check-circle"></i> 100 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-check-circle"></i> 10 Threads/vCPU</li>
+                    <li><i class="fas fa-check-circle"></i> 10 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (5 TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-check-circle"></i> Transactional Emails</li>
+                    <li><i class="fas fa-check-circle"></i> Email Forwarding</li>
+                    <li><i class="fas fa-check-circle"></i> WP Management</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(31); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="31">
@@ -174,32 +172,66 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <div class="pricing-card" data-price-bdt="8500">
+            <div class="pricing-card" data-price-bdt="12140">
                 <div class="pricing-icon">
                     <i class="fas fa-crown"></i>
                 </div>
-                <h3 class="pricing-name">Xeon-3</h3>
-                <p class="pricing-description">High-performance VPS</p>
+                <h3 class="pricing-name">NVMe Premium</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(8500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(8500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(12140)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(12140)['amount']; ?></span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <p class="price-note">Starting from</p>
+                </div>
+                
+                <ul class="pricing-features">
+                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-check-circle"></i> 500 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-check-circle"></i> 30 Threads/vCPU</li>
+                    <li><i class="fas fa-check-circle"></i> 64 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (23 TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-check-circle"></i> Transactional Emails</li>
+                    <li><i class="fas fa-check-circle"></i> Email Forwarding</li>
+                    <li><i class="fas fa-check-circle"></i> WP Management</li>
+                </ul>
+                
+                <a href="<?php echo getWHMCSProductURL(33); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="33">
+                    Order Now
+                </a>
+            </div>
+        </div>
+
+        <div class="section-header" style="margin-top: 3rem;">
+            <h3 class="section-title">Intel Xeon Custom Profile</h3>
+            <p class="section-description">
+                Customizable Xeon configuration for specific workloads
+            </p>
+        </div>
+        
+        <div class="pricing-grid">
+            <div class="pricing-card" data-price-bdt="5800">
+                <div class="pricing-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <h3 class="pricing-name">Intel Xeon Custom Profile</h3>
+                
+                <div class="pricing-price">
+                    <div class="price-amount">
+                        <span class="price-currency"><?php echo convertPrice(5800)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(5800)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 8 Xeon vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 16 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 200 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unmetered Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 2 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
+                    <li><i class="fas fa-check-circle"></i> Storage 50 GB</li>
+                    <li><i class="fas fa-check-circle"></i> CPU Power 5 Threads</li>
+                    <li><i class="fas fa-check-circle"></i> Memory 5 GB</li>
+                    <li><i class="fas fa-check-circle"></i> Bandwidth 1 Gbit/s-Port</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(32); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="32">

@@ -5,6 +5,9 @@
 RewriteEngine On
 RewriteBase /
 
+# Sitemap
+RewriteRule ^sitemap\.xml$ /sitemap.php [L]
+
 # Localhost base-path helper: ensure /carrothost prefix when accessing via localhost root.
 RewriteCond %{HTTP_HOST} ^localhost$ [NC]
 RewriteCond %{REQUEST_URI} !^/carrothost/

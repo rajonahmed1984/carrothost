@@ -11,6 +11,8 @@
     <meta name="keywords" content="<?php echo $metaKeywords ?? META_KEYWORDS; ?>">
     <meta name="author" content="<?php echo META_AUTHOR; ?>">
     <link rel="canonical" href="<?php echo SITE_URL . '/' . basename($_SERVER['PHP_SELF'], '.php'); ?>">
+    <meta name="google-site-verification" content="googleff102cbf176e0195.html">
+    <meta name="msvalidate.01" content="FE3E4A2C892331030670F3F2CA6F0A09">
     
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="<?php echo isset($pageTitle) ? $pageTitle . ' - ' . SITE_NAME : SITE_NAME; ?>">
@@ -37,7 +39,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- JSON-LD Schema -->
     <script type="application/ld+json">
@@ -65,7 +67,7 @@
         <?php echo $additionalSchema; ?>
     <?php endif; ?>
 </head>
-<body>
+<body data-site-url="<?php echo SITE_URL; ?>">
     <!-- Header -->
     <header class="site-header">
         <!-- Top Bar -->
@@ -92,7 +94,10 @@
                             </button>
                         </div>
                         <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="top-bar-link">
-                            <i class="fas fa-user"></i> Client Login
+                            <i class="fas fa-circle-user"></i> Client Area
+                        </a>
+                        <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="top-bar-link">
+                            <i class="fas fa-right-to-bracket"></i> Login
                         </a>
                     </div>
                 </div>
@@ -117,39 +122,84 @@
                     <!-- Navigation Menu -->
                     <ul class="nav-menu">
                         <li class="nav-item <?php echo getCurrentPage() === 'index' ? 'active' : ''; ?>">
-                            <a href="<?php echo SITE_URL; ?>">Home</a>
+                            <a href="<?php echo SITE_URL; ?>" class="nav-link">Home</a>
                         </li>
                         
                         <li class="nav-item has-dropdown">
-                            <a href="#">Domain <i class="fas fa-chevron-down"></i></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="<?php echo SITE_URL; ?>/domain-register">Register a New Domain</a></li>
-                                <li><a href="<?php echo SITE_URL; ?>/domain-transfer">Transfer in a Domain</a></li>
-                            </ul>
+                            <a href="#" class="nav-link" aria-expanded="false">Domain <i class="fas fa-chevron-down"></i></a>
+                            <button class="submenu-toggle" aria-label="Toggle Domain menu" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="dropdown-menu mega-menu">
+                                <div class="mega-column">
+                                    <h4>Domain Services</h4>
+                                    <a href="<?php echo SITE_URL; ?>/domain-register">Register a New Domain</a>
+                                    <a href="<?php echo SITE_URL; ?>/domain-transfer">Transfer in a Domain</a>
+                                </div>
+                                <div class="mega-column">
+                                    <h4>Why CarrotHost?</h4>
+                                    <p>Instant activation, free DNS management, and 24/7 expert support.</p>
+                                </div>
+                                <div class="mega-card">
+                                    <span class="mega-label">Find Your Domain</span>
+                                    <p>Search your perfect domain name in seconds.</p>
+                                    <a class="btn btn-primary btn-sm" href="<?php echo WHMCS_DOMAIN_REGISTER; ?>">Search Now</a>
+                                </div>
+                            </div>
                         </li>
                         
                         <li class="nav-item has-dropdown">
-                            <a href="#">Hosting <i class="fas fa-chevron-down"></i></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="<?php echo SITE_URL; ?>/cpanel-hosting">cPanel Hosting</a></li>
-                                <li><a href="<?php echo SITE_URL; ?>/webuzo-hosting">Webuzo Hosting</a></li>
-                            </ul>
+                            <a href="#" class="nav-link" aria-expanded="false">Hosting <i class="fas fa-chevron-down"></i></a>
+                            <button class="submenu-toggle" aria-label="Toggle Hosting menu" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="dropdown-menu mega-menu">
+                                <div class="mega-column">
+                                    <h4>Shared Hosting</h4>
+                                    <a href="<?php echo SITE_URL; ?>/cpanel-hosting">cPanel Hosting</a>
+                                    <a href="<?php echo SITE_URL; ?>/webuzo-hosting">Webuzo Hosting</a>
+                                </div>
+                                <div class="mega-column">
+                                    <h4>Included</h4>
+                                    <p>SSD storage, LiteSpeed, free SSL, and daily malware scanning.</p>
+                                </div>
+                                <div class="mega-card">
+                                    <span class="mega-label">Launch Today</span>
+                                    <p>Get reliable hosting with fast setup and local support.</p>
+                                    <a class="btn btn-primary btn-sm" href="<?php echo WHMCS_CART_URL; ?>">Order Now</a>
+                                </div>
+                            </div>
                         </li>
                         
                         <li class="nav-item has-dropdown">
-                            <a href="#">Server <i class="fas fa-chevron-down"></i></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="<?php echo SITE_URL; ?>/dedicated-server">Dedicated Server</a></li>
-                                <li><a href="<?php echo SITE_URL; ?>/bdix-vps">BDIX VPS</a></li>
-                                <li><a href="<?php echo SITE_URL; ?>/xeon-vps">Xeon VPS</a></li>
-                                <li><a href="<?php echo SITE_URL; ?>/ryzen-vps">Ryzen VPS</a></li>
-                            </ul>
+                            <a href="#" class="nav-link" aria-expanded="false">Server <i class="fas fa-chevron-down"></i></a>
+                            <button class="submenu-toggle" aria-label="Toggle Server menu" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="dropdown-menu mega-menu">
+                                <div class="mega-column">
+                                    <h4>VPS & Dedicated</h4>
+                                    <a href="<?php echo SITE_URL; ?>/dedicated-server">Dedicated Server</a>
+                                    <a href="<?php echo SITE_URL; ?>/bdix-vps">BDIX VPS</a>
+                                    <a href="<?php echo SITE_URL; ?>/xeon-vps">Xeon VPS</a>
+                                    <a href="<?php echo SITE_URL; ?>/ryzen-vps">Ryzen VPS</a>
+                                </div>
+                                <div class="mega-column">
+                                    <h4>Performance</h4>
+                                    <p>NVMe storage, premium network, and enterprise-grade uptime.</p>
+                                </div>
+                                <div class="mega-card">
+                                    <span class="mega-label">Need Help?</span>
+                                    <p>Talk to our engineers to size the right server.</p>
+                                    <a class="btn btn-primary btn-sm" href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>">Chat Now</a>
+                                </div>
+                            </div>
                         </li>
                     </ul>
                     
                     <!-- CTA Button -->
-                    <a href="<?php echo WHMCS_DOMAIN_REGISTER; ?>" class="btn btn-primary nav-cta">
-                        Get Started
+                    <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-primary nav-cta">
+                        Order Now
                     </a>
                 </div>
             </div>

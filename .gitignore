@@ -19,6 +19,7 @@ vendor/
 .env
 .env.local
 .env.*.local
+config.local.php
 
 # IDE
 .vscode/

@@ -114,34 +114,31 @@ include 'includes/header.php';
         </div>
         
         <div class="pricing-grid">
-            <!-- Basic Plan -->
-            <div class="pricing-card" data-price-bdt="500">
+            <!-- Orange Carrot -->
+            <div class="pricing-card" data-price-bdt="4800">
                 <div class="pricing-icon">
-                    <i class="fas fa-rocket"></i>
+                    <i class="fas fa-carrot"></i>
                 </div>
-                <h3 class="pricing-name">Basic</h3>
-                <p class="pricing-description">Perfect for personal websites and blogs</p>
+                <h3 class="pricing-name">Orange Carrot</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(4800)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(4800)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
-                    <p class="price-note">Billed annually - Save 20%</p>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 20 GB Monthly Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Website/Domain</li>
-                    <li><i class="fas fa-check-circle"></i> 5 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> 5 FTP Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Softaculous Auto Installer</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
-                    <li><i class="fas fa-check-circle"></i> 99.9% Uptime Guarantee</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> 10 Email Accounts</li>
+                    <li><i class="fas fa-check-circle"></i> 2 GB Email Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 10 GB Hosting Storage</li>
+                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(1); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="1">
@@ -149,37 +146,32 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <!-- Standard Plan -->
-            <div class="pricing-card featured" data-price-bdt="800">
+            <!-- Blue Carrot -->
+            <div class="pricing-card featured" data-price-bdt="9600">
                 <span class="pricing-badge">Most Popular</span>
                 <div class="pricing-icon">
-                    <i class="fas fa-star"></i>
+                    <i class="fas fa-carrot"></i>
                 </div>
-                <h3 class="pricing-name">Standard</h3>
-                <p class="pricing-description">Great for small business websites</p>
+                <h3 class="pricing-name">Blue Carrot</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(800)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(800)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(9600)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(9600)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
-                    <p class="price-note">Billed annually - Save 20%</p>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 5 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 50 GB Monthly Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 3 Websites/Domains</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> 10 FTP Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Softaculous Auto Installer</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Imunify AV+ Security</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
-                    <li><i class="fas fa-check-circle"></i> 99.9% Uptime Guarantee</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> 20 Email Accounts</li>
+                    <li><i class="fas fa-check-circle"></i> 4 GB Email Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 20 GB Hosting Storage</li>
+                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(2); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="2">
@@ -187,82 +179,34 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <!-- Premium Plan -->
-            <div class="pricing-card" data-price-bdt="1500">
+            <!-- Red Carrot -->
+            <div class="pricing-card" data-price-bdt="14400">
                 <div class="pricing-icon">
-                    <i class="fas fa-crown"></i>
+                    <i class="fas fa-carrot"></i>
                 </div>
-                <h3 class="pricing-name">Premium</h3>
-                <p class="pricing-description">Ideal for growing businesses</p>
+                <h3 class="pricing-name">Red Carrot</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(1500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(1500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(14400)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(14400)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
-                    <p class="price-note">Billed annually - Save 20%</p>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 10 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 100 GB Monthly Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Websites/Domains</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited FTP Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Softaculous Auto Installer</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Imunify AV+ Security</li>
-                    <li><i class="fas fa-check-circle"></i> CloudLinux OS</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> 30 Email Accounts</li>
+                    <li><i class="fas fa-check-circle"></i> 6 GB Email Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 30 GB Hosting Storage</li>
+                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
                     <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
-                    <li><i class="fas fa-check-circle"></i> 99.9% Uptime Guarantee</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(3); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="3">
-                    Order Now
-                </a>
-            </div>
-            
-            <!-- Business Plan -->
-            <div class="pricing-card" data-price-bdt="2500">
-                <div class="pricing-icon">
-                    <i class="fas fa-building"></i>
-                </div>
-                <h3 class="pricing-name">Business</h3>
-                <p class="pricing-description">For high-traffic business websites</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(2500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(2500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                    <p class="price-note">Billed annually - Save 20%</p>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 25 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 250 GB Monthly Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Websites</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited FTP Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> Free SSL Certificate</li>
-                    <li><i class="fas fa-check-circle"></i> cPanel Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Softaculous Auto Installer</li>
-                    <li><i class="fas fa-check-circle"></i> Hourly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Imunify360 Security</li>
-                    <li><i class="fas fa-check-circle"></i> CloudLinux OS</li>
-                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
-                    <li><i class="fas fa-check-circle"></i> Free CDN</li>
-                    <li><i class="fas fa-check-circle"></i> Dedicated IP Address</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 VIP Support</li>
-                    <li><i class="fas fa-check-circle"></i> 99.9% Uptime Guarantee</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(4); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="4">
                     Order Now
                 </a>
             </div>

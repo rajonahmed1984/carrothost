@@ -105,113 +105,198 @@ include 'includes/header.php';
         <div class="section-header">
             <h2 class="section-title">Dedicated Server Plans</h2>
             <p class="section-description">
-                All plans include full management, DDoS protection, and hardware replacement
+                Enterprise-grade hardware with transparent monthly pricing
             </p>
         </div>
-        
-        <div class="pricing-grid">
-            <div class="pricing-card" data-price-bdt="15000">
-                <div class="pricing-icon">
-                    <i class="fas fa-server"></i>
-                </div>
-                <h3 class="pricing-name">DS-1 Standard</h3>
-                <p class="pricing-description">Entry-level dedicated server</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(15000)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(15000)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Intel Xeon E5-2650 (8C/16T)</li>
-                    <li><i class="fas fa-check-circle"></i> 32 GB DDR4 ECC RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 2x 1 TB SATA SSD (RAID 1)</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Gbps Port</li>
-                    <li><i class="fas fa-check-circle"></i> 30 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 5 IPv4 Addresses</li>
-                    <li><i class="fas fa-check-circle"></i> Full Server Management</li>
-                    <li><i class="fas fa-check-circle"></i> Hardware RAID Controller</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(50); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="50">
-                    Order Now
-                </a>
-            </div>
-            
-            <div class="pricing-card featured" data-price-bdt="25000">
-                <span class="pricing-badge">Enterprise</span>
-                <div class="pricing-icon">
-                    <i class="fas fa-building"></i>
-                </div>
-                <h3 class="pricing-name">DS-2 Performance</h3>
-                <p class="pricing-description">High-performance server</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(25000)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(25000)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Dual Intel Xeon E5-2680 (24C/48T)</li>
-                    <li><i class="fas fa-check-circle"></i> 64 GB DDR4 ECC RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 2x 2 TB NVMe SSD (RAID 1)</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Gbps Port</li>
-                    <li><i class="fas fa-check-circle"></i> 50 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 10 IPv4 Addresses</li>
-                    <li><i class="fas fa-check-circle"></i> Full Server Management</li>
-                    <li><i class="fas fa-check-circle"></i> Hardware RAID Controller</li>
-                    <li><i class="fas fa-check-circle"></i> DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Dedicated Account Manager</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 VIP Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(51); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="51">
-                    Order Now
-                </a>
-            </div>
-            
-            <div class="pricing-card" data-price-bdt="40000">
-                <div class="pricing-icon">
-                    <i class="fas fa-crown"></i>
-                </div>
-                <h3 class="pricing-name">DS-3 Enterprise</h3>
-                <p class="pricing-description">Maximum performance</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(40000)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(40000)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Dual AMD EPYC 7543 (64C/128T)</li>
-                    <li><i class="fas fa-check-circle"></i> 128 GB DDR4 ECC RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 4x 4 TB NVMe SSD (RAID 10)</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Gbps Port</li>
-                    <li><i class="fas fa-check-circle"></i> 100 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> /28 IPv4 Subnet (16 IPs)</li>
-                    <li><i class="fas fa-check-circle"></i> Full Server Management</li>
-                    <li><i class="fas fa-check-circle"></i> Enterprise RAID Controller</li>
-                    <li><i class="fas fa-check-circle"></i> Advanced DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> Hourly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Dedicated Account Manager</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 VIP Support with SLA</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(52); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="52">
-                    Order Now
-                </a>
-            </div>
+
+        <div class="comparison-table-wrapper dedicated-table">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Plan Name</th>
+                        <th>CPU Power</th>
+                        <th>Memory</th>
+                        <th>Storage</th>
+                        <th>Bandwidth</th>
+                        <th>IP</th>
+                        <th>Price</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="name">SSL5-045</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/Intel_logo.png" alt="Intel">
+                            <span class="name">XeonL5420</span>
+                            <span class="subtext">Dual Processor 2.5 GHz (8 Core)</span>
+                        </td>
+                        <td><span class="name">16 GB</span><span class="subtext">DDR2</span></td>
+                        <td><span class="name">500 GB</span><span class="subtext">SATA (7200RPM)</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">5</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="10800"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="5400"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(98); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSL5-060</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/Intel_logo.png" alt="Intel">
+                            <span class="name">XeonL5520</span>
+                            <span class="subtext">Dual Processor 2.26 GHz (8 Core, 16 Threads)</span>
+                        </td>
+                        <td><span class="name">24 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">500 GB</span><span class="subtext">SATA (7200RPM)</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">5</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="14400"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="7200"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(99); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSL5-073</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/Intel_logo.png" alt="Intel">
+                            <span class="name">XeonL5520</span>
+                            <span class="subtext">Dual Processor 2.26 GHz (8 Core, 16 Threads)</span>
+                        </td>
+                        <td><span class="name">48 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">1 TB</span><span class="subtext">SATA</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">5</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="17520"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="9000"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(143); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-090</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1230v1</span>
+                            <span class="subtext">3.20 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">16 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">2 TB</span><span class="subtext">SATA</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="19440"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="10800"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(87); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-112</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1230v2</span>
+                            <span class="subtext">3.30 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">16 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">256 GB</span><span class="subtext">SSD</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="22800"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="13800"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(88); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-120</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1230v2</span>
+                            <span class="subtext">3.30 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">16 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">2x 1TB</span><span class="subtext">SATA</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="23040"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="14400"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(84); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-135</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1270v2</span>
+                            <span class="subtext">3.50 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">32 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">2 TB</span><span class="subtext">SATA</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="24240"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="16200"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(89); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-172</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1270v2</span>
+                            <span class="subtext">3.50 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">32 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">500 GB</span><span class="subtext">SSD</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="28800"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="21000"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(137); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="name">SSE3-217</span></td>
+                        <td>
+                            <img class="intel-logo" src="https://carrothost.com/wp-content/uploads/2021/09/intel-xeon.png" alt="Intel Xeon">
+                            <span class="name">E3-1270v2</span>
+                            <span class="subtext">3.50 GHz (4 Core, 8 Threads)</span>
+                        </td>
+                        <td><span class="name">32 GB</span><span class="subtext">DDR3</span></td>
+                        <td><span class="name">1 TB</span><span class="subtext">SSD</span></td>
+                        <td><span class="name">10 TB</span><span class="subtext">1 Gbps port</span></td>
+                        <td><span class="name">4</span><span class="subtext">Usable</span></td>
+                        <td class="price">
+                            <span class="old"><span class="price-value" data-price-bdt="33840"></span>/m</span>
+                            <span class="new"><span class="price-value" data-price-bdt="26400"></span>/m</span>
+                        </td>
+                        <td class="price">
+                            <a class="cart-btn" href="<?php echo getWHMCSProductURL(93); ?>">Order Now →</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </section>

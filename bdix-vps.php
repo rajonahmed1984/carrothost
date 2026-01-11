@@ -114,32 +114,28 @@ include 'includes/header.php';
         </div>
         
         <div class="pricing-grid">
-            <!-- BDIX Starter -->
-            <div class="pricing-card" data-price-bdt="1500">
+            <!-- BDIX Standard -->
+            <div class="pricing-card" data-price-bdt="1550">
                 <div class="pricing-icon">
                     <i class="fas fa-bolt"></i>
                 </div>
-                <h3 class="pricing-name">BDIX Starter</h3>
-                <p class="pricing-description">Perfect for small projects</p>
+                <h3 class="pricing-name">BDIX Standard</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(1500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(1500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(1550)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(1550)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 40 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> <strong>Unlimited BDIX Bandwidth</strong></li>
-                    <li><i class="fas fa-check-circle"></i> 500 GB International Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 Address</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
+                    <li><i class="fas fa-check-circle"></i> 2 Cores Core</li>
+                    <li><i class="fas fa-check-circle"></i> 2 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 25 GB Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 1000 GB/m Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(20); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="20">
@@ -147,34 +143,29 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <!-- BDIX Standard -->
-            <div class="pricing-card featured" data-price-bdt="2500">
+            <!-- BDIX Enhanced -->
+            <div class="pricing-card featured" data-price-bdt="2700">
                 <span class="pricing-badge">Popular</span>
                 <div class="pricing-icon">
                     <i class="fas fa-star"></i>
                 </div>
-                <h3 class="pricing-name">BDIX Standard</h3>
-                <p class="pricing-description">Great for streaming servers</p>
+                <h3 class="pricing-name">BDIX Enhanced</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(2500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(2500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(2700)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(2700)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 80 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> <strong>Unlimited BDIX Bandwidth</strong></li>
-                    <li><i class="fas fa-check-circle"></i> 1 TB International Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 Address</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
+                    <li><i class="fas fa-check-circle"></i> 4 Cores Core</li>
+                    <li><i class="fas fa-check-circle"></i> 4 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 50 GB Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 1500 GB/m Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(21); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="21">
@@ -183,72 +174,30 @@ include 'includes/header.php';
             </div>
             
             <!-- BDIX Premium -->
-            <div class="pricing-card" data-price-bdt="4500">
+            <div class="pricing-card" data-price-bdt="4900">
                 <div class="pricing-icon">
                     <i class="fas fa-crown"></i>
                 </div>
                 <h3 class="pricing-name">BDIX Premium</h3>
-                <p class="pricing-description">For high-traffic applications</p>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(4500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(4500)['amount']; ?></span>
+                        <span class="price-currency"><?php echo convertPrice(4900)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(4900)['amount']; ?></span>
                         <span class="price-period">/month</span>
                     </div>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 8 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 16 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 160 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> <strong>Unlimited BDIX Bandwidth</strong></li>
-                    <li><i class="fas fa-check-circle"></i> 2 TB International Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 2 IPv4 Addresses</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Advanced DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
+                    <li><i class="fas fa-check-circle"></i> 6 Cores Core</li>
+                    <li><i class="fas fa-check-circle"></i> 8 GB RAM</li>
+                    <li><i class="fas fa-check-circle"></i> 100 GB Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 2000 GB/m Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(22); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="22">
-                    Order Now
-                </a>
-            </div>
-            
-            <!-- BDIX Enterprise -->
-            <div class="pricing-card" data-price-bdt="7500">
-                <div class="pricing-icon">
-                    <i class="fas fa-building"></i>
-                </div>
-                <h3 class="pricing-name">BDIX Enterprise</h3>
-                <p class="pricing-description">Maximum performance</p>
-                
-                <div class="pricing-price">
-                    <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(7500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(7500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
-                    </div>
-                </div>
-                
-                <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 16 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 32 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 320 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> <strong>Unlimited BDIX Bandwidth</strong></li>
-                    <li><i class="fas fa-check-circle"></i> 5 TB International Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 4 IPv4 Addresses</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Enterprise DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> Hourly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> Dedicated Account Manager</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 VIP Support</li>
-                </ul>
-                
-                <a href="<?php echo getWHMCSProductURL(23); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="23">
                     Order Now
                 </a>
             </div>

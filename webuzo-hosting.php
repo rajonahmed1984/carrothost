@@ -114,32 +114,29 @@ include 'includes/header.php';
         </div>
         
         <div class="pricing-grid">
-            <!-- Starter VPS -->
-            <div class="pricing-card" data-price-bdt="1200">
+            <!-- Starter -->
+            <div class="pricing-card" data-price-bdt="4200">
                 <div class="pricing-icon">
                     <i class="fas fa-seedling"></i>
                 </div>
-                <h3 class="pricing-name">Starter VPS</h3>
-                <p class="pricing-description">Perfect for small projects</p>
+                <h3 class="pricing-name">Starter</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(1200)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(1200)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(4200)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(4200)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 1 vCPU Core</li>
-                    <li><i class="fas fa-check-circle"></i> 2 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 30 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> 1 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 Address</li>
-                    <li><i class="fas fa-check-circle"></i> Webuzo Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
+                    <li><i class="fas fa-check-circle"></i> 5 GB SSD Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 250 GB Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
+                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(10); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="10">
@@ -147,34 +144,30 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <!-- Standard VPS -->
-            <div class="pricing-card featured" data-price-bdt="2000">
-                <span class="pricing-badge">Recommended</span>
+            <!-- Standard -->
+            <div class="pricing-card featured" data-price-bdt="8400">
+                <span class="pricing-badge">Most Popular</span>
                 <div class="pricing-icon">
                     <i class="fas fa-rocket"></i>
                 </div>
-                <h3 class="pricing-name">Standard VPS</h3>
-                <p class="pricing-description">Great for growing websites</p>
+                <h3 class="pricing-name">Standard</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(2000)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(2000)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(8400)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(8400)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 60 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> 2 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 Address</li>
-                    <li><i class="fas fa-check-circle"></i> Webuzo Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Weekly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
+                    <li><i class="fas fa-check-circle"></i> 10 GB SSD Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 500 GB Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
+                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(11); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="11">
@@ -182,34 +175,29 @@ include 'includes/header.php';
                 </a>
             </div>
             
-            <!-- Advanced VPS -->
-            <div class="pricing-card" data-price-bdt="3500">
+            <!-- Advanced -->
+            <div class="pricing-card" data-price-bdt="12000">
                 <div class="pricing-icon">
                     <i class="fas fa-server"></i>
                 </div>
-                <h3 class="pricing-name">Advanced VPS</h3>
-                <p class="pricing-description">For resource-intensive apps</p>
+                <h3 class="pricing-name">Advanced</h3>
                 
                 <div class="pricing-price">
                     <div class="price-amount">
-                        <span class="price-currency"><?php echo convertPrice(3500)['symbol']; ?></span>
-                        <span class="price-number"><?php echo convertPrice(3500)['amount']; ?></span>
-                        <span class="price-period">/month</span>
+                        <span class="price-currency"><?php echo convertPrice(12000)['symbol']; ?></span>
+                        <span class="price-number"><?php echo convertPrice(12000)['amount']; ?></span>
+                        <span class="price-period">/year</span>
                     </div>
+                    <p class="price-note">Annually</p>
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 120 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> 4 TB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 Address</li>
-                    <li><i class="fas fa-check-circle"></i> Webuzo Control Panel</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
+                    <li><i class="fas fa-check-circle"></i> 20 GB SSD Storage</li>
+                    <li><i class="fas fa-check-circle"></i> 1000 GB Bandwidth</li>
+                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
+                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
+                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(12); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="12">

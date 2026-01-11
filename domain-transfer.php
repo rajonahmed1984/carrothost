@@ -40,7 +40,7 @@ include 'includes/header.php';
         <!-- Transfer Search Box -->
         <div class="domain-search-box" style="max-width: 900px; margin: 2rem auto;">
             <h3 class="domain-search-title">Start Your Domain Transfer</h3>
-            <form class="domain-search-form" action="<?php echo WHMCS_DOMAIN_TRANSFER; ?>" method="get">
+            <form class="domain-search-form" action="<?php echo WHMCS_DOMAIN_TRANSFER; ?>" method="get" data-whmcs-url="<?php echo WHMCS_URL; ?>" data-check-mode="transfer" data-default-tld=".com">
                 <div class="domain-input-wrapper">
                     <span>www.</span>
                     <input type="text" 
@@ -53,6 +53,7 @@ include 'includes/header.php';
                     <i class="fas fa-exchange-alt"></i> Start Transfer
                 </button>
             </form>
+            <div class="domain-search-result" aria-live="polite"></div>
             <p style="text-align: center; margin-top: 1rem; color: #666; font-size: 0.9rem;">
                 Enter your domain name to check transfer eligibility and get started
             </p>
@@ -181,7 +182,7 @@ include 'includes/header.php';
                 
                 <!-- Step 5 -->
                 <div style="display: flex; gap: 2rem; align-items: start;">
-                    <div style="flex-shrink: 0; width: 60px; height: 60px; background: linear-gradient(135deg, #009247 0%, #007a3a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold;">✓</div>
+                    <div style="flex-shrink: 0; width: 60px; height: 60px; background: linear-gradient(135deg, #009247 0%, #007a3a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold;">5</div>
                     <div>
                         <h3 style="margin-bottom: 0.5rem;">Transfer Complete!</h3>
                         <p style="color: #666;">Your domain transfer will be completed within 5-7 days. You'll receive confirmation once it's done.</p>
@@ -214,27 +215,27 @@ include 'includes/header.php';
                 <tbody>
                     <tr>
                         <td><strong>.com</strong></td>
-                        <td data-price-bdt="1600"><?php echo formatPrice(1600); ?>/year</td>
+                        <td><span class="extension-price" data-tld=".com" data-price-type="transfer" data-price-bdt="1600"><?php echo formatPrice(1600); ?></span>/year</td>
                         <td>+1 Year Extension</td>
                     </tr>
                     <tr>
                         <td><strong>.net</strong></td>
-                        <td data-price-bdt="1900"><?php echo formatPrice(1900); ?>/year</td>
+                        <td><span class="extension-price" data-tld=".net" data-price-type="transfer" data-price-bdt="1900"><?php echo formatPrice(1900); ?></span>/year</td>
                         <td>+1 Year Extension</td>
                     </tr>
                     <tr>
                         <td><strong>.org</strong></td>
-                        <td data-price-bdt="1800"><?php echo formatPrice(1800); ?>/year</td>
+                        <td><span class="extension-price" data-tld=".org" data-price-type="transfer" data-price-bdt="1800"><?php echo formatPrice(1800); ?></span>/year</td>
                         <td>+1 Year Extension</td>
                     </tr>
                     <tr>
                         <td><strong>.info</strong></td>
-                        <td data-price-bdt="2500"><?php echo formatPrice(2500); ?>/year</td>
+                        <td><span class="extension-price" data-tld=".info" data-price-type="transfer" data-price-bdt="2500"><?php echo formatPrice(2500); ?></span>/year</td>
                         <td>+1 Year Extension</td>
                     </tr>
                     <tr>
                         <td><strong>.xyz</strong></td>
-                        <td data-price-bdt="500"><?php echo formatPrice(500); ?>/year</td>
+                        <td><span class="extension-price" data-tld=".xyz" data-price-type="transfer" data-price-bdt="500"><?php echo formatPrice(500); ?></span>/year</td>
                         <td>+1 Year Extension</td>
                     </tr>
                 </tbody>

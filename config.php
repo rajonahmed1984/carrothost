@@ -4,6 +4,12 @@
  * Hosting Business Website Configuration
  */
 
+// Optional local overrides (keep secrets out of version control)
+$localConfigPath = __DIR__ . '/config.local.php';
+if (file_exists($localConfigPath)) {
+    require $localConfigPath;
+}
+
 // Site Configuration
 define('SITE_NAME', 'CarrotHost');
 define('SITE_TAGLINE', 'Fast, Secure & Optimized Web Hosting');
@@ -27,6 +33,12 @@ define('WHMCS_CART_URL', WHMCS_URL . '/cart.php');
 define('WHMCS_CLIENT_AREA', WHMCS_URL . '/clientarea.php');
 define('WHMCS_DOMAIN_REGISTER', WHMCS_URL . '/cart.php?a=add&domain=register');
 define('WHMCS_DOMAIN_TRANSFER', WHMCS_URL . '/cart.php?a=add&domain=transfer');
+if (!defined('WHMCS_API_IDENTIFIER')) {
+    define('WHMCS_API_IDENTIFIER', getenv('WHMCS_API_IDENTIFIER') ?: '');
+}
+if (!defined('WHMCS_API_SECRET')) {
+    define('WHMCS_API_SECRET', getenv('WHMCS_API_SECRET') ?: '');
+}
 
 // Currency Configuration
 define('DEFAULT_CURRENCY', 'BDT');
