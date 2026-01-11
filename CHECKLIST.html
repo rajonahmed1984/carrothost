@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarrotHost Installation Checklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #f16922 0%, #d95a1c 100%);
+            color: white;
+            padding: 3rem;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 3rem;
+        }
+        .section {
+            margin-bottom: 3rem;
+        }
+        .section h2 {
+            color: #f16922;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #f16922;
+        }
+        .checklist {
+            list-style: none;
+        }
+        .checklist li {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        .checklist li:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .checklist input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+        .checklist label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 1rem;
+        }
+        .priority {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+        .priority.high {
+            background: #dc3545;
+            color: white;
+        }
+        .priority.medium {
+            background: #ffc107;
+            color: #000;
+        }
+        .priority.low {
+            background: #28a745;
+            color: white;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 0.5rem;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin-top: 2rem;
+            display: none;
+        }
+        .success-box h3 {
+            color: #155724;
+            margin-bottom: 0.5rem;
+        }
+        .progress {
+            background: #e9ecef;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 3rem;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f16922 0%, #009247 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .footer {
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+        .footer a {
+            color: #f16922;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CarrotHost Installation Checklist</h1>
+            <p>Follow this checklist to get your website up and running</p>
+        </div>
+        
+        <div class="content">
+            <div class="progress">
+                <div class="progress-bar" id="progressBar">0%</div>
+            </div>
+            
+            <div class="info-box">
+                <h3>📖 Before You Start</h3>
+                <p>This checklist will guide you through the complete setup of your CarrotHost website. Check off items as you complete them. Your progress is saved automatically!</p>
+            </div>
+            
+            <!-- Initial Setup -->
+            <div class="section">
+                <h2>1️⃣ Initial Setup (Required)</h2>
+                <ul class="checklist" data-category="setup">
+                    <li>
+                        <input type="checkbox" id="setup1">
+                        <label for="setup1">
+                            Open <code>config.php</code> and update WHMCS_URL
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="setup2">
+                        <label for="setup2">
+                            Update SITE_EMAIL and SITE_PHONE in config.php
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="setup3">
+                        <label for="setup3">
+                            Update WHATSAPP_NUMBER in config.php
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="setup4">
+                        <label for="setup4">
+                            Set correct USD_TO_BDT_RATE (current market rate)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="setup5">
+                        <label for="setup5">
+                            Test the homepage loads: http://localhost/carrothost/
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- WHMCS Configuration -->
+            <div class="section">
+                <h2>2️⃣ WHMCS Product Configuration</h2>
+                <ul class="checklist" data-category="whmcs">
+                    <li>
+                        <input type="checkbox" id="whmcs1">
+                        <label for="whmcs1">
+                            Update cPanel hosting product IDs (cpanel-hosting.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs2">
+                        <label for="whmcs2">
+                            Update Webuzo VPS product IDs (webuzo-hosting.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs3">
+                        <label for="whmcs3">
+                            Update BDIX VPS product IDs (bdix-vps.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs4">
+                        <label for="whmcs4">
+                            Update Xeon VPS product IDs (xeon-vps.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs5">
+                        <label for="whmcs5">
+                            Update Ryzen VPS product IDs (ryzen-vps.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs6">
+                        <label for="whmcs6">
+                            Update Dedicated Server product IDs (dedicated-server.php)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="whmcs7">
+                        <label for="whmcs7">
+                            Test an "Order Now" button - should redirect to WHMCS
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Images & Branding -->
+            <div class="section">
+                <h2>3️⃣ Images & Branding</h2>
+                <ul class="checklist" data-category="images">
+                    <li>
+                        <input type="checkbox" id="img1">
+                        <label for="img1">
+                            Add logo.png to assets/images/ (180x45px)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="img2">
+                        <label for="img2">
+                            Add logo-white.png to assets/images/ (white version)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="img3">
+                        <label for="img3">
+                            Add favicon.png (32x32px or 64x64px)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="img4">
+                        <label for="img4">
+                            Add og-image.jpg (1200x630px) for social sharing
+                            <span class="priority low">OPTIONAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="img5">
+                        <label for="img5">
+                            Add payment method logos (bKash, Nagad, Visa, Mastercard)
+                            <span class="priority low">OPTIONAL</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Testing -->
+            <div class="section">
+                <h2>4️⃣ Testing & Quality Assurance</h2>
+                <ul class="checklist" data-category="testing">
+                    <li>
+                        <input type="checkbox" id="test1">
+                        <label for="test1">
+                            Test currency switcher (BDT ↔ USD) on all pages
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test2">
+                        <label for="test2">
+                            Test domain search redirects to WHMCS
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test3">
+                        <label for="test3">
+                            Test all navigation menu links work
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test4">
+                        <label for="test4">
+                            Test mobile menu on phone/tablet
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test5">
+                        <label for="test5">
+                            Test WhatsApp button opens WhatsApp
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test6">
+                        <label for="test6">
+                            Test all footer links are correct
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test7">
+                        <label for="test7">
+                            Test responsive design on multiple devices
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="test8">
+                        <label for="test8">
+                            Check for browser console errors (F12)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Content Review -->
+            <div class="section">
+                <h2>5️⃣ Content Review</h2>
+                <ul class="checklist" data-category="content">
+                    <li>
+                        <input type="checkbox" id="content1">
+                        <label for="content1">
+                            Review and adjust all pricing (if needed)
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="content2">
+                        <label for="content2">
+                            Review feature descriptions for accuracy
+                            <span class="priority low">OPTIONAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="content3">
+                        <label for="content3">
+                            Check all contact information is correct
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="content4">
+                        <label for="content4">
+                            Update domain pricing if needed
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Pre-Launch -->
+            <div class="section">
+                <h2>6️⃣ Pre-Launch Preparation</h2>
+                <ul class="checklist" data-category="launch">
+                    <li>
+                        <input type="checkbox" id="launch1">
+                        <label for="launch1">
+                            Update SITE_URL to your production domain in config.php
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch2">
+                        <label for="launch2">
+                            Enable HTTPS redirect in .htaccess (uncomment lines)
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch3">
+                        <label for="launch3">
+                            Install SSL certificate on your domain
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch4">
+                        <label for="launch4">
+                            Upload all files to production server
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch5">
+                        <label for="launch5">
+                            Test website on production URL
+                            <span class="priority high">CRITICAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch6">
+                        <label for="launch6">
+                            Set up Google Analytics (optional)
+                            <span class="priority low">OPTIONAL</span>
+                        </label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="launch7">
+                        <label for="launch7">
+                            Submit to Google Search Console
+                            <span class="priority medium">IMPORTANT</span>
+                        </label>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="success-box" id="successBox">
+                <h3>🎉 Congratulations! Your website is ready!</h3>
+                <p>You've completed all checklist items. Your CarrotHost website is now ready to accept customers. Good luck with your hosting business!</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Built with ❤️ for <a href="https://carrothost.com">CarrotHost</a></p>
+            <p style="margin-top: 0.5rem; opacity: 0.7;">Need help? Check <a href="README.md">README.md</a> or <a href="QUICK-START.md">QUICK-START.md</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize
+        loadProgress();
+        updateProgress();
+        
+        // Add event listeners to all checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                saveProgress();
+                updateProgress();
+            });
+        });
+        
+        // Save progress to localStorage
+        function saveProgress() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const progress = {};
+            checkboxes.forEach(cb => {
+                progress[cb.id] = cb.checked;
+            });
+            localStorage.setItem('carrothost_checklist', JSON.stringify(progress));
+        }
+        
+        // Load progress from localStorage
+        function loadProgress() {
+            const saved = localStorage.getItem('carrothost_checklist');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                Object.keys(progress).forEach(id => {
+                    const checkbox = document.getElementById(id);
+                    if (checkbox) {
+                        checkbox.checked = progress[id];
+                    }
+                });
+            }
+        }
+        
+        // Update progress bar
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const total = checkboxes.length;
+            const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
+            const percentage = Math.round((checked / total) * 100);
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            // Show success message if 100%
+            if (percentage === 100) {
+                document.getElementById('successBox').style.display = 'block';
+            } else {
+                document.getElementById('successBox').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
