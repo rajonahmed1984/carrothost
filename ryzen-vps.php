@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'Ryzen VPS Hosting - AMD Ryzen Powered Virtual Servers';
-$metaDescription = 'High-performance Ryzen VPS hosting with AMD Ryzen processors, NVMe storage, and exceptional single-thread performance. Perfect for gaming and CPU-intensive applications.';
+$metaDescription = 'High-performance Ryzen VPS hosting with AMD Ryzen processors, NVMe storage, and strong single-thread speed for gaming and CPU-intensive applications.';
 $metaKeywords = 'ryzen vps, amd ryzen vps, ryzen vps hosting, gaming vps, high performance vps';
 
 include 'includes/header.php';
@@ -15,25 +15,29 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<div class="page-header">
+<section class="section hero-section">
     <div class="container">
-        <h1 class="page-header-title">AMD Ryzen VPS Hosting</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>Ryzen VPS</span>
-        </div>
-    </div>
-</div>
-
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">AMD Ryzen Powered VPS</h2>
-            <p class="section-description">
-                Experience exceptional performance with AMD Ryzen processors. Best-in-class single-thread 
-                performance perfect for gaming servers, trading platforms, and CPU-intensive workloads.
-            </p>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fab fa-amd"></i> Ryzen VPS</span>
+                <h1 class="section-title">AMD Ryzen Powered VPS</h1>
+                <p class="section-description">
+                    Experience exceptional performance with AMD Ryzen processors. Best-in-class single-thread 
+                    performance perfect for gaming servers, trading platforms, and CPU-intensive workloads.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-bolt"></i> View Plans
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Get Consultation
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/47ba0277781c -->
+                <img src="<?php echo SITE_URL; ?>/img/ryzen-hero.jpg" alt="Ryzen VPS performance workspace" loading="lazy">
+            </div>
         </div>
         
         <div class="features-grid">
@@ -59,7 +63,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-tachometer-alt"></i>
+                    <i class="fas fa-gauge-high"></i>
                 </div>
                 <h3 class="feature-title">High Clock Speed</h3>
                 <p class="feature-description">
@@ -69,7 +73,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-hdd"></i>
+                    <i class="fas fa-hard-drive"></i>
                 </div>
                 <h3 class="feature-title">Gen4 NVMe Storage</h3>
                 <p class="feature-description">
@@ -89,7 +93,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">Advanced Security</h3>
                 <p class="feature-description">
@@ -100,9 +104,10 @@ include 'includes/header.php';
     </div>
 </section>
 
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">Ryzen VPS Plans</h2>
             <p class="section-description">
                 All plans include KVM virtualization, unlimited bandwidth, and instant setup
@@ -126,14 +131,14 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 Ryzen vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 60 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Support</li>
+                    <li><i class="fas fa-circle-check"></i> 2 Ryzen vCPU Cores</li>
+                    <li><i class="fas fa-circle-check"></i> 4 GB DDR4 RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 60 GB NVMe SSD</li>
+                    <li><i class="fas fa-circle-check"></i> Unlimited Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 IPv4 + IPv6</li>
+                    <li><i class="fas fa-circle-check"></i> KVM Virtualization</li>
+                    <li><i class="fas fa-circle-check"></i> Full Root Access</li>
+                    <li><i class="fas fa-circle-check"></i> 24/7 Support</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(40); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="40">
@@ -158,15 +163,15 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 Ryzen vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 120 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Weekly Backups</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Priority Support</li>
+                    <li><i class="fas fa-circle-check"></i> 4 Ryzen vCPU Cores</li>
+                    <li><i class="fas fa-circle-check"></i> 8 GB DDR4 RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 120 GB NVMe SSD</li>
+                    <li><i class="fas fa-circle-check"></i> Unlimited Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 IPv4 + IPv6</li>
+                    <li><i class="fas fa-circle-check"></i> KVM Virtualization</li>
+                    <li><i class="fas fa-circle-check"></i> Full Root Access</li>
+                    <li><i class="fas fa-circle-check"></i> Weekly Backups</li>
+                    <li><i class="fas fa-circle-check"></i> 24/7 Priority Support</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(41); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="41">
@@ -190,16 +195,16 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 8 Ryzen vCPU Cores</li>
-                    <li><i class="fas fa-check-circle"></i> 16 GB DDR4 RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 240 GB NVMe SSD</li>
-                    <li><i class="fas fa-check-circle"></i> Unlimited Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 2 IPv4 + IPv6</li>
-                    <li><i class="fas fa-check-circle"></i> KVM Virtualization</li>
-                    <li><i class="fas fa-check-circle"></i> Full Root Access</li>
-                    <li><i class="fas fa-check-circle"></i> Daily Backups</li>
-                    <li><i class="fas fa-check-circle"></i> DDoS Protection</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Premium Support</li>
+                    <li><i class="fas fa-circle-check"></i> 8 Ryzen vCPU Cores</li>
+                    <li><i class="fas fa-circle-check"></i> 16 GB DDR4 RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 240 GB NVMe SSD</li>
+                    <li><i class="fas fa-circle-check"></i> Unlimited Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 2 IPv4 + IPv6</li>
+                    <li><i class="fas fa-circle-check"></i> KVM Virtualization</li>
+                    <li><i class="fas fa-circle-check"></i> Full Root Access</li>
+                    <li><i class="fas fa-circle-check"></i> Daily Backups</li>
+                    <li><i class="fas fa-circle-check"></i> DDoS Protection</li>
+                    <li><i class="fas fa-circle-check"></i> 24/7 Premium Support</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(42); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="42">
@@ -218,7 +223,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-shopping-cart"></i> Order Ryzen VPS
+                <i class="fas fa-cart-shopping"></i> Order Ryzen VPS
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Get Consultation
@@ -228,3 +233,5 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+
+

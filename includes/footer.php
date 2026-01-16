@@ -7,7 +7,7 @@
             <div class="container">
                 <div class="trust-badges">
                     <div class="trust-badge">
-                        <i class="fas fa-shield-alt"></i>
+                        <i class="fas fa-shield-halved"></i>
                         <div>
                             <strong>99.9% Uptime</strong>
                             <span>Guarantee</span>
@@ -40,6 +40,16 @@
         <div class="footer-top">
             <div class="container">
                 <div class="footer-grid">
+                    <div class="footer-col footer-about">
+                        <img src="<?php echo SITE_URL; ?>/img/logo.png" alt="<?php echo SITE_NAME; ?> Logo" class="footer-logo">
+                        <p class="footer-description">
+                            <?php echo SITE_NAME; ?> provides fast SSD hosting, managed VPS, dedicated servers, and domain services in Bangladesh with 24/7 expert support.
+                        </p>
+                        <div class="footer-contact">
+                            <span><i class="fas fa-phone"></i> <?php echo SITE_PHONE; ?></span>
+                            <span><i class="fas fa-envelope"></i> <?php echo SITE_EMAIL; ?></span>
+                        </div>
+                    </div>
                     <div class="footer-col">
                         <h4 class="footer-title">Products</h4>
                         <ul class="footer-links">

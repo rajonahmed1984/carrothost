@@ -8,7 +8,7 @@ require_once 'config.php';
 
 // SEO Meta Tags
 $pageTitle = 'Professional Web Hosting Services in Bangladesh';
-$metaDescription = 'Fast, secure & optimized web hosting with 99.9% uptime guarantee. Get cPanel hosting, VPS, dedicated servers, and domain registration with 24/7 support.';
+$metaDescription = 'Fast, secure web hosting in Bangladesh with SSD storage, 99.9% uptime, cPanel hosting, VPS, dedicated servers, and domain registration backed by 24/7 support.';
 $metaKeywords = 'web hosting bangladesh, cpanel hosting, vps hosting, bdix hosting, dedicated server bangladesh, cheap hosting bd, domain registration';
 
 // JSON-LD Schema for Products
@@ -42,63 +42,70 @@ include 'includes/header.php';
 <!-- Hero Section -->
 <section class="hero-section">
     <div class="container">
-        <div class="hero-content">
-            <h1 class="hero-title">
-                Fast, Secure & Optimized<br>
-                <span class="text-highlight">Web Hosting</span> for Your Business
-            </h1>
-            <p class="hero-subtitle">
-                Lightning-fast SSD hosting with Imunify AV+ security, 99.9% uptime guarantee, 
-                and 24/7 dedicated support. Start your online journey today!
-            </p>
-            <div class="hero-cta">
-                <a href="<?php echo WHMCS_DOMAIN_REGISTER; ?>" class="btn btn-primary btn-lg">
-                    <i class="fas fa-rocket"></i> Get Started Now
-                </a>
-                <a href="#pricing" class="btn btn-outline btn-lg">
-                    <i class="fas fa-tags"></i> View Pricing
-                </a>
-            </div>
-            
-            <!-- Domain Search Box -->
-            <div class="domain-search-box">
-                <h3 class="domain-search-title">Find Your Perfect Domain</h3>
-                <form class="domain-search-form" data-whmcs-url="<?php echo WHMCS_URL; ?>" data-check-mode="register" data-default-tld=".com">
-                    <div class="domain-input-wrapper">
-                        <span>www.</span>
-                        <input type="text" 
-                               class="domain-input" 
-                               placeholder="yourdomain" 
-                               name="domain" 
-                               required>
-                    </div>
-                    <button type="submit" class="btn btn-primary domain-search-btn">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                </form>
-                <div class="domain-search-result" aria-live="polite"></div>
-                <div class="popular-extensions">
-                    <span class="extension-tag" data-tld=".com" data-price-type="register">
-                        .com <span class="extension-price" data-price-bdt="1600">
-                            <?php echo formatPrice(1600); ?>
-                        </span>
-                    </span>
-                    <span class="extension-tag" data-tld=".net" data-price-type="register">
-                        .net <span class="extension-price" data-price-bdt="1900">
-                            <?php echo formatPrice(1900); ?>
-                        </span>
-                    </span>
-                    <span class="extension-tag" data-tld=".org" data-price-type="register">
-                        .org <span class="extension-price" data-price-bdt="1800">
-                            <?php echo formatPrice(1800); ?>
-                        </span>
-                    </span>
-                    <span class="extension-tag" data-tld=".xyz" data-price-type="register">
-                        .xyz <span class="extension-price" data-price-bdt="500">
-                            <?php echo formatPrice(500); ?>
-                        </span>
-                    </span>
+        <div class="service-hero">
+            <div class="hero-content hero-content-left">
+                <span class="section-subtitle"><i class="fas fa-rocket"></i> Premium Hosting</span>
+                <h1 class="hero-title">
+                    Fast, Secure & Optimized<br>
+                    <span class="text-highlight">Web Hosting</span> for Your Business
+                </h1>
+                <p class="hero-subtitle">
+                    Lightning-fast SSD hosting with Imunify AV+ security, 99.9% uptime guarantee, 
+                    and 24/7 dedicated support. Start your online journey today!
+                </p>
+                <div class="hero-cta">
+                    <a href="<?php echo WHMCS_DOMAIN_REGISTER; ?>" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket"></i> Get Started Now
+                    </a>
+                    <a href="#pricing" class="btn btn-outline btn-lg">
+                        <i class="fas fa-tags"></i> View Pricing
+                    </a>
                 </div>
+                
+                <!-- Domain Search Box -->
+                <div class="domain-search-box">
+                    <h3 class="domain-search-title">Find Your Perfect Domain</h3>
+                    <form class="domain-search-form" data-whmcs-url="<?php echo WHMCS_URL; ?>" data-check-mode="register" data-default-tld=".com">
+                        <div class="domain-input-wrapper">
+                            <span>www.</span>
+                            <input type="text" 
+                                   class="domain-input" 
+                                   placeholder="yourdomain" 
+                                   name="domain" 
+                                   required>
+                        </div>
+                        <button type="submit" class="btn btn-primary domain-search-btn">
+                            <i class="fas fa-magnifying-glass"></i> Search
+                        </button>
+                    </form>
+                    <div class="domain-search-result" aria-live="polite"></div>
+                    <div class="popular-extensions">
+                        <span class="extension-tag" data-tld=".com" data-price-type="register">
+                            .com <span class="extension-price" data-price-bdt="1600">
+                                <?php echo formatPrice(1600); ?>
+                            </span>
+                        </span>
+                        <span class="extension-tag" data-tld=".net" data-price-type="register">
+                            .net <span class="extension-price" data-price-bdt="1900">
+                                <?php echo formatPrice(1900); ?>
+                            </span>
+                        </span>
+                        <span class="extension-tag" data-tld=".org" data-price-type="register">
+                            .org <span class="extension-price" data-price-bdt="1800">
+                                <?php echo formatPrice(1800); ?>
+                            </span>
+                        </span>
+                        <span class="extension-tag" data-tld=".xyz" data-price-type="register">
+                            .xyz <span class="extension-price" data-price-bdt="500">
+                                <?php echo formatPrice(500); ?>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/009f0129c71c -->
+                <img src="<?php echo SITE_URL; ?>/img/home-hero.jpg" alt="Team building a modern website together" loading="lazy">
             </div>
         </div>
     </div>
@@ -108,7 +115,7 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
-            <span class="section-subtitle">Why Choose CarrotHost</span>
+            <span class="section-subtitle"><i class="fas fa-star"></i> Why Choose CarrotHost</span>
             <h2 class="section-title">Powerful Features for Your Success</h2>
             <p class="section-description">
                 Experience enterprise-grade hosting features designed to help your business grow online.
@@ -118,7 +125,7 @@ include 'includes/header.php';
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-tachometer-alt"></i>
+                    <i class="fas fa-gauge-high"></i>
                 </div>
                 <h3 class="feature-title">Lightning Fast Speed</h3>
                 <p class="feature-description">
@@ -128,7 +135,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">Advanced Security</h3>
                 <p class="feature-description">
@@ -158,7 +165,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-sync-alt"></i>
+                    <i class="fas fa-arrows-rotate"></i>
                 </div>
                 <h3 class="feature-title">Automatic Backups</h3>
                 <p class="feature-description">
@@ -183,6 +190,13 @@ include 'includes/header.php';
 <!-- Stats Section -->
 <section class="section section-bg">
     <div class="container">
+        <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-chart-line"></i> Trusted by Businesses</span>
+            <h2 class="section-title">Proven Hosting at Scale</h2>
+            <p class="section-description">
+                Reliable performance metrics that show why thousands of customers choose CarrotHost.
+            </p>
+        </div>
         <div class="stats-grid">
             <div class="stat-item">
                 <div class="stat-number" data-count="5000">0</div>
@@ -207,6 +221,7 @@ include 'includes/header.php';
 <!-- CTA Section -->
 <section class="cta-section">
     <div class="container">
+        <span class="section-subtitle"><i class="fas fa-arrow-right"></i> Get Started</span>
         <h2 class="section-title">Ready to Get Started?</h2>
         <p class="section-description">
             Join thousands of satisfied customers who trust CarrotHost for their web hosting needs. 

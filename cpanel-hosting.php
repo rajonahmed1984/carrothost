@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'cPanel Hosting Plans - Fast & Secure Web Hosting';
-$metaDescription = 'Professional cPanel hosting with SSD storage, free SSL, daily backups, and 24/7 support. Choose from Basic, Standard, or Premium hosting plans starting from just ৳500/month.';
+$metaDescription = 'Professional cPanel hosting in Bangladesh with SSD storage, free SSL, LiteSpeed, daily backups, and 24/7 support. Plans start from just BDT 500/month.';
 $metaKeywords = 'cpanel hosting bangladesh, cpanel web hosting, ssd cpanel hosting, cheap cpanel hosting bd, cpanel hosting price';
 
 include 'includes/header.php';
@@ -15,27 +15,30 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<!-- Page Header -->
-<div class="page-header">
-    <div class="container">
-        <h1 class="page-header-title">cPanel Hosting</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>cPanel Hosting</span>
-        </div>
-    </div>
-</div>
-
 <!-- Intro Section -->
-<section class="section">
+<section class="section hero-section">
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Professional cPanel Web Hosting</h2>
-            <p class="section-description">
-                Experience powerful, reliable, and user-friendly cPanel hosting with SSD storage, 
-                free SSL certificates, and 24/7 expert support. Perfect for websites of all sizes.
-            </p>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-cpanel"></i> cPanel Hosting</span>
+                <h1 class="section-title">Professional cPanel Web Hosting</h1>
+                <p class="section-description">
+                    Experience powerful, reliable, and user-friendly cPanel hosting with SSD storage, 
+                    free SSL certificates, and 24/7 expert support. Perfect for websites of all sizes.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-cart-shopping"></i> View Plans
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Need Help?
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/98d2b5aba04b -->
+                <img src="<?php echo SITE_URL; ?>/img/cpanel-hero.jpg" alt="cPanel hosting dashboard on a laptop" loading="lazy">
+            </div>
         </div>
         
         <!-- Features Grid -->
@@ -52,7 +55,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-hdd"></i>
+                    <i class="fas fa-hard-drive"></i>
                 </div>
                 <h3 class="feature-title">Pure SSD Storage</h3>
                 <p class="feature-description">
@@ -104,9 +107,10 @@ include 'includes/header.php';
 </section>
 
 <!-- Pricing Section -->
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">Choose Your Perfect Plan</h2>
             <p class="section-description">
                 All plans include 24/7 support, free SSL, daily backups, and 99.9% uptime guarantee
@@ -131,14 +135,14 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> 2 GB Email Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 10 GB Hosting Storage</li>
-                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
-                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> 10 Email Accounts</li>
+                    <li><i class="fas fa-circle-check"></i> 2 GB Email Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 10 GB Hosting Storage</li>
+                    <li><i class="fas fa-circle-check"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-circle-check"></i> UNLIMITED Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> LiteSpeed Web Server</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(1); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="1">
@@ -164,14 +168,14 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> 20 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB Email Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 20 GB Hosting Storage</li>
-                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
-                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> 20 Email Accounts</li>
+                    <li><i class="fas fa-circle-check"></i> 4 GB Email Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 20 GB Hosting Storage</li>
+                    <li><i class="fas fa-circle-check"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-circle-check"></i> UNLIMITED Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> LiteSpeed Web Server</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(2); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="2">
@@ -196,14 +200,14 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> 30 Email Accounts</li>
-                    <li><i class="fas fa-check-circle"></i> 6 GB Email Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 30 GB Hosting Storage</li>
-                    <li><i class="fas fa-check-circle"></i> Proactive Malware Scanning</li>
-                    <li><i class="fas fa-check-circle"></i> UNLIMITED Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> LiteSpeed Web Server</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> 30 Email Accounts</li>
+                    <li><i class="fas fa-circle-check"></i> 6 GB Email Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 30 GB Hosting Storage</li>
+                    <li><i class="fas fa-circle-check"></i> Proactive Malware Scanning</li>
+                    <li><i class="fas fa-circle-check"></i> UNLIMITED Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> LiteSpeed Web Server</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(3); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="3">
@@ -218,13 +222,14 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-server"></i> Specs</span>
             <h2 class="section-title">Technical Specifications</h2>
             <p class="section-description">
                 Powered by enterprise-grade hardware and software
             </p>
         </div>
         
-        <div class="comparison-table-wrapper">
+        <div class="comparison-table-wrapper narrow">
             <table class="comparison-table">
                 <thead>
                     <tr>
@@ -288,7 +293,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-shopping-cart"></i> Order Now
+                <i class="fas fa-cart-shopping"></i> Order Now
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Need Help? Chat with Us
@@ -298,3 +303,5 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+
+

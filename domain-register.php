@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'Domain Registration - Register Your Domain Name';
-$metaDescription = 'Register your perfect domain name with CarrotHost. Choose from .com, .net, .org, .bd, and 500+ domain extensions. Affordable prices and free WHOIS privacy.';
+$metaDescription = 'Register your perfect domain name with CarrotHost. Choose .com, .net, .org, .bd, and 500+ extensions with instant activation, free DNS, and WHOIS privacy.';
 $metaKeywords = 'domain registration, register domain, buy domain, domain name, cheap domain bangladesh';
 
 include 'includes/header.php';
@@ -15,28 +15,31 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<div class="page-header">
+<section class="section hero-section">
     <div class="container">
-        <h1 class="page-header-title">Register a New Domain</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>Domain Registration</span>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-globe"></i> Domain Registration</span>
+                <h1 class="section-title">Find Your Perfect Domain Name</h1>
+                <p class="section-description">
+                    Search and register your ideal domain name from 500+ extensions. Start building your online presence today!
+                </p>
+                <div class="hero-cta">
+                    <a class="btn btn-primary" href="#domain-search">
+                        <i class="fas fa-magnifying-glass"></i> Search Domain
+                    </a>
+                    <a class="btn btn-outline" href="<?php echo SITE_URL; ?>/domain-transfer">
+                        <i class="fas fa-right-left"></i> Transfer a Domain
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/c5249f4df085 -->
+                <img src="<?php echo SITE_URL; ?>/img/domain-hero.jpg" alt="Laptop showing a domain search workflow" loading="lazy">
+            </div>
         </div>
-    </div>
-</div>
 
-<!-- Domain Search Section -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Find Your Perfect Domain Name</h2>
-            <p class="section-description">
-                Search and register your ideal domain name from 500+ extensions. Start building your online presence today!
-            </p>
-        </div>
-        
-        <div class="domain-search-box" style="max-width: 900px; margin: 2rem auto;">
+        <div class="domain-search-box" id="domain-search">
             <form class="domain-search-form" data-whmcs-url="<?php echo WHMCS_URL; ?>" data-check-mode="register" data-default-tld=".com">
                 <div class="domain-input-wrapper">
                     <span>www.</span>
@@ -47,7 +50,7 @@ include 'includes/header.php';
                            required>
                 </div>
                 <button type="submit" class="btn btn-primary domain-search-btn">
-                    <i class="fas fa-search"></i> Search Domain
+                    <i class="fas fa-magnifying-glass"></i> Search Domain
                 </button>
             </form>
             <div class="domain-search-result" aria-live="polite"></div>
@@ -59,6 +62,7 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Popular Picks</span>
             <h2 class="section-title">Featured Extensions</h2>
             <p class="section-description">Top picks with live pricing</p>
         </div>
@@ -91,6 +95,7 @@ include 'includes/header.php';
 <section class="section section-bg">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-chart-line"></i> Live Pricing</span>
             <h2 class="section-title">Domain Pricing</h2>
             <p class="section-description">
                 Browse extensions by category with live WHMCS pricing
@@ -140,13 +145,17 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-shield-halved"></i> Why CarrotHost</span>
             <h2 class="section-title">Why Register Your Domain with CarrotHost?</h2>
+            <p class="section-description">
+                Everything you need to secure, manage, and grow your domain in one place.
+            </p>
         </div>
         
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">Free WHOIS Privacy</h3>
                 <p class="feature-description">
@@ -166,7 +175,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-sync-alt"></i>
+                    <i class="fas fa-arrows-rotate"></i>
                 </div>
                 <h3 class="feature-title">Auto-Renewal</h3>
                 <p class="feature-description">
@@ -216,7 +225,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_DOMAIN_REGISTER; ?>" class="btn btn-lg">
-                <i class="fas fa-search"></i> Search Domain
+                <i class="fas fa-magnifying-glass"></i> Search Domain
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Need Help?
@@ -226,3 +235,4 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+

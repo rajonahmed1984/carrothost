@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'Xeon VPS Hosting - Intel Xeon Powered Virtual Servers';
-$metaDescription = 'High-performance Xeon VPS hosting with Intel Xeon processors, NVMe SSD storage, and unmetered bandwidth. Perfect for business applications and high-traffic websites.';
+$metaDescription = 'High-performance Xeon VPS hosting with Intel Xeon processors, NVMe SSD storage, and unmetered bandwidth for business applications and high-traffic websites.';
 $metaKeywords = 'xeon vps, intel xeon vps, xeon vps hosting, enterprise vps, high performance vps';
 
 include 'includes/header.php';
@@ -15,25 +15,29 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<div class="page-header">
+<section class="section hero-section">
     <div class="container">
-        <h1 class="page-header-title">Intel Xeon VPS Hosting</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>Xeon VPS</span>
-        </div>
-    </div>
-</div>
-
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Enterprise-Grade Intel Xeon VPS</h2>
-            <p class="section-description">
-                Powered by Intel Xeon processors with NVMe SSD storage for maximum performance. 
-                Ideal for demanding applications, databases, and high-traffic websites.
-            </p>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-microchip"></i> Xeon VPS</span>
+                <h1 class="section-title">Enterprise-Grade Intel Xeon VPS</h1>
+                <p class="section-description">
+                    Powered by Intel Xeon processors with NVMe SSD storage for maximum performance. 
+                    Ideal for demanding applications, databases, and high-traffic websites.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-cart-shopping"></i> View Plans
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Chat with Us
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/4636190af475 -->
+                <img src="<?php echo SITE_URL; ?>/img/xeon-hero.jpg" alt="Enterprise server infrastructure" loading="lazy">
+            </div>
         </div>
         
         <div class="features-grid">
@@ -100,9 +104,10 @@ include 'includes/header.php';
     </div>
 </section>
 
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">Xeon VPS Plans</h2>
             <p class="section-description">
                 All plans include KVM virtualization, unmetered bandwidth, and 99.9% uptime SLA
@@ -126,12 +131,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
-                    <li><i class="fas fa-check-circle"></i> 15 GB On-Board NVMe Drive</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Threads/vCPU</li>
-                    <li><i class="fas fa-check-circle"></i> 2 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (1TB Outgoing Transfer Limit /month)</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-circle-check"></i> 15 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Threads/vCPU</li>
+                    <li><i class="fas fa-circle-check"></i> 2 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbit/s-Port (1TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(30); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="30">
@@ -156,15 +161,15 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
-                    <li><i class="fas fa-check-circle"></i> 100 GB On-Board NVMe Drive</li>
-                    <li><i class="fas fa-check-circle"></i> 10 Threads/vCPU</li>
-                    <li><i class="fas fa-check-circle"></i> 10 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (5 TB Outgoing Transfer Limit /month)</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
-                    <li><i class="fas fa-check-circle"></i> Transactional Emails</li>
-                    <li><i class="fas fa-check-circle"></i> Email Forwarding</li>
-                    <li><i class="fas fa-check-circle"></i> WP Management</li>
+                    <li><i class="fas fa-circle-check"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-circle-check"></i> 100 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-circle-check"></i> 10 Threads/vCPU</li>
+                    <li><i class="fas fa-circle-check"></i> 10 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbit/s-Port (5 TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> Transactional Emails</li>
+                    <li><i class="fas fa-circle-check"></i> Email Forwarding</li>
+                    <li><i class="fas fa-circle-check"></i> WP Management</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(31); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="31">
@@ -188,15 +193,15 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Xeon Platinum CPUs</li>
-                    <li><i class="fas fa-check-circle"></i> 500 GB On-Board NVMe Drive</li>
-                    <li><i class="fas fa-check-circle"></i> 30 Threads/vCPU</li>
-                    <li><i class="fas fa-check-circle"></i> 64 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbit/s-Port (23 TB Outgoing Transfer Limit /month)</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
-                    <li><i class="fas fa-check-circle"></i> Transactional Emails</li>
-                    <li><i class="fas fa-check-circle"></i> Email Forwarding</li>
-                    <li><i class="fas fa-check-circle"></i> WP Management</li>
+                    <li><i class="fas fa-circle-check"></i> Xeon Platinum CPUs</li>
+                    <li><i class="fas fa-circle-check"></i> 500 GB On-Board NVMe Drive</li>
+                    <li><i class="fas fa-circle-check"></i> 30 Threads/vCPU</li>
+                    <li><i class="fas fa-circle-check"></i> 64 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbit/s-Port (23 TB Outgoing Transfer Limit /month)</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> Transactional Emails</li>
+                    <li><i class="fas fa-circle-check"></i> Email Forwarding</li>
+                    <li><i class="fas fa-circle-check"></i> WP Management</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(33); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="33">
@@ -205,7 +210,8 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <div class="section-header" style="margin-top: 3rem;">
+        <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-sliders"></i> Custom</span>
             <h3 class="section-title">Intel Xeon Custom Profile</h3>
             <p class="section-description">
                 Customizable Xeon configuration for specific workloads
@@ -228,10 +234,10 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> Storage 50 GB</li>
-                    <li><i class="fas fa-check-circle"></i> CPU Power 5 Threads</li>
-                    <li><i class="fas fa-check-circle"></i> Memory 5 GB</li>
-                    <li><i class="fas fa-check-circle"></i> Bandwidth 1 Gbit/s-Port</li>
+                    <li><i class="fas fa-circle-check"></i> Storage 50 GB</li>
+                    <li><i class="fas fa-circle-check"></i> CPU Power 5 Threads</li>
+                    <li><i class="fas fa-circle-check"></i> Memory 5 GB</li>
+                    <li><i class="fas fa-circle-check"></i> Bandwidth 1 Gbit/s-Port</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(32); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="32">
@@ -250,7 +256,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-shopping-cart"></i> Order Now
+                <i class="fas fa-cart-shopping"></i> Order Now
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Chat with Us
@@ -260,3 +266,5 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+
+

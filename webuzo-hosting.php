@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'Webuzo VPS Hosting - Powerful VPS with Webuzo Panel';
-$metaDescription = 'Affordable Webuzo VPS hosting with full root access, SSD storage, and easy application management. Perfect for developers and agencies.';
+$metaDescription = 'Affordable Webuzo VPS hosting with full root access, SSD storage, and one-click app management for developers, agencies, and growing businesses.';
 $metaKeywords = 'webuzo hosting, webuzo vps, vps with webuzo, cheap webuzo hosting, webuzo control panel';
 
 include 'includes/header.php';
@@ -15,27 +15,30 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<!-- Page Header -->
-<div class="page-header">
-    <div class="container">
-        <h1 class="page-header-title">Webuzo VPS Hosting</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>Webuzo Hosting</span>
-        </div>
-    </div>
-</div>
-
 <!-- Intro Section -->
-<section class="section">
+<section class="section hero-section">
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">VPS Hosting with Webuzo Control Panel</h2>
-            <p class="section-description">
-                Get the power of VPS with the ease of Webuzo control panel. Install 450+ applications 
-                with one click, manage domains, email, databases, and more.
-            </p>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-layer-group"></i> Webuzo VPS</span>
+                <h1 class="section-title">VPS Hosting with Webuzo Control Panel</h1>
+                <p class="section-description">
+                    Get the power of VPS with the ease of Webuzo control panel. Install 450+ applications 
+                    with one click, manage domains, email, databases, and more.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-cart-shopping"></i> View Plans
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Chat with Expert
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/c5249f4df085 -->
+                <img src="<?php echo SITE_URL; ?>/img/webuzo-hero.jpg" alt="Webuzo control panel workspace" loading="lazy">
+            </div>
         </div>
         
         <!-- Features Grid -->
@@ -82,7 +85,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">DDoS Protection</h3>
                 <p class="feature-description">
@@ -104,9 +107,10 @@ include 'includes/header.php';
 </section>
 
 <!-- Pricing Section -->
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">Webuzo VPS Plans</h2>
             <p class="section-description">
                 All plans include Webuzo control panel, full root access, and 24/7 support
@@ -131,12 +135,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 5 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 250 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
-                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 5 GB SSD Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 250 GB Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> Standard Performance</li>
+                    <li><i class="fas fa-circle-check"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(10); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="10">
@@ -162,12 +166,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 10 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 500 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
-                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 10 GB SSD Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 500 GB Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> Standard Performance</li>
+                    <li><i class="fas fa-circle-check"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(11); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="11">
@@ -192,12 +196,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 20 GB SSD Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 1000 GB Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Website</li>
-                    <li><i class="fas fa-check-circle"></i> Standard Performance</li>
-                    <li><i class="fas fa-check-circle"></i> Vulnerability Protection</li>
-                    <li><i class="fas fa-check-circle"></i> SSL Certificates</li>
+                    <li><i class="fas fa-circle-check"></i> 20 GB SSD Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 1000 GB Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Website</li>
+                    <li><i class="fas fa-circle-check"></i> Standard Performance</li>
+                    <li><i class="fas fa-circle-check"></i> Vulnerability Protection</li>
+                    <li><i class="fas fa-circle-check"></i> SSL Certificates</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(12); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="12">
@@ -212,13 +216,14 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-boxes-stacked"></i> Webuzo Tools</span>
             <h2 class="section-title">What's Included with Webuzo?</h2>
         </div>
         
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-cloud-download-alt"></i>
+                    <i class="fas fa-cloud-arrow-down"></i>
                 </div>
                 <h3 class="feature-title">450+ Applications</h3>
                 <p class="feature-description">
@@ -288,7 +293,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-shopping-cart"></i> Order Now
+                <i class="fas fa-cart-shopping"></i> Order Now
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Chat with Expert
@@ -298,3 +303,5 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+
+

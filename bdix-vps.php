@@ -7,7 +7,7 @@
 require_once 'config.php';
 
 $pageTitle = 'BDIX VPS Hosting Bangladesh - Local High-Speed VPS';
-$metaDescription = 'BDIX VPS hosting with ultra-fast local Bangladesh connectivity. Perfect for streaming, gaming, file sharing, and content delivery with unlimited BDIX bandwidth.';
+$metaDescription = 'BDIX VPS hosting with ultra-fast local Bangladesh connectivity, SSD storage, and high bandwidth for streaming, gaming, file sharing, and content delivery.';
 $metaKeywords = 'bdix vps, bangladesh vps, bdix hosting, local vps bangladesh, bdix vps hosting, streaming vps bd';
 
 include 'includes/header.php';
@@ -15,27 +15,30 @@ include 'includes/header.php';
 
 <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
 
-<!-- Page Header -->
-<div class="page-header">
-    <div class="container">
-        <h1 class="page-header-title">BDIX VPS Hosting</h1>
-        <div class="page-header-breadcrumb">
-            <a href="<?php echo SITE_URL; ?>"><i class="fas fa-home"></i> Home</a>
-            <i class="fas fa-chevron-right"></i>
-            <span>BDIX VPS</span>
-        </div>
-    </div>
-</div>
-
 <!-- Intro Section -->
-<section class="section">
+<section class="section hero-section">
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Bangladesh Internet Exchange (BDIX) VPS</h2>
-            <p class="section-description">
-                Experience lightning-fast local connectivity with BDIX VPS hosting. Perfect for streaming 
-                servers, game servers, file sharing, and content delivery within Bangladesh.
-            </p>
+        <div class="service-hero">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-gauge-high"></i> BDIX VPS</span>
+                <h1 class="section-title">Bangladesh Internet Exchange (BDIX) VPS</h1>
+                <p class="section-description">
+                    Experience lightning-fast local connectivity with BDIX VPS hosting. Perfect for streaming 
+                    servers, game servers, file sharing, and content delivery within Bangladesh.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-cart-shopping"></i> Order BDIX VPS
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Need Guidance?
+                    </a>
+                </div>
+            </div>
+            <div class="service-hero-media">
+                <!-- Unsplash: https://unsplash.com/photos/0ad4aaf24ca7 -->
+                <img src="<?php echo SITE_URL; ?>/img/bdix-hero.jpg" alt="Server racks and network cables" loading="lazy">
+            </div>
         </div>
         
         <!-- BDIX Benefits -->
@@ -82,7 +85,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-map-marker-alt"></i>
+                    <i class="fas fa-location-dot"></i>
                 </div>
                 <h3 class="feature-title">Bangladesh Data Center</h3>
                 <p class="feature-description">
@@ -92,7 +95,7 @@ include 'includes/header.php';
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
+                    <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">DDoS Protection</h3>
                 <p class="feature-description">
@@ -104,9 +107,10 @@ include 'includes/header.php';
 </section>
 
 <!-- BDIX VPS Pricing -->
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">BDIX VPS Plans</h2>
             <p class="section-description">
                 All plans include unlimited BDIX bandwidth, KVM virtualization, and full root access
@@ -130,12 +134,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 2 Cores Core</li>
-                    <li><i class="fas fa-check-circle"></i> 2 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 25 GB Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 1000 GB/m Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
-                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
+                    <li><i class="fas fa-circle-check"></i> 2 Cores Core</li>
+                    <li><i class="fas fa-circle-check"></i> 2 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 25 GB Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 1000 GB/m Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-circle-check"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(20); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="20">
@@ -160,12 +164,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 4 Cores Core</li>
-                    <li><i class="fas fa-check-circle"></i> 4 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 50 GB Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 1500 GB/m Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
-                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
+                    <li><i class="fas fa-circle-check"></i> 4 Cores Core</li>
+                    <li><i class="fas fa-circle-check"></i> 4 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 50 GB Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 1500 GB/m Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-circle-check"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(21); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="21">
@@ -189,12 +193,12 @@ include 'includes/header.php';
                 </div>
                 
                 <ul class="pricing-features">
-                    <li><i class="fas fa-check-circle"></i> 6 Cores Core</li>
-                    <li><i class="fas fa-check-circle"></i> 8 GB RAM</li>
-                    <li><i class="fas fa-check-circle"></i> 100 GB Storage</li>
-                    <li><i class="fas fa-check-circle"></i> 2000 GB/m Bandwidth</li>
-                    <li><i class="fas fa-check-circle"></i> 1 Gbps BDIX</li>
-                    <li><i class="fas fa-check-circle"></i> 100Mbps Internet</li>
+                    <li><i class="fas fa-circle-check"></i> 6 Cores Core</li>
+                    <li><i class="fas fa-circle-check"></i> 8 GB RAM</li>
+                    <li><i class="fas fa-circle-check"></i> 100 GB Storage</li>
+                    <li><i class="fas fa-circle-check"></i> 2000 GB/m Bandwidth</li>
+                    <li><i class="fas fa-circle-check"></i> 1 Gbps BDIX</li>
+                    <li><i class="fas fa-circle-check"></i> 100Mbps Internet</li>
                 </ul>
                 
                 <a href="<?php echo getWHMCSProductURL(22); ?>" class="btn btn-primary pricing-cta" data-whmcs-product="22">
@@ -209,12 +213,13 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-layer-group"></i> Use Cases</span>
             <h2 class="section-title">Perfect For</h2>
         </div>
         
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #f16922 0%, #d95a1c 100%);">
+                <div class="feature-icon">
                     <i class="fas fa-tv"></i>
                 </div>
                 <h3 class="feature-title">IPTV & Streaming</h3>
@@ -224,7 +229,7 @@ include 'includes/header.php';
             </div>
             
             <div class="feature-card">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #f16922 0%, #d95a1c 100%);">
+                <div class="feature-icon">
                     <i class="fas fa-gamepad"></i>
                 </div>
                 <h3 class="feature-title">Game Servers</h3>
@@ -234,8 +239,8 @@ include 'includes/header.php';
             </div>
             
             <div class="feature-card">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #f16922 0%, #d95a1c 100%);">
-                    <i class="fas fa-file-download"></i>
+                <div class="feature-icon">
+                    <i class="fas fa-file-arrow-down"></i>
                 </div>
                 <h3 class="feature-title">File Sharing</h3>
                 <p class="feature-description">
@@ -244,7 +249,7 @@ include 'includes/header.php';
             </div>
             
             <div class="feature-card">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #f16922 0%, #d95a1c 100%);">
+                <div class="feature-icon">
                     <i class="fas fa-cloud"></i>
                 </div>
                 <h3 class="feature-title">CDN & Caching</h3>
@@ -260,10 +265,11 @@ include 'includes/header.php';
 <section class="section section-bg">
     <div class="container">
         <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-server"></i> Specs</span>
             <h2 class="section-title">Technical Specifications</h2>
         </div>
         
-        <div class="comparison-table-wrapper">
+        <div class="comparison-table-wrapper narrow">
             <table class="comparison-table">
                 <thead>
                     <tr>
@@ -323,7 +329,7 @@ include 'includes/header.php';
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-shopping-cart"></i> Order BDIX VPS
+                <i class="fas fa-cart-shopping"></i> Order BDIX VPS
             </a>
             <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
                 <i class="fab fa-whatsapp"></i> Need Guidance?
@@ -333,3 +339,5 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
+
+

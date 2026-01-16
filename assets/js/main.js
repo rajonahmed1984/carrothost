@@ -273,6 +273,14 @@
                     behavior: 'smooth',
                     block: 'start'
                 });
+
+                if (navMenu && navMenu.classList.contains('active')) {
+                    navMenu.classList.remove('active');
+                    if (mobileMenuToggle) {
+                        mobileMenuToggle.classList.remove('active');
+                    }
+                    document.body.style.overflow = '';
+                }
             }
         });
     });
@@ -386,6 +394,7 @@
                 });
         });
     });
+
 
     // ==========================================
     // DOMAIN PRICING BROWSER (CATEGORIES)
@@ -651,7 +660,9 @@
     // COUNTER ANIMATION
     // ==========================================
     function animateCounter(element) {
-        const target = parseInt(element.dataset.count);
+        const rawTarget = element.dataset.count || '0';
+        const target = parseFloat(rawTarget);
+        const decimals = rawTarget.includes('.') ? rawTarget.split('.')[1].length : 0;
         const duration = 2000;
         const step = target / (duration / 16);
         let current = 0;
@@ -659,10 +670,16 @@
         const timer = setInterval(() => {
             current += step;
             if (current >= target) {
-                element.textContent = target.toLocaleString();
+                element.textContent = target.toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                });
                 clearInterval(timer);
             } else {
-                element.textContent = Math.floor(current).toLocaleString();
+                element.textContent = current.toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                });
             }
         }, 16);
     }
