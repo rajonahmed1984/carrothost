@@ -64,7 +64,9 @@
     });
     
     function updatePrices() {
-        const usdRate = 120; // BDT to USD conversion rate
+        const usdRate = (window.__APP_CONFIG__ && typeof window.__APP_CONFIG__.usdToBdtRate === 'number')
+            ? window.__APP_CONFIG__.usdToBdtRate
+            : 120; // BDT to USD conversion rate
         const symbol = currentCurrency === 'BDT' ? '৳' : '$';
         
         document.querySelectorAll('[data-price-bdt]').forEach(element => {

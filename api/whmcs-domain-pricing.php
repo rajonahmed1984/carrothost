@@ -6,13 +6,14 @@
 
 require_once __DIR__ . '/../config.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-if (!WHMCS_API_IDENTIFIER || !WHMCS_API_SECRET) {
-    http_response_code(500);
+if (!WHMCS_API_IDENTIFIER || !WHMCS_API_SECRET || !WHMCS_API_URL) {
+    http_response_code(503);
     echo json_encode([
         'success' => false,
-        'error' => 'WHMCS API credentials are missing.'
+        'ok' => false,
+        'error' => 'Service temporarily unavailable.'
     ]);
     exit;
 }
@@ -43,7 +44,7 @@ if (!$types) {
     $types = ['register' => true];
 }
 
-$apiUrl = rtrim(WHMCS_URL, '/') . '/includes/api.php';
+$apiUrl = WHMCS_API_URL;
 $postFields = [
     'identifier' => WHMCS_API_IDENTIFIER,
     'secret' => WHMCS_API_SECRET,
@@ -62,6 +63,7 @@ if ($response === false) {
     http_response_code(502);
     echo json_encode([
         'success' => false,
+        'ok' => false,
         'error' => 'WHMCS API request failed.'
     ]);
     curl_close($ch);
@@ -76,6 +78,7 @@ if ($status >= 400 || !is_array($data) || ($data['result'] ?? '') !== 'success')
     http_response_code(502);
     echo json_encode([
         'success' => false,
+        'ok' => false,
         'error' => $data['message'] ?? 'Invalid response from WHMCS API.'
     ]);
     exit;
@@ -102,6 +105,7 @@ foreach ($rawPricing as $tld => $details) {
 
 echo json_encode([
     'success' => true,
+    'ok' => true,
     'currency' => $data['currency'] ?? null,
     'pricing' => $pricing
 ]);

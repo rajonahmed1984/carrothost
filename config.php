@@ -22,6 +22,11 @@ define('SITE_URL', $siteScheme . '://' . $siteHost . $siteBase);
 define('SITE_EMAIL', 'support@carrothost.com');
 define('SITE_PHONE', '+8801787882277');
 define('WHATSAPP_NUMBER', '8801787882277');
+define('ASSET_VERSION', '2026-01-16');
+define('GTM_ID', 'GTM-T46T43FF');
+define('GA4_ID', '');
+define('YANDEX_METRICA_ID', '37a44d71328c7cfa');
+define('SITE_ADDRESS', 'Dhaka, Bangladesh');
 
 // Brand Colors
 define('PRIMARY_COLOR', '#f16922'); // Orange - CTA buttons, pricing highlights
@@ -33,6 +38,9 @@ define('WHMCS_CART_URL', WHMCS_URL . '/cart.php');
 define('WHMCS_CLIENT_AREA', WHMCS_URL . '/clientarea.php');
 define('WHMCS_DOMAIN_REGISTER', WHMCS_URL . '/cart.php?a=add&domain=register');
 define('WHMCS_DOMAIN_TRANSFER', WHMCS_URL . '/cart.php?a=add&domain=transfer');
+if (!defined('WHMCS_API_URL')) {
+    define('WHMCS_API_URL', rtrim(WHMCS_URL, '/') . '/includes/api.php');
+}
 if (!defined('WHMCS_API_IDENTIFIER')) {
     define('WHMCS_API_IDENTIFIER', getenv('WHMCS_API_IDENTIFIER') ?: '');
 }
@@ -118,4 +126,159 @@ function getWHMCSProductURL($productId) {
  */
 function getCurrentPage() {
     return basename($_SERVER['PHP_SELF'], '.php');
+}
+
+/**
+ * Build a canonical URL based on the current request path.
+ * @return string
+ */
+function getCanonicalUrl() {
+    $siteUrl = rtrim(SITE_URL, '/');
+    $basePath = parse_url(SITE_URL, PHP_URL_PATH) ?? '';
+    $basePath = rtrim($basePath, '/');
+
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    $path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
+
+    if ($basePath !== '' && strpos($path, $basePath) === 0) {
+        $path = substr($path, strlen($basePath));
+        if ($path === '') {
+            $path = '/';
+        }
+    }
+
+    if ($path !== '/' && substr($path, -1) === '/') {
+        $path = rtrim($path, '/');
+    }
+
+    if ($path === '/index' || $path === '/index.php') {
+        $path = '/';
+    }
+
+    if (substr($path, -4) === '.php') {
+        $path = substr($path, 0, -4);
+        if ($path === '/index') {
+            $path = '/';
+        }
+    }
+
+    return $siteUrl . $path;
+}
+
+/**
+ * Build a canonical URL for a known path (used by sitemap).
+ * @param string $path
+ * @return string
+ */
+function buildCanonicalUrlFromPath($path) {
+    $siteUrl = rtrim(SITE_URL, '/');
+    $cleanPath = '/' . ltrim((string)$path, '/');
+
+    if ($cleanPath === '/index' || $cleanPath === '/index.php') {
+        $cleanPath = '/';
+    }
+
+    if (substr($cleanPath, -4) === '.php') {
+        $cleanPath = substr($cleanPath, 0, -4);
+        if ($cleanPath === '/index') {
+            $cleanPath = '/';
+        }
+    }
+
+    if ($cleanPath !== '/' && substr($cleanPath, -1) === '/') {
+        $cleanPath = rtrim($cleanPath, '/');
+    }
+
+    return $siteUrl . $cleanPath;
+}
+
+function jsonLdScript(array $data) {
+    return '<script type="application/ld+json">' . PHP_EOL
+        . json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        . PHP_EOL . '</script>';
+}
+
+function buildBreadcrumbSchema(array $items) {
+    if (!$items) {
+        return '';
+    }
+
+    $script = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => []
+    ];
+
+    foreach ($items as $index => $item) {
+        if (empty($item['name']) || empty($item['url'])) {
+            continue;
+        }
+        $script['itemListElement'][] = [
+            '@type' => 'ListItem',
+            'position' => $index + 1,
+            'name' => $item['name'],
+            'item' => $item['url']
+        ];
+    }
+
+    if (!$script['itemListElement']) {
+        return '';
+    }
+
+    return jsonLdScript($script);
+}
+
+function buildServiceSchema($type, $name, $description, $url = null, array $offers = null) {
+    if (!$name || !$description) {
+        return '';
+    }
+
+    $script = [
+        '@context' => 'https://schema.org',
+        '@type' => $type ?: 'Service',
+        'name' => $name,
+        'description' => $description
+    ];
+
+    if ($url) {
+        $script['url'] = $url;
+    }
+
+    if ($offers) {
+        $script['offers'] = $offers;
+    }
+
+    return jsonLdScript($script);
+}
+
+function buildFaqSchema(array $faqs) {
+    if (!$faqs) {
+        return '';
+    }
+
+    $script = [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => []
+    ];
+
+    foreach ($faqs as $faq) {
+        if (empty($faq['question']) || empty($faq['answer'])) {
+            continue;
+        }
+        $script['mainEntity'][] = [
+            '@type' => 'Question',
+            'name' => $faq['question'],
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text' => $faq['answer']
+            ]
+        ];
+    }
+
+    if (!$script['mainEntity']) {
+        return '';
+    }
+
+    return jsonLdScript($script);
 }

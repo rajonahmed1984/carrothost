@@ -48,6 +48,7 @@
                         <div class="footer-contact">
                             <span><i class="fas fa-phone"></i> <?php echo SITE_PHONE; ?></span>
                             <span><i class="fas fa-envelope"></i> <?php echo SITE_EMAIL; ?></span>
+                            <span><i class="fas fa-location-dot"></i> <?php echo SITE_ADDRESS; ?></span>
                         </div>
                     </div>
                     <div class="footer-col">
@@ -133,7 +134,6 @@
     <?php endif; ?>
 </body>
 </html>
-
 
 
 

@@ -23,7 +23,7 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
 
 foreach ($pages as $page) {
-    $url = rtrim(SITE_URL, '/') . ($page['path'] !== '' ? '/' . $page['path'] : '/');
+    $url = buildCanonicalUrlFromPath($page['path']);
     $filePath = __DIR__ . '/' . $page['file'];
     $lastmod = file_exists($filePath) ? date('Y-m-d', filemtime($filePath)) : date('Y-m-d');
     $priority = $page['priority'];

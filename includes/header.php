@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- Yandex Search Console Verification -->
+    <meta name="yandex-verification" content="37a44d71328c7cfa" />
     
     <!-- SEO Meta Tags -->
     <title><?php echo isset($pageTitle) ? $pageTitle . ' - ' . SITE_NAME : SITE_NAME . ' - ' . SITE_TAGLINE; ?></title>
     <meta name="description" content="<?php echo $metaDescription ?? 'Professional web hosting services in Bangladesh with 24/7 support. cPanel hosting, VPS, dedicated servers, and domain registration at affordable prices.'; ?>">
     <meta name="keywords" content="<?php echo $metaKeywords ?? META_KEYWORDS; ?>">
     <meta name="author" content="<?php echo META_AUTHOR; ?>">
-    <link rel="canonical" href="<?php echo SITE_URL . '/' . basename($_SERVER['PHP_SELF'], '.php'); ?>">
-    <meta name="google-site-verification" content="googleff102cbf176e0195.html">
+    <link rel="canonical" href="<?php echo htmlspecialchars(getCanonicalUrl(), ENT_QUOTES, 'UTF-8'); ?>">
     <meta name="msvalidate.01" content="FE3E4A2C892331030670F3F2CA6F0A09">
     
     <!-- Open Graph Meta Tags -->
@@ -33,7 +35,8 @@
     <link rel="apple-touch-icon" href="<?php echo SITE_URL; ?>/img/apple-touch-icon.png">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css?v=<?php echo ASSET_VERSION; ?>">
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css?v=<?php echo ASSET_VERSION; ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts -->
@@ -66,8 +69,16 @@
     <?php if (isset($additionalSchema)): ?>
         <?php echo $additionalSchema; ?>
     <?php endif; ?>
+
+    <script>
+        window.__APP_CONFIG__ = {
+            usdToBdtRate: <?php echo json_encode(USD_TO_BDT_RATE); ?>
+        };
+    </script>
+    <?php include __DIR__ . '/analytics-head.php'; ?>
 </head>
 <body data-site-url="<?php echo SITE_URL; ?>">
+    <?php include __DIR__ . '/analytics-body.php'; ?>
     <!-- Header -->
     <header class="site-header">
         <!-- Top Bar -->
@@ -195,12 +206,25 @@
                                 </div>
                             </div>
                         </li>
+                        
+                        <li class="nav-item nav-item-mobile-actions">
+                            <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="nav-link nav-link-muted">
+                                <i class="fas fa-circle-user"></i> Client Area
+                            </a>
+                            <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-primary nav-cta">
+                                <i class="fas fa-rocket"></i> Get Started
+                            </a>
+                        </li>
                     </ul>
                     
-                    <!-- CTA Button -->
-                    <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-primary nav-cta">
-                        Order Now
-                    </a>
+                    <div class="nav-actions">
+                        <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="nav-link nav-link-muted">
+                            <i class="fas fa-circle-user"></i> Client Area
+                        </a>
+                        <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-primary nav-cta">
+                            Get Started
+                        </a>
+                    </div>
                 </div>
             </div>
         </nav>

@@ -10,96 +10,168 @@ $pageTitle = 'Dedicated Server Hosting - Fully Managed Dedicated Servers';
 $metaDescription = 'Enterprise-grade dedicated servers with Intel Xeon processors, NVMe storage, unmetered bandwidth, and managed support for high-traffic websites and applications.';
 $metaKeywords = 'dedicated server bangladesh, managed dedicated server, enterprise server, bare metal server';
 
+$dedicatedBreadcrumb = [
+    ['name' => 'Home', 'url' => buildCanonicalUrlFromPath('')],
+    ['name' => 'Dedicated Server', 'url' => buildCanonicalUrlFromPath('dedicated-server')]
+];
+$dedicatedFaq = [
+    ['question' => 'Do you offer managed services?', 'answer' => 'Yes, we manage OS updates, security, and monitoring so you can focus on your business.'],
+    ['question' => 'Can I customize hardware?', 'answer' => 'We tailor CPU, storage, and RAM to match your workload and compliance needs.'],
+    ['question' => 'What kind of network do you provide?', 'answer' => '10 Gbps ports with multiple Tier 1 carriers and redundant uplinks.'],
+    ['question' => 'How long does provisioning take?', 'answer' => 'Most dedicated servers are provisioned within 24-48 hours with your OS choice.' ]
+];
+$dedicatedOffers = [
+    '@type' => 'Service',
+    'serviceType' => 'Dedicated Server Hosting',
+    'provider' => [
+        '@type' => 'Organization',
+        'name' => SITE_NAME,
+        'url' => SITE_URL
+    ]
+];
+$schemaParts = [
+    buildBreadcrumbSchema($dedicatedBreadcrumb),
+    buildServiceSchema('Service', 'Dedicated Server Hosting', 'Enterprise-grade bare metal servers with managed support and premium networking.', SITE_URL . '/dedicated-server', $dedicatedOffers),
+    buildFaqSchema($dedicatedFaq)
+];
+$additionalSchema = implode("\n", array_filter($schemaParts));
+
 include 'includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/components.css">
+<section class="section hero-section">
+    <div class="container">
+        <div class="service-hero hero-split">
+            <div class="section-header">
+                <span class="section-subtitle"><i class="fas fa-server"></i> Dedicated Servers</span>
+                <h1 class="section-title">Bare metal performance with full control</h1>
+                <p class="section-description">
+                    Get dedicated hardware, managed support, and enterprise networking for mission-critical
+                    workloads. Ideal for high-traffic platforms, databases, and compliance-heavy workloads.
+                </p>
+                <div class="hero-cta">
+                    <a href="#plans" class="btn btn-primary">
+                        <i class="fas fa-cart-shopping"></i> View Plans
+                    </a>
+                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
+                        <i class="fab fa-whatsapp"></i> Request Consultation
+                    </a>
+                </div>
+                <div class="hero-metrics">
+                    <div class="hero-metric">
+                        <strong>99.99%</strong>
+                        <span>Uptime SLA</span>
+                    </div>
+                    <div class="hero-metric">
+                        <strong>10 Gbps</strong>
+                        <span>Network ready</span>
+                    </div>
+                    <div class="hero-metric">
+                        <strong>24/7</strong>
+                        <span>Managed support</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-media">
+                <img src="<?php echo SITE_URL; ?>/img/hero-server.jpg" alt="Dedicated server hardware" loading="lazy">
+                <div class="hero-callout">
+                    <span>Dedicated Hardware</span>
+                    <strong>Single-tenant performance</strong>
+                </div>
+                <div class="hero-callout hero-callout-secondary">
+                    <span>Management</span>
+                    <strong>Enterprise support</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="trust-strip">
+            <div class="trust-item"><i class="fas fa-server"></i> 100% dedicated resources</div>
+            <div class="trust-item"><i class="fas fa-network-wired"></i> Premium network</div>
+            <div class="trust-item"><i class="fas fa-shield-halved"></i> Hardware RAID</div>
+            <div class="trust-item"><i class="fas fa-user-tie"></i> Priority support</div>
+        </div>
+    </div>
+</section>
 
 <section class="section">
     <div class="container">
-        <div class="service-hero">
-            <div class="section-header service-hero-copy">
-                <h2 class="section-title">Enterprise-Grade Dedicated Servers</h2>
-                <p class="section-description">
-                    Get complete control with fully dedicated physical servers. Perfect for mission-critical 
-                    applications, high-traffic websites, and resource-intensive workloads.
-                </p>
-            </div>
-            <div class="service-hero-media">
-                <img src="<?php echo SITE_URL; ?>/img/hero-server.jpg" alt="Dedicated server hardware" loading="lazy">
-            </div>
+        <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-star"></i> Enterprise Features</span>
+            <h2 class="section-title">Built for critical workloads</h2>
         </div>
-        
+
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-server"></i>
                 </div>
-                <h3 class="feature-title">100% Dedicated Resources</h3>
+                <h3 class="feature-title">Dedicated resources</h3>
                 <p class="feature-description">
-                    Entire physical server dedicated to you with no sharing of CPU, RAM, or storage.
+                    Full CPU, RAM, and storage resources reserved for your workloads.
                 </p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-gear"></i>
                 </div>
-                <h3 class="feature-title">Fully Managed</h3>
+                <h3 class="feature-title">Fully managed</h3>
                 <p class="feature-description">
-                    Complete server management including OS installation, updates, and monitoring.
+                    OS installs, updates, monitoring, and security handled by our team.
                 </p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-network-wired"></i>
                 </div>
-                <h3 class="feature-title">Enterprise Network</h3>
+                <h3 class="feature-title">Enterprise network</h3>
                 <p class="feature-description">
-                    10 Gbps port with premium bandwidth and multiple upstream providers.
+                    Multi-carrier connectivity with redundant uplinks for reliability.
                 </p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-shield-halved"></i>
                 </div>
                 <h3 class="feature-title">Hardware RAID</h3>
                 <p class="feature-description">
-                    Enterprise hardware RAID controllers with battery backup for data protection.
+                    RAID arrays protect data and improve storage performance.
                 </p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3 class="feature-title">99.99% Uptime SLA</h3>
+                <h3 class="feature-title">99.99% uptime SLA</h3>
                 <p class="feature-description">
-                    Industry-leading uptime guarantee with redundant power and network.
+                    Redundant power, cooling, and networking for reliable uptime.
                 </p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-user-tie"></i>
                 </div>
-                <h3 class="feature-title">Dedicated Support</h3>
+                <h3 class="feature-title">Dedicated support</h3>
                 <p class="feature-description">
-                    Priority 24/7 support with dedicated account manager for enterprise clients.
+                    Priority assistance with a dedicated account manager available.
                 </p>
             </div>
         </div>
     </div>
 </section>
 
-<section class="section section-bg">
+<section class="section section-bg" id="plans">
     <div class="container">
         <div class="section-header">
-            <h2 class="section-title">Dedicated Server Plans</h2>
+            <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
+            <h2 class="section-title">Dedicated server plans</h2>
             <p class="section-description">
-                Enterprise-grade hardware with transparent monthly pricing
+                Enterprise-grade hardware with transparent monthly pricing.
             </p>
         </div>
 
@@ -298,9 +370,10 @@ include 'includes/header.php';
 <section class="section">
     <div class="container">
         <div class="section-header">
-            <h2 class="section-title">Why Choose Our Dedicated Servers?</h2>
+            <span class="section-subtitle"><i class="fas fa-list-check"></i> Specifications</span>
+            <h2 class="section-title">What you can expect</h2>
         </div>
-        
+
         <div class="comparison-table-wrapper">
             <table class="comparison-table">
                 <thead>
@@ -348,11 +421,39 @@ include 'includes/header.php';
     </div>
 </section>
 
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-subtitle"><i class="fas fa-circle-question"></i> FAQs</span>
+            <h2 class="section-title">Dedicated server FAQs</h2>
+        </div>
+
+        <div class="faq-accordion">
+            <details class="faq-item">
+                <summary>Is dedicated hosting fully managed?</summary>
+                <p>Yes. We provide OS setup, monitoring, and support.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Can I customize the hardware?</summary>
+                <p>Yes. We can tailor CPU, RAM, storage, and RAID to your needs.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Do you provide migration help?</summary>
+                <p>Our team can assist with data and workload migration.</p>
+            </details>
+            <details class="faq-item">
+                <summary>How long does provisioning take?</summary>
+                <p>Most servers are provisioned within 24-48 hours.</p>
+            </details>
+        </div>
+    </div>
+</section>
+
 <section class="cta-section">
     <div class="container">
-        <h2 class="section-title">Need a Custom Configuration?</h2>
+        <h2 class="section-title">Need a custom configuration?</h2>
         <p class="section-description">
-            Contact us for custom dedicated server configurations tailored to your specific requirements.
+            Contact us for a dedicated server tailored to your exact requirements.
         </p>
         <div class="cta-buttons">
             <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
@@ -366,6 +467,3 @@ include 'includes/header.php';
 </section>
 
 <?php include 'includes/footer.php'; ?>
-
-
-

@@ -1,0 +1,12 @@
+<?php
+/**
+ * Local configuration overrides (do not commit real secrets).
+ */
+
+// WHMCS API credentials
+define('WHMCS_API_IDENTIFIER', 'your_whmcs_api_identifier');
+define('WHMCS_API_SECRET', 'your_whmcs_api_secret');
+
+// Optional: custom API endpoint
+// define('WHMCS_API_URL', 'https://portal.carrothost.com/includes/api.php');
+
