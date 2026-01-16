@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'ryzen';
+
 $pageTitle = 'Ryzen VPS Hosting - AMD Ryzen Powered Virtual Servers';
 $metaDescription = 'High-performance Ryzen VPS hosting with AMD Ryzen processors, NVMe storage, and strong single-thread speed for gaming and CPU-intensive applications.';
 $metaKeywords = 'ryzen vps, amd ryzen vps, ryzen vps hosting, gaming vps, high performance vps';

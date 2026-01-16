@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'xeon';
+
 $pageTitle = 'Xeon VPS Hosting - Intel Xeon Powered Virtual Servers';
 $metaDescription = 'High-performance Xeon VPS hosting with Intel Xeon processors, NVMe SSD storage, and unmetered bandwidth for business applications and high-traffic websites.';
 $metaKeywords = 'xeon vps, intel xeon vps, xeon vps hosting, enterprise vps, high performance vps';

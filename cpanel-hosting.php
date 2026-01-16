@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'cpanel';
+
 $pageTitle = 'cPanel Hosting Plans - Fast & Secure Web Hosting';
 $metaDescription = 'Professional cPanel hosting in Bangladesh with SSD storage, free SSL, LiteSpeed, daily backups, and 24/7 support. Plans start from just BDT 500/month.';
 $metaKeywords = 'cpanel hosting bangladesh, cpanel web hosting, ssd cpanel hosting, cheap cpanel hosting bd, cpanel hosting price';
@@ -37,58 +39,54 @@ $additionalSchema = implode("\n", array_filter($schemaParts));
 include 'includes/header.php';
 ?>
 
-<section class="section hero-section">
+<section class="section hero-section hero-dashboard">
     <div class="container">
-        <div class="service-hero hero-split">
-            <div class="section-header">
-                <span class="section-subtitle"><i class="fas fa-cpanel"></i> cPanel Hosting</span>
-                <h1 class="section-title">cPanel hosting built for speed in Bangladesh</h1>
-                <p class="section-description">
-                    Launch on LiteSpeed, SSD storage, and daily backups with the control panel teams already know.
-                    Get reliable uptime, free SSL, and local support you can reach any time.
-                </p>
-                <div class="hero-cta">
-                    <a href="#plans" class="btn btn-primary">
-                        <i class="fas fa-cart-shopping"></i> View Plans
-                    </a>
-                    <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
-                        <i class="fab fa-whatsapp"></i> Talk to Support
-                    </a>
+        <div class="hero-grid">
+            <div class="hero-copy">
+                <span class="badge"><i class="fas fa-cpanel"></i> cPanel Hosting</span>
+                <h1>Control panel hosting made simple</h1>
+                <p>Manage sites, email, databases, and backups from the dashboard you already know. Powered by LiteSpeed, SSD, and 24/7 local support.</p>
+                <div class="hero-actions">
+                    <a href="#plans" class="btn btn-primary"><i class="fas fa-rocket"></i> Buy cPanel Hosting</a>
+                    <a href="#compare" class="btn btn-outline"><i class="fas fa-layer-group"></i> Compare Plans</a>
                 </div>
-                <div class="hero-metrics">
-                    <div class="hero-metric">
-                        <strong>99.9%</strong>
-                        <span>Uptime SLA</span>
+                <div class="hero-quick-specs">
+                    <div class="chip"><i class="fas fa-lock"></i> Free SSL</div>
+                    <div class="chip"><i class="fas fa-database"></i> NVMe Storage</div>
+                    <div class="chip"><i class="fas fa-gauge-high"></i> LiteSpeed</div>
+                    <div class="chip"><i class="fas fa-headset"></i> 24/7 Support</div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="dashboard-frame">
+                    <div class="frame-top">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="frame-title">cPanel Dashboard</span>
                     </div>
-                    <div class="hero-metric">
-                        <strong>LiteSpeed</strong>
-                        <span>Cache ready</span>
-                    </div>
-                    <div class="hero-metric">
-                        <strong>24/7</strong>
-                        <span>Local experts</span>
+                    <div class="frame-body">
+                        <div class="frame-sidebar">
+                            <span><i class="fas fa-folder-open"></i> File Manager</span>
+                            <span><i class="fas fa-envelope"></i> Email</span>
+                            <span><i class="fas fa-database"></i> MySQL</span>
+                            <span><i class="fas fa-shield-alt"></i> Security</span>
+                        </div>
+                        <div class="frame-main">
+                            <div class="widget">
+                                <p>Resource Usage</p>
+                                <div class="widget-bar"><span style="width:68%"></span></div>
+                            </div>
+                            <div class="widget-grid">
+                                <div class="widget-card"><i class="fas fa-cloud-upload-alt"></i> Backups</div>
+                                <div class="widget-card"><i class="fas fa-rocket"></i> LiteSpeed</div>
+                                <div class="widget-card"><i class="fas fa-shield-halved"></i> SSL</div>
+                                <div class="widget-card"><i class="fas fa-copy"></i> One-click Apps</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="hero-media">
-                <!-- Unsplash: https://unsplash.com/photos/98d2b5aba04b -->
-                <img src="<?php echo SITE_URL; ?>/img/cpanel-hero.jpg" alt="cPanel hosting dashboard on a laptop" loading="lazy">
-                <div class="hero-callout">
-                    <span>Performance Stack</span>
-                    <strong>SSD + LiteSpeed</strong>
-                </div>
-                <div class="hero-callout hero-callout-secondary">
-                    <span>Security</span>
-                    <strong>Free SSL + Malware Scan</strong>
-                </div>
-            </div>
-        </div>
-
-        <div class="trust-strip">
-            <div class="trust-item"><i class="fas fa-shield-halved"></i> Imunify AV+ protection</div>
-            <div class="trust-item"><i class="fas fa-arrows-rotate"></i> Daily automated backups</div>
-            <div class="trust-item"><i class="fas fa-server"></i> Tier III Dhaka DC</div>
-            <div class="trust-item"><i class="fas fa-headset"></i> 24/7 support team</div>
         </div>
     </div>
 </section>
@@ -98,9 +96,7 @@ include 'includes/header.php';
         <div class="section-header">
             <span class="section-subtitle"><i class="fas fa-tags"></i> Pricing</span>
             <h2 class="section-title">Choose your cPanel plan</h2>
-            <p class="section-description">
-                All plans include LiteSpeed, free SSL, daily backups, and proactive security.
-            </p>
+            <p class="section-description">LiteSpeed, free SSL, daily backups, malware scan, and proactive support included on every plan.</p>
         </div>
 
         <div class="pricing-grid">
@@ -111,7 +107,7 @@ include 'includes/header.php';
                 <h3 class="pricing-name">Orange Carrot</h3>
 
                 <div class="pricing-price">
-                    <div class="price-amount">
+                    <div class="price-amount" data-price-bdt="4800">
                         <span class="price-currency"><?php echo convertPrice(4800)['symbol']; ?></span>
                         <span class="price-number"><?php echo convertPrice(4800)['amount']; ?></span>
                         <span class="price-period">/year</span>
@@ -142,7 +138,7 @@ include 'includes/header.php';
                 <h3 class="pricing-name">Blue Carrot</h3>
 
                 <div class="pricing-price">
-                    <div class="price-amount">
+                    <div class="price-amount" data-price-bdt="9600">
                         <span class="price-currency"><?php echo convertPrice(9600)['symbol']; ?></span>
                         <span class="price-number"><?php echo convertPrice(9600)['amount']; ?></span>
                         <span class="price-period">/year</span>
@@ -172,7 +168,7 @@ include 'includes/header.php';
                 <h3 class="pricing-name">Red Carrot</h3>
 
                 <div class="pricing-price">
-                    <div class="price-amount">
+                    <div class="price-amount" data-price-bdt="14400">
                         <span class="price-currency"><?php echo convertPrice(14400)['symbol']; ?></span>
                         <span class="price-number"><?php echo convertPrice(14400)['amount']; ?></span>
                         <span class="price-period">/year</span>
@@ -198,144 +194,97 @@ include 'includes/header.php';
     </div>
 </section>
 
-<section class="section" id="included">
+<section class="section tools-strip" id="tools">
+    <div class="container">
+        <div class="strip-grid">
+            <div class="tool-card"><i class="fas fa-folder-open"></i> File Manager</div>
+            <div class="tool-card"><i class="fas fa-envelope"></i> Email Accounts</div>
+            <div class="tool-card"><i class="fas fa-database"></i> MySQL & phpMyAdmin</div>
+            <div class="tool-card"><i class="fas fa-download"></i> One-click Installer</div>
+            <div class="tool-card"><i class="fas fa-cloud-upload-alt"></i> Backups & Restore</div>
+            <div class="tool-card"><i class="fas fa-shield-halved"></i> SSL & Security</div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="inside-cpanel">
     <div class="container">
         <div class="section-header">
-            <span class="section-subtitle"><i class="fas fa-star"></i> Included With Every Plan</span>
-            <h2 class="section-title">Everything you need to run a modern website</h2>
-            <p class="section-description">
-                Launch fast with built-in security, performance, and management tools.
-            </p>
+            <span class="section-subtitle"><i class="fas fa-window-restore"></i> Inside cPanel</span>
+            <h2 class="section-title">Manage everything from one dashboard</h2>
+            <p class="section-description">Control domains, email, backups, and apps without touching the command line.</p>
         </div>
 
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-cpanel"></i>
+        <div class="panel-showcase">
+            <div class="panel-frame">
+                <div class="frame-top">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span class="frame-title">cPanel Preview</span>
                 </div>
-                <h3 class="feature-title">cPanel control panel</h3>
-                <p class="feature-description">
-                    Manage files, databases, and email with the industry standard interface.
-                </p>
+                <div class="frame-body">
+                    <img src="<?php echo SITE_URL; ?>/img/cpanel-screenshot-placeholder.png" alt="cPanel interface preview" loading="lazy">
+                </div>
             </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-rocket"></i>
-                </div>
-                <h3 class="feature-title">LiteSpeed acceleration</h3>
-                <p class="feature-description">
-                    Cache-enabled hosting keeps WordPress, Laravel, and CMS sites fast.
-                </p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-lock"></i>
-                </div>
-                <h3 class="feature-title">Free SSL + WAF</h3>
-                <p class="feature-description">
-                    Protect traffic with SSL and firewall rules that reduce attack risk.
-                </p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-arrows-rotate"></i>
-                </div>
-                <h3 class="feature-title">Daily backups</h3>
-                <p class="feature-description">
-                    Restore files quickly with automatic backups retained for up to 30 days.
-                </p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-envelope"></i>
-                </div>
-                <h3 class="feature-title">Professional email</h3>
-                <p class="feature-description">
-                    Create branded inboxes with webmail, IMAP, and spam protection.
-                </p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-headset"></i>
-                </div>
-                <h3 class="feature-title">Local support team</h3>
-                <p class="feature-description">
-                    Get help from Bangladesh-based experts via WhatsApp or ticketing.
-                </p>
+            <div class="panel-list">
+                <h3>Manage faster with built-in tools</h3>
+                <ul>
+                    <li><i class="fas fa-link"></i> Domains, subdomains, redirects, DNS</li>
+                    <li><i class="fas fa-envelope-open-text"></i> Email inboxes with spam filtering</li>
+                    <li><i class="fas fa-database"></i> Databases with phpMyAdmin</li>
+                    <li><i class="fas fa-sync"></i> Cron jobs and scheduling</li>
+                    <li><i class="fas fa-shield-alt"></i> SSL, WAF, malware scanning</li>
+                    <li><i class="fas fa-cloud-upload-alt"></i> Backup and restore in a click</li>
+                </ul>
             </div>
         </div>
     </div>
 </section>
 
-<section class="section section-bg">
+<section class="section section-split" id="performance-security">
     <div class="container">
-        <div class="section-header">
-            <span class="section-subtitle"><i class="fas fa-list-check"></i> Plan Comparison</span>
-            <h2 class="section-title">Compare features at a glance</h2>
-            <p class="section-description">
-                All plans include SSL, LiteSpeed, daily backups, and 24/7 support.
-            </p>
-        </div>
-
-        <div class="comparison-table-wrapper">
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Feature</th>
-                        <th>Orange</th>
-                        <th>Blue</th>
-                        <th>Red</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Websites</strong></td>
-                        <td>1</td>
-                        <td>1</td>
-                        <td>1</td>
-                    </tr>
-                    <tr>
-                        <td><strong>SSD Storage</strong></td>
-                        <td>10 GB</td>
-                        <td>20 GB</td>
-                        <td>30 GB</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Email Accounts</strong></td>
-                        <td>10</td>
-                        <td>20</td>
-                        <td>30</td>
-                    </tr>
-                    <tr>
-                        <td><strong>LiteSpeed Cache</strong></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Daily Backups</strong></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Free SSL</strong></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                        <td><i class="fas fa-circle-check check-icon"></i></td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="split-grid">
+            <div class="split-card">
+                <h3><i class="fas fa-gauge-high"></i> Performance</h3>
+                <ul>
+                    <li><i class="fas fa-bolt"></i> LiteSpeed + HTTP/2/3</li>
+                    <li><i class="fas fa-database"></i> NVMe storage for fast I/O</li>
+                    <li><i class="fas fa-layer-group"></i> Server-level caching</li>
+                    <li><i class="fas fa-sitemap"></i> Anycast DNS for faster resolution</li>
+                </ul>
+            </div>
+            <div class="split-card">
+                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                <ul>
+                    <li><i class="fas fa-lock"></i> Free SSL on every site</li>
+                    <li><i class="fas fa-shield-halved"></i> WAF + malware scanning</li>
+                    <li><i class="fas fa-cloud-upload-alt"></i> Daily backups with restore</li>
+                    <li><i class="fas fa-user-shield"></i> Two-factor auth for client area</li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>
 
-<section class="section">
+<section class="section section-accent" id="migration">
+    <div class="container cta-band">
+        <div>
+            <h3>Free migration + real humans</h3>
+            <p>Send us your cPanel login and we’ll migrate your sites, email, and SSL with zero downtime.</p>
+            <div class="cta-buttons">
+                <a href="<?php echo SUPPORT_TICKET_URL; ?>" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i> Request migration</a>
+                <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-sm"><i class="fab fa-whatsapp"></i> Chat now</a>
+            </div>
+        </div>
+        <div class="cta-badges">
+            <span><i class="fas fa-headset"></i> 24/7 support</span>
+            <span><i class="fas fa-shield-halved"></i> Zero-downtime transfers</span>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="faq">
     <div class="container">
         <div class="section-header">
             <span class="section-subtitle"><i class="fas fa-circle-question"></i> FAQs</span>
@@ -344,38 +293,21 @@ include 'includes/header.php';
 
         <div class="faq-accordion">
             <details class="faq-item">
-                <summary>Can you migrate my existing site?</summary>
-                <p>Yes. Our team can help move your site and email with minimal downtime.</p>
+                <summary>What is cPanel?</summary>
+                <p>cPanel is a user-friendly control panel to manage websites, email, databases, DNS, and backups without using the command line.</p>
             </details>
             <details class="faq-item">
-                <summary>Is SSL included on all plans?</summary>
-                <p>Every plan includes free SSL with auto-renewal at no extra charge.</p>
+                <summary>Can I migrate my site?</summary>
+                <p>Yes. We migrate cPanel accounts, websites, and email free of charge when you move to CarrotHost.</p>
             </details>
             <details class="faq-item">
-                <summary>Do you offer daily backups?</summary>
-                <p>Yes. Automated backups run daily with easy restore options.</p>
+                <summary>Do you provide SSL?</summary>
+                <p>All plans include free SSL certificates with automatic renewals.</p>
             </details>
             <details class="faq-item">
-                <summary>Can I upgrade later?</summary>
-                <p>You can move to a higher plan or VPS as your traffic grows.</p>
+                <summary>How many websites per plan?</summary>
+                <p>Each plan supports 1 website to keep resources dedicated; upgrade or move to VPS for more sites.</p>
             </details>
-        </div>
-    </div>
-</section>
-
-<section class="cta-section">
-    <div class="container">
-        <h2 class="section-title">Ready to launch on cPanel?</h2>
-        <p class="section-description">
-            Get fast setup, secure hosting, and a support team that knows Bangladesh businesses.
-        </p>
-        <div class="cta-buttons">
-            <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-lg">
-                <i class="fas fa-cart-shopping"></i> Order Now
-            </a>
-            <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline btn-lg">
-                <i class="fab fa-whatsapp"></i> Chat with Us
-            </a>
         </div>
     </div>
 </section>

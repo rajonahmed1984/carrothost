@@ -1,34 +1,22 @@
 <?php
-/**
- * 500 Error Page
- */
-
-require_once 'config.php';
 http_response_code(500);
-
 $pageTitle = 'Server Error';
-$metaDescription = 'We are experiencing a temporary issue. Please try again shortly or contact support.';
-
-include 'includes/header.php';
+$metaDescription = 'Something went wrong on our side. Please try again later.';
+require_once __DIR__ . '/includes/header.php';
 ?>
-<section class="section hero-section">
+
+<main class="section error-section">
     <div class="container">
-        <div class="section-header">
-            <span class="section-subtitle"><i class="fas fa-circle-exclamation"></i> 500 Error</span>
-            <h1 class="section-title">Something went wrong</h1>
-            <p class="section-description">
-                Our team has been notified. Please refresh the page or try again later.
-            </p>
-            <div class="hero-cta">
-                <a href="<?php echo SITE_URL; ?>" class="btn btn-primary">
-                    <i class="fas fa-house"></i> Back to Home
-                </a>
-                <a href="mailto:<?php echo SITE_EMAIL; ?>" class="btn btn-outline">
-                    <i class="fas fa-envelope"></i> Email Support
-                </a>
+        <div class="error-card">
+            <span class="error-code">500</span>
+            <h1>Server Error</h1>
+            <p>Our team has been notified. Please try again shortly or reach out to support if the issue persists.</p>
+            <div class="error-actions">
+                <a class="btn btn-primary" href="<?php echo SITE_URL; ?>">Try Again</a>
+                <a class="btn btn-secondary" href="<?php echo SUPPORT_TICKET_URL; ?>">Contact Support</a>
             </div>
         </div>
     </div>
-</section>
+</main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/footer.php'; ?>

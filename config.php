@@ -129,38 +129,74 @@ function getCurrentPage() {
 }
 
 /**
+ * Normalize a request or route fragment into a clean path for URLs.
+ *
+ * @param string|null $rawPath Raw path (can include query string or site URL).
+ * @param bool $stripBasePath Whether to remove the configured SITE_URL base path.
+ * @return string Clean path that always starts with '/' and has no file extension.
+ */
+function normalizePathForUrls($rawPath = null, $stripBasePath = true) {
+    $path = $rawPath;
+
+    if ($path === null) {
+        $path = $_SERVER['REQUEST_URI'] ?? '/';
+    }
+
+    $path = parse_url($path, PHP_URL_PATH) ?? $path;
+    $path = (string)$path;
+    $path = trim($path);
+
+    if ($path === '') {
+        $path = '/';
+    }
+
+    $basePath = '';
+
+    if ($stripBasePath) {
+        $basePath = parse_url(SITE_URL, PHP_URL_PATH) ?? '';
+        $basePath = rtrim($basePath, '/');
+    }
+
+    if ($basePath && strpos($path, $basePath) === 0) {
+        $path = substr($path, strlen($basePath));
+        if ($path === '' || $path === false) {
+            $path = '/';
+        }
+    }
+
+    if (($path !== '/') && substr($path, -1) === '/') {
+        $path = rtrim($path, '/');
+    }
+
+    if (substr($path, -4) === '.php') {
+        $path = substr($path, 0, -4);
+        if ($path === '' || $path === false) {
+            $path = '/';
+        }
+    }
+
+    if ($path === '/index') {
+        $path = '/';
+    }
+
+    if ($path === '') {
+        $path = '/';
+    }
+
+    if ($path !== '/' && $path[0] !== '/') {
+        $path = '/' . ltrim($path, '/');
+    }
+
+    return $path;
+}
+
+/**
  * Build a canonical URL based on the current request path.
  * @return string
  */
 function getCanonicalUrl() {
     $siteUrl = rtrim(SITE_URL, '/');
-    $basePath = parse_url(SITE_URL, PHP_URL_PATH) ?? '';
-    $basePath = rtrim($basePath, '/');
-
-    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-    $path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
-
-    if ($basePath !== '' && strpos($path, $basePath) === 0) {
-        $path = substr($path, strlen($basePath));
-        if ($path === '') {
-            $path = '/';
-        }
-    }
-
-    if ($path !== '/' && substr($path, -1) === '/') {
-        $path = rtrim($path, '/');
-    }
-
-    if ($path === '/index' || $path === '/index.php') {
-        $path = '/';
-    }
-
-    if (substr($path, -4) === '.php') {
-        $path = substr($path, 0, -4);
-        if ($path === '/index') {
-            $path = '/';
-        }
-    }
+    $path = normalizePathForUrls(null, true);
 
     return $siteUrl . $path;
 }
@@ -172,22 +208,7 @@ function getCanonicalUrl() {
  */
 function buildCanonicalUrlFromPath($path) {
     $siteUrl = rtrim(SITE_URL, '/');
-    $cleanPath = '/' . ltrim((string)$path, '/');
-
-    if ($cleanPath === '/index' || $cleanPath === '/index.php') {
-        $cleanPath = '/';
-    }
-
-    if (substr($cleanPath, -4) === '.php') {
-        $cleanPath = substr($cleanPath, 0, -4);
-        if ($cleanPath === '/index') {
-            $cleanPath = '/';
-        }
-    }
-
-    if ($cleanPath !== '/' && substr($cleanPath, -1) === '/') {
-        $cleanPath = rtrim($cleanPath, '/');
-    }
+    $cleanPath = normalizePathForUrls($path, false);
 
     return $siteUrl . $cleanPath;
 }

@@ -11,9 +11,14 @@
     // ==========================================
     const currencyButtons = document.querySelectorAll('.currency-btn');
     const siteUrl = document.body && document.body.dataset.siteUrl ? document.body.dataset.siteUrl.replace(/\/+$/, '') : '';
+    const appConfig = window.__APP_CONFIG__ || {};
+    const currencySymbols = appConfig.currencySymbols || {};
+    const storedCurrency = localStorage.getItem('currency');
+    const bodyCurrency = document.body && document.body.dataset.currentCurrency;
+    const defaultCurrency = appConfig.defaultCurrency || bodyCurrency || storedCurrency || 'BDT';
     
     // Load saved currency preference
-    let currentCurrency = localStorage.getItem('currency') || 'BDT';
+    let currentCurrency = storedCurrency || defaultCurrency;
     
     // Initialize currency on page load
     initCurrency();
@@ -27,6 +32,11 @@
                 btn.classList.remove('active');
             }
         });
+        
+        if (document.body) {
+            document.body.dataset.currentCurrency = currentCurrency;
+        }
+        localStorage.setItem('currency', currentCurrency);
         
         // Update all prices
         updatePrices();
@@ -64,10 +74,11 @@
     });
     
     function updatePrices() {
-        const usdRate = (window.__APP_CONFIG__ && typeof window.__APP_CONFIG__.usdToBdtRate === 'number')
-            ? window.__APP_CONFIG__.usdToBdtRate
-            : 120; // BDT to USD conversion rate
-        const symbol = currentCurrency === 'BDT' ? '৳' : '$';
+        const rawUsdRate = typeof appConfig.usdToBdtRate === 'number'
+            ? appConfig.usdToBdtRate
+            : parseFloat(appConfig.usdToBdtRate);
+        const usdRate = rawUsdRate && rawUsdRate > 0 ? rawUsdRate : 120; // BDT to USD conversion rate
+        const symbol = currencySymbols[currentCurrency] || (currentCurrency === 'USD' ? '$' : '৳');
         
         document.querySelectorAll('[data-price-bdt]').forEach(element => {
             const bdtPrice = parseFloat(element.dataset.priceBdt);
@@ -92,7 +103,7 @@
                 if (number) number.textContent = displayPrice;
             } else {
                 // For simple price elements
-                element.innerHTML = `${symbol}${displayPrice}`;
+                element.innerHTML = symbol + displayPrice;
             }
         });
     }

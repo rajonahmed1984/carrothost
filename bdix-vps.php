@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'bdix';
+
 $pageTitle = 'BDIX VPS Hosting Bangladesh - Local High-Speed VPS';
 $metaDescription = 'BDIX VPS hosting with ultra-fast local Bangladesh connectivity, SSD storage, and high bandwidth for streaming, gaming, file sharing, and content delivery.';
 $metaKeywords = 'bdix vps, bangladesh vps, bdix hosting, local vps bangladesh, bdix vps hosting, streaming vps bd';

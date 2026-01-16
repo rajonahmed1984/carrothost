@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'domain-register';
+
 $pageTitle = 'Domain Registration - Register Your Domain Name';
 $metaDescription = 'Register your perfect domain name with CarrotHost. Choose .com, .net, .org, .bd, and 500+ extensions with instant activation, free DNS, and WHOIS privacy.';
 $metaKeywords = 'domain registration, register domain, buy domain, domain name, cheap domain bangladesh';

@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'webuzo';
+
 $pageTitle = 'Webuzo VPS Hosting - Powerful VPS with Webuzo Panel';
 $metaDescription = 'Affordable Webuzo VPS hosting with full root access, SSD storage, and one-click app management for developers, agencies, and growing businesses.';
 $metaKeywords = 'webuzo hosting, webuzo vps, vps with webuzo, cheap webuzo hosting, webuzo control panel';

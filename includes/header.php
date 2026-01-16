@@ -1,3 +1,9 @@
+<?php
+// Fallback page theme so body class is always present for theming.
+if (!isset($pageTheme) || !$pageTheme) {
+    $pageTheme = 'default';
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,14 +76,27 @@
         <?php echo $additionalSchema; ?>
     <?php endif; ?>
 
+    <?php
+    $appConfig = [
+        'usdToBdtRate' => USD_TO_BDT_RATE,
+        'defaultCurrency' => $_SESSION['currency'] ?? DEFAULT_CURRENCY,
+        'currencySymbols' => [
+            'BDT' => CURRENCY_SYMBOL_BDT,
+            'USD' => CURRENCY_SYMBOL_USD,
+        ],
+    ];
+    ?>
     <script>
-        window.__APP_CONFIG__ = {
-            usdToBdtRate: <?php echo json_encode(USD_TO_BDT_RATE); ?>
-        };
+        window.__APP_CONFIG__ = <?= json_encode($appConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     </script>
     <?php include __DIR__ . '/analytics-head.php'; ?>
 </head>
-<body data-site-url="<?php echo SITE_URL; ?>">
+<body
+    class="page-<?php echo htmlspecialchars($pageTheme, ENT_QUOTES, 'UTF-8'); ?>"
+    data-site-url="<?php echo SITE_URL; ?>"
+    data-current-currency="<?php echo htmlspecialchars($_SESSION['currency'] ?? DEFAULT_CURRENCY, ENT_QUOTES); ?>"
+    data-page-theme="<?php echo htmlspecialchars($pageTheme, ENT_QUOTES, 'UTF-8'); ?>"
+>
     <?php include __DIR__ . '/analytics-body.php'; ?>
     <!-- Header -->
     <header class="site-header">
@@ -103,13 +122,7 @@
                             <button class="currency-btn <?php echo $_SESSION['currency'] === 'USD' ? 'active' : ''; ?>" data-currency="USD">
                                 USD ($)
                             </button>
-                        </div>
-                        <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="top-bar-link">
-                            <i class="fas fa-circle-user"></i> Client Area
-                        </a>
-                        <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="top-bar-link">
-                            <i class="fas fa-right-to-bracket"></i> Login
-                        </a>
+                        </div>                        
                     </div>
                 </div>
             </div>
@@ -147,10 +160,6 @@
                                     <a href="<?php echo SITE_URL; ?>/domain-register">Register a New Domain</a>
                                     <a href="<?php echo SITE_URL; ?>/domain-transfer">Transfer in a Domain</a>
                                 </div>
-                                <div class="mega-column">
-                                    <h4>Why CarrotHost?</h4>
-                                    <p>Instant activation, free DNS management, and 24/7 expert support.</p>
-                                </div>
                                 <div class="mega-card">
                                     <span class="mega-label">Find Your Domain</span>
                                     <p>Search your perfect domain name in seconds.</p>
@@ -169,10 +178,6 @@
                                     <h4>Shared Hosting</h4>
                                     <a href="<?php echo SITE_URL; ?>/cpanel-hosting">cPanel Hosting</a>
                                     <a href="<?php echo SITE_URL; ?>/webuzo-hosting">Webuzo Hosting</a>
-                                </div>
-                                <div class="mega-column">
-                                    <h4>Included</h4>
-                                    <p>SSD storage, LiteSpeed, free SSL, and daily malware scanning.</p>
                                 </div>
                                 <div class="mega-card">
                                     <span class="mega-label">Launch Today</span>
@@ -195,10 +200,6 @@
                                     <a href="<?php echo SITE_URL; ?>/xeon-vps">Xeon VPS</a>
                                     <a href="<?php echo SITE_URL; ?>/ryzen-vps">Ryzen VPS</a>
                                 </div>
-                                <div class="mega-column">
-                                    <h4>Performance</h4>
-                                    <p>NVMe storage, premium network, and enterprise-grade uptime.</p>
-                                </div>
                                 <div class="mega-card">
                                     <span class="mega-label">Need Help?</span>
                                     <p>Talk to our engineers to size the right server.</p>
@@ -220,9 +221,6 @@
                     <div class="nav-actions">
                         <a href="<?php echo WHMCS_CLIENT_AREA; ?>" class="nav-link nav-link-muted">
                             <i class="fas fa-circle-user"></i> Client Area
-                        </a>
-                        <a href="<?php echo WHMCS_CART_URL; ?>" class="btn btn-primary nav-cta">
-                            Get Started
                         </a>
                     </div>
                 </div>

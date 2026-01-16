@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'domain-transfer';
+
 $pageTitle = 'Domain Transfer - Transfer Your Domain to CarrotHost';
 $metaDescription = 'Transfer your domain to CarrotHost for better management, free WHOIS privacy, and competitive pricing with a fast, secure transfer process.';
 $metaKeywords = 'domain transfer, transfer domain, move domain, domain migration, domain transfer bangladesh';

@@ -1,34 +1,22 @@
 <?php
-/**
- * 404 Error Page
- */
-
-require_once 'config.php';
 http_response_code(404);
-
 $pageTitle = 'Page Not Found';
-$metaDescription = 'The page you are looking for could not be found. Return to the homepage or contact support for help.';
-
-include 'includes/header.php';
+$metaDescription = 'Sorry, the page you are looking for could not be found.';
+require_once __DIR__ . '/includes/header.php';
 ?>
-<section class="section hero-section">
+
+<main class="section error-section">
     <div class="container">
-        <div class="section-header">
-            <span class="section-subtitle"><i class="fas fa-triangle-exclamation"></i> 404 Error</span>
-            <h1 class="section-title">We cannot find that page</h1>
-            <p class="section-description">
-                The page may have moved, been renamed, or is temporarily unavailable.
-            </p>
-            <div class="hero-cta">
-                <a href="<?php echo SITE_URL; ?>" class="btn btn-primary">
-                    <i class="fas fa-house"></i> Back to Home
-                </a>
-                <a href="https://wa.me/<?php echo WHATSAPP_NUMBER; ?>" class="btn btn-outline">
-                    <i class="fab fa-whatsapp"></i> Chat Support
-                </a>
+        <div class="error-card">
+            <span class="error-code">404</span>
+            <h1>We can&apos;t find that page.</h1>
+            <p>The page may have moved, been renamed, or no longer exists. Please try one of the links below or return to the homepage.</p>
+            <div class="error-actions">
+                <a class="btn btn-primary" href="<?php echo SITE_URL; ?>">Go to Homepage</a>
+                <a class="btn btn-secondary" href="<?php echo SUPPORT_TICKET_URL; ?>">Contact Support</a>
             </div>
         </div>
     </div>
-</section>
+</main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/footer.php'; ?>

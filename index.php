@@ -7,6 +7,7 @@
 require_once 'config.php';
 
 // SEO Meta Tags
+$pageTheme = 'home';
 $pageTitle = 'Professional Web Hosting Services in Bangladesh';
 $metaDescription = 'Fast, secure web hosting in Bangladesh with SSD storage, 99.9% uptime, cPanel hosting, VPS, dedicated servers, and domain registration backed by 24/7 support.';
 $metaKeywords = 'web hosting bangladesh, cpanel hosting, vps hosting, bdix hosting, dedicated server bangladesh, cheap hosting bd, domain registration';

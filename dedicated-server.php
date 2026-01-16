@@ -6,6 +6,8 @@
 
 require_once 'config.php';
 
+$pageTheme = 'dedicated';
+
 $pageTitle = 'Dedicated Server Hosting - Fully Managed Dedicated Servers';
 $metaDescription = 'Enterprise-grade dedicated servers with Intel Xeon processors, NVMe storage, unmetered bandwidth, and managed support for high-traffic websites and applications.';
 $metaKeywords = 'dedicated server bangladesh, managed dedicated server, enterprise server, bare metal server';
