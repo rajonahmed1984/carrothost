@@ -71,7 +71,7 @@ const FooterLinkItem = ({ link }: { link: FooterLink }) => {
 
 const SiteFooter = () => {
   return (
-    <footer className="relative overflow-hidden bg-footer text-footer-foreground">
+    <footer className="relative overflow-hidden bg-footer text-footer-foreground border-t-4 border-orange-500">
       <div className="container relative z-10 pt-16 pb-14 md:pt-24 md:pb-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

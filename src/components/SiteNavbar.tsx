@@ -104,16 +104,11 @@ const SiteNavbar = () => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 bg-white border-b transition-all duration-300 ${
           isScrolled
-            ? "bg-card/[0.98] backdrop-blur-2xl border-b border-border/50"
-            : "bg-card/70 backdrop-blur-md"
+            ? "border-slate-200 shadow-[0_2px_16px_rgba(15,23,42,0.06)]"
+            : "border-slate-200/80"
         }`}
-        style={{
-          boxShadow: isScrolled
-            ? "0 1px 0 hsl(215 20% 90% / 0.5), 0 4px 20px hsl(220 25% 12% / 0.03)"
-            : "none",
-        }}
       >
         <div className="container flex items-center justify-between h-16 lg:h-[4.5rem]">
           {/* Logo */}
