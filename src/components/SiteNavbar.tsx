@@ -58,6 +58,8 @@ const navItems: NavItem[] = [
   },
 ];
 
+const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
+
 const SiteNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -116,9 +118,11 @@ const SiteNavbar = () => {
         <div className="container flex items-center justify-between h-16 lg:h-[4.5rem]">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200">
-              <span className="text-primary-foreground font-extrabold text-xs">HF</span>
-            </div>
+            <img
+              src={logoSrc}
+              alt="HostFlow logo"
+              className="h-10 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+            />
             <span className="font-bold text-foreground text-lg tracking-tight hidden sm:block">HostFlow</span>
           </Link>
 

@@ -58,6 +58,8 @@ const socials = [
   { icon: Youtube, href: "#", label: "YouTube" },
 ];
 
+const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
+
 const FooterLinkItem = ({ link }: { link: FooterLink }) => {
   const inner = (
     <span className="text-[13.5px] text-footer-foreground/65 hover:text-footer-heading transition-colors duration-200 leading-none">
@@ -124,9 +126,11 @@ const SiteFooter = () => {
           {/* Brand Column */}
           <div className="lg:col-span-5 lg:pr-12">
             <Link to="/" className="inline-flex items-center gap-2 mb-5 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center group-hover:shadow-md transition-all">
-                <span className="text-primary-foreground font-extrabold text-xs">HF</span>
-              </div>
+              <img
+                src={logoSrc}
+                alt="HostFlow logo"
+                className="h-11 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+              />
               <span className="font-bold text-footer-heading text-lg tracking-tight">HostFlow</span>
             </Link>
             <p className="text-sm text-footer-foreground/65 leading-relaxed mb-6 max-w-sm">
