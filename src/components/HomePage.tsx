@@ -26,26 +26,42 @@ const heroHighlights = [
   "24/7 Support",
 ];
 
-const trustStrip = [
+const domainExtensions = [
   {
-    title: "NVMe SSD Storage",
-    description: "Premium storage for faster loading times and smoother performance.",
+    title: ".com",
+    regularPrice: "1,450",
+    offerPrice: "999",
+    cycle: "/year",
+    imageTone: "from-orange-100 via-white to-amber-50",
+    accentTone: "text-orange-600",
+    tag: "Popular",
   },
   {
-    title: "Free SSL Security",
-    description: "Trusted SSL certificates included to secure websites and visitors.",
+    title: ".net",
+    regularPrice: "1,650",
+    offerPrice: "1,150",
+    cycle: "/year",
+    imageTone: "from-sky-100 via-white to-cyan-50",
+    accentTone: "text-sky-600",
+    tag: "Tech Pick",
   },
   {
-    title: "LiteSpeed Ready",
-    description: "Optimized delivery for business websites, stores, and modern apps.",
+    title: ".org",
+    regularPrice: "1,550",
+    offerPrice: "1,099",
+    cycle: "/year",
+    imageTone: "from-violet-100 via-white to-fuchsia-50",
+    accentTone: "text-violet-600",
+    tag: "Trusted",
   },
   {
-    title: "BDIX Friendly",
-    description: "Better local performance for Bangladesh-focused traffic and users.",
-  },
-  {
-    title: "24/7 Support",
-    description: "Dependable support for hosting, VPS, migrations, and uptime issues.",
+    title: ".bd",
+    regularPrice: "2,200",
+    offerPrice: "1,499",
+    cycle: "/year",
+    imageTone: "from-emerald-100 via-white to-lime-50",
+    accentTone: "text-emerald-600",
+    tag: "Local",
   },
 ];
 
@@ -227,7 +243,7 @@ const HomePage = () => {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
 
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#08101f_0%,#0b1426_52%,#eef4fb_100%)] pt-28 md:pt-36">
+      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#08101f_0%,#0b1426_52%,#eef4fb_100%)] pt-10 md:pt-20">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[10%] top-20 h-72 w-72 rounded-full bg-orange-500/12 blur-[90px]" />
           <div className="absolute right-[8%] top-24 h-72 w-72 rounded-full bg-blue-500/14 blur-[100px]" />
@@ -250,7 +266,7 @@ const HomePage = () => {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: 0.08 }}
-              className="text-4xl font-extrabold leading-[1.05] text-white sm:text-5xl md:text-6xl lg:text-7xl"
+              className="text-4xl font-extrabold leading-[1.05] text-white sm:text-4xl md:text-5xl lg:text-6xl"
             >
               Fast, Secure and Reliable
               <span className="block bg-[linear-gradient(135deg,#f59e0b_0%,#fb923c_35%,#60a5fa_100%)] bg-clip-text text-transparent">
@@ -269,29 +285,6 @@ const HomePage = () => {
               We provide NVMe SSD powered cPanel Hosting, Webuzo Hosting, Xeon VPS, and BDIX VPS
               for businesses, developers, agencies, and growing brands in Bangladesh.
             </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.24 }}
-              className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
-            >
-              <Link
-                to="/cpanel-hosting"
-                className="btn-primary inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold md:text-base"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <button
-                type="button"
-                onClick={() => scrollToSection("plans")}
-                className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 md:text-base"
-              >
-                View Hosting Plans
-                <ChevronDown className="h-4 w-4" />
-              </button>
-            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -315,21 +308,92 @@ const HomePage = () => {
       </section>
 
       <section className="border-y border-border/60 bg-white">
-        <div className="container py-6 md:py-7">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {trustStrip.map((item, index) => (
-              <motion.div
-                key={item.title}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.4, delay: index * 0.04 }}
-                className="rounded-2xl border border-border/70 bg-white px-4 py-4"
-              >
-                <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{item.description}</p>
-              </motion.div>
-            ))}
+        <div className="container py-8 md:py-10">
+          <div className="grid gap-6 xl:grid-cols-[1.15fr_1.85fr] xl:items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45 }}
+              className="max-w-xl"
+            >
+              <div className="section-pill-badge">Domain Names</div>
+              <h2 className="mt-4 text-2xl font-bold text-foreground md:text-3xl">
+                Secure the domain your brand deserves
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                Register a new domain or transfer your existing one to Carrothost and manage it
+                alongside your hosting from one place. Compare regular and offer pricing before
+                you launch.
+              </p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href="https://portal.carrothost.com/cart.php?a=add&domain=register"
+                  className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+                >
+                  Register Domain
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://portal.carrothost.com/cart.php?a=add&domain=transfer"
+                  className="btn-outline inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+                >
+                  Transfer Domain
+                </a>
+              </div>
+            </motion.div>
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {domainExtensions.map((item, index) => (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.4, delay: index * 0.04 }}
+                  className="card-premium group overflow-hidden rounded-[1.4rem]"
+                >
+                  <div className={`relative bg-gradient-to-br ${item.imageTone} p-4`}>
+                    <div className="absolute right-4 top-4 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-foreground shadow-sm">
+                      {item.tag}
+                    </div>
+                    <div className="flex h-24 items-center justify-center rounded-[1.1rem] border border-white/80 bg-white/75 shadow-sm backdrop-blur">
+                      <div className="text-center">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                          Domain
+                        </div>
+                        <div className={`mt-2 text-3xl font-extrabold ${item.accentTone}`}>
+                          {item.title}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="text-base font-semibold text-foreground">{item.title}</div>
+                      <div className="rounded-full bg-primary/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                        Save BDT {Number(item.regularPrice.replace(",", "")) - Number(item.offerPrice.replace(",", ""))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-border/70 bg-slate-50/90 p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Starting Price
+                      </div>
+                      <div className="mt-2 flex items-end gap-2">
+                        <span className="text-3xl font-extrabold text-foreground">BDT {item.offerPrice}</span>
+                        <span className="pb-1 text-sm text-muted-foreground">{item.cycle}</span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Regular:</span>
+                        <span className="text-muted-foreground line-through">BDT {item.regularPrice}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
