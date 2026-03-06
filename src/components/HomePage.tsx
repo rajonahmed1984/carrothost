@@ -27,6 +27,29 @@ const heroHighlights = [
   "24/7 Support",
 ];
 
+const trustStrip = [
+  {
+    title: "NVMe SSD Storage",
+    description: "Premium storage for faster loading times and smoother performance.",
+  },
+  {
+    title: "Free SSL Security",
+    description: "Trusted SSL certificates included to secure websites and visitors.",
+  },
+  {
+    title: "LiteSpeed Ready",
+    description: "Optimized delivery for business websites, stores, and modern apps.",
+  },
+  {
+    title: "BDIX Friendly",
+    description: "Better local performance for Bangladesh-focused traffic and users.",
+  },
+  {
+    title: "24/7 Support",
+    description: "Dependable support for hosting, VPS, migrations, and uptime issues.",
+  },
+];
+
 const serviceCards = [
   {
     title: "Webuzo Hosting",
@@ -138,6 +161,13 @@ const pricingCards = [
     href: "/bdix-vps",
     featured: false,
   },
+];
+
+const bangladeshBenefits = [
+  "BDIX VPS for local traffic and Bangladesh-focused services",
+  "Lower latency benefits for local visitors and businesses",
+  "Hosting options for startups, agencies, stores, and business websites",
+  "Reliable support for long-term growth and infrastructure upgrades",
 ];
 
 const testimonials = [
@@ -370,13 +400,33 @@ const HomePage = () => {
         </div>
       </section>
 
+      <section className="border-y border-border/60 bg-white">
+        <div className="container py-6 md:py-7">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {trustStrip.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.4, delay: index * 0.04 }}
+                className="rounded-2xl border border-border/70 bg-white px-4 py-4"
+              >
+                <div className="text-sm font-semibold text-foreground">{item.title}</div>
+                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section-spacing bg-white">
         <div className="container">
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <motion.div {...fadeUp}>
               <span className="section-pill-badge">Performance Focused</span>
               <h2 className="mt-5 max-w-3xl text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
-                Clear, fast hosting built for modern websites
+                Built for speed, stability, and long-term growth
               </h2>
               <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">
                 Carrothost delivers modern hosting solutions designed for speed, uptime, security,
@@ -385,30 +435,46 @@ const HomePage = () => {
               </p>
             </motion.div>
 
-            <motion.div {...fadeUp} className="grid gap-4 sm:grid-cols-2">
-              {[
-                {
-                  title: "Premium Storage",
-                  text: "NVMe SSD powered hosting for faster file access and smoother website delivery.",
-                },
-                {
-                  title: "Business Ready",
-                  text: "Suitable for portfolios, company websites, stores, and agency projects.",
-                },
-                {
-                  title: "Local Advantage",
-                  text: "BDIX-friendly options for stronger local speed and lower latency.",
-                },
-                {
-                  title: "Scalable Path",
-                  text: "Start with shared hosting and move to VPS as your traffic grows.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="card-premium rounded-2xl p-5">
-                  <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.text}</p>
+            <motion.div {...fadeUp} className="card-premium rounded-[1.75rem] p-6 md:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                    Performance Overview
+                  </div>
+                  <h3 className="mt-2 text-xl font-semibold text-foreground">
+                    Premium NVMe SSD infrastructure
+                  </h3>
                 </div>
-              ))}
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Server className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    title: "Faster Loading",
+                    text: "NVMe SSD storage helps websites load faster and respond better under daily traffic.",
+                  },
+                  {
+                    title: "Control Panel Speed",
+                    text: "Faster file access improves dashboard responsiveness and routine hosting tasks.",
+                  },
+                  {
+                    title: "Better Under Load",
+                    text: "Stable performance helps business sites, stores, and apps handle traffic more smoothly.",
+                  },
+                  {
+                    title: "Upgrade Path",
+                    text: "Move from shared hosting to VPS without rebuilding your whole hosting setup.",
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-2xl border border-border/70 bg-white p-4">
+                    <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </div>
         </div>
@@ -544,6 +610,57 @@ const HomePage = () => {
                 </Link>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section-spacing bg-[linear-gradient(180deg,hsl(220_34%_11%)_0%,hsl(220_32%_9%)_100%)] text-white">
+        <div className="container">
+          <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+            <motion.div {...fadeUp}>
+              <span className="section-pill-badge border-white/10 bg-white/5 text-orange-300">
+                Bangladesh Optimized
+              </span>
+              <h2 className="mt-5 text-3xl font-bold md:text-4xl lg:text-5xl">
+                Web hosting designed for Bangladesh
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-slate-300">
+                Carrothost provides hosting services tailored for the Bangladesh market with
+                performance-focused infrastructure, local-friendly connectivity, and scalable
+                hosting options for startups, agencies, online stores, and business websites.
+              </p>
+              <p className="mt-5 text-base leading-8 text-slate-300">
+                Our BDIX VPS options help improve local traffic performance and reduce latency for
+                Bangladesh users, while our wider hosting range supports websites that need strong
+                uptime, practical control panels, and reliable support.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to="/bdix-vps"
+                  className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold"
+                >
+                  Explore BDIX VPS
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/cpanel-hosting"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  View Hosting Plans
+                </Link>
+              </div>
+            </motion.div>
+
+            <motion.div {...fadeUp} className="grid gap-4 sm:grid-cols-2">
+              {bangladeshBenefits.map((item) => (
+                <div key={item} className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-5">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-orange-300" />
+                    <p className="text-sm leading-7 text-slate-200">{item}</p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
           </div>
         </div>
       </section>
