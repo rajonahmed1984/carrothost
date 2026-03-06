@@ -12,8 +12,6 @@ import {
   Cpu,
   Network,
   LogIn,
-  ArrowRight,
-  Sparkles,
   ChevronRight,
 } from "lucide-react";
 
@@ -38,22 +36,58 @@ const navItems: NavItem[] = [
   {
     label: "Domains",
     children: [
-      { label: "Register Domain", href: "#", icon: Globe, description: "Find and register your perfect .com, .net, .xyz & more" },
-      { label: "Transfer Domain", href: "#", icon: RefreshCw, description: "Move your existing domain to us — free & seamless" },
+      {
+        label: "Register Domain",
+        href: "https://portal.carrothost.com/cart.php?a=add&domain=register",
+        icon: Globe,
+        description: "Find and register your perfect .com, .net, .xyz & more",
+      },
+      {
+        label: "Transfer Domain",
+        href: "https://portal.carrothost.com/cart.php?a=add&domain=transfer",
+        icon: RefreshCw,
+        description: "Move your existing domain to us for a simple transfer process",
+      },
     ],
   },
   {
     label: "Web Hosting",
     children: [
-      { label: "Webuzo Hosting", href: "/webuzo-hosting", icon: Server, tag: "Popular", description: "One-click app deployment with 400+ scripts", isRoute: true },
-      { label: "cPanel Hosting", href: "/cpanel-hosting", icon: HardDrive, description: "Full-featured cPanel with LiteSpeed & NVMe", isRoute: true },
+      {
+        label: "Webuzo Hosting",
+        href: "/webuzo-hosting",
+        icon: Server,
+        tag: "Popular",
+        description: "One-click app deployment with 400+ scripts",
+        isRoute: true,
+      },
+      {
+        label: "cPanel Hosting",
+        href: "/cpanel-hosting",
+        icon: HardDrive,
+        description: "Full-featured cPanel with LiteSpeed and NVMe",
+        isRoute: true,
+      },
     ],
   },
   {
     label: "VPS Servers",
     children: [
-      { label: "Xeon VPS", href: "/xeon-vps", icon: Cpu, description: "Enterprise Xeon processors with dedicated resources", isRoute: true },
-      { label: "BDIX VPS", href: "/bdix-vps", icon: Network, tag: "Fast", description: "Ultra-low latency BDIX peering for Bangladesh", isRoute: true },
+      {
+        label: "Xeon VPS",
+        href: "/xeon-vps",
+        icon: Cpu,
+        description: "Enterprise Xeon processors with dedicated resources",
+        isRoute: true,
+      },
+      {
+        label: "BDIX VPS",
+        href: "/bdix-vps",
+        icon: Network,
+        tag: "Fast",
+        description: "Ultra-low latency BDIX peering for Bangladesh",
+        isRoute: true,
+      },
     ],
   },
 ];
@@ -81,12 +115,14 @@ const SiteNavbar = () => {
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [mobileOpen]);
 
   const isActive = (item: NavItem): boolean => {
     if (item.href && item.isRoute) return location.pathname === item.href;
-    if (item.children) return item.children.some((c) => c.isRoute && location.pathname === c.href);
+    if (item.children) return item.children.some((child) => child.isRoute && location.pathname === child.href);
     return false;
   };
 
@@ -105,23 +141,18 @@ const SiteNavbar = () => {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 bg-white border-b transition-all duration-300 ${
-          isScrolled
-            ? "border-slate-200 shadow-[0_2px_16px_rgba(15,23,42,0.06)]"
-            : "border-slate-200/80"
+          isScrolled ? "border-slate-200 shadow-[0_2px_16px_rgba(15,23,42,0.06)]" : "border-slate-200/80"
         }`}
       >
         <div className="container flex items-center justify-between h-16 lg:h-[4.5rem]">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 group">
+          <Link to="/" className="flex items-center shrink-0 group">
             <img
               src={logoSrc}
               alt="Carrothost logo"
               className="h-10 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
-            <span className="font-bold text-foreground text-lg tracking-tight hidden sm:block">Carrothost</span>
           </Link>
 
-          {/* Desktop Nav — centered */}
           <div className="hidden lg:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
             {navItems.map((item) => (
               <div
@@ -134,9 +165,7 @@ const SiteNavbar = () => {
                   <Link
                     to={item.href}
                     className={`relative flex items-center gap-1 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive(item)
-                        ? "text-primary"
-                        : "text-foreground/70 hover:text-foreground"
+                      isActive(item) ? "text-primary" : "text-foreground/70 hover:text-foreground"
                     }`}
                   >
                     <span className="relative z-10">{item.label}</span>
@@ -175,7 +204,6 @@ const SiteNavbar = () => {
                   </button>
                 )}
 
-                {/* Desktop Dropdown */}
                 <AnimatePresence>
                   {item.children && openDropdown === item.label && (
                     <motion.div
@@ -188,7 +216,6 @@ const SiteNavbar = () => {
                         boxShadow: "0 16px 48px hsl(220 25% 12% / 0.1), 0 2px 8px hsl(220 25% 12% / 0.05)",
                       }}
                     >
-                      {/* Dropdown header */}
                       <div className="px-3 pt-2 pb-2 mb-0.5">
                         <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
                           {item.label}
@@ -225,17 +252,32 @@ const SiteNavbar = () => {
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[11.5px] text-muted-foreground mt-0.5 leading-snug">{sub.description}</div>
+                                <div className="text-[11.5px] text-muted-foreground mt-0.5 leading-snug">
+                                  {sub.description}
+                                </div>
                               </div>
-                              <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-all duration-200 ${
-                                active ? "text-primary/40" : "text-muted-foreground/0 group-hover:text-muted-foreground/40"
-                              }`} />
+                              <ChevronRight
+                                className={`w-3.5 h-3.5 shrink-0 transition-all duration-200 ${
+                                  active ? "text-primary/40" : "text-muted-foreground/0 group-hover:text-muted-foreground/40"
+                                }`}
+                              />
                             </div>
                           );
+
                           return sub.isRoute ? (
-                            <Link key={sub.label} to={sub.href} onClick={() => setOpenDropdown(null)}>{content}</Link>
+                            <Link key={sub.label} to={sub.href} onClick={() => setOpenDropdown(null)}>
+                              {content}
+                            </Link>
                           ) : (
-                            <a key={sub.label} href={sub.href} onClick={() => setOpenDropdown(null)}>{content}</a>
+                            <a
+                              key={sub.label}
+                              href={sub.href}
+                              onClick={() => setOpenDropdown(null)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {content}
+                            </a>
                           );
                         })}
                       </div>
@@ -246,7 +288,6 @@ const SiteNavbar = () => {
             ))}
           </div>
 
-          {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-2">
             <a
               href="#"
@@ -255,16 +296,8 @@ const SiteNavbar = () => {
               <LogIn className="w-4 h-4" />
               Client Area
             </a>
-            <Link
-              to="/webuzo-hosting"
-              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Get Started
-            </Link>
           </div>
 
-          {/* Mobile toggle */}
           <button
             className="lg:hidden relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted/60 transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -272,11 +305,23 @@ const SiteNavbar = () => {
           >
             <AnimatePresence mode="wait">
               {mobileOpen ? (
-                <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <motion.div
+                  key="close"
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
                   <X className="w-5 h-5" />
                 </motion.div>
               ) : (
-                <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <motion.div
+                  key="open"
+                  initial={{ rotate: 90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
                   <Menu className="w-5 h-5" />
                 </motion.div>
               )}
@@ -285,7 +330,6 @@ const SiteNavbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -306,7 +350,6 @@ const SiteNavbar = () => {
             >
               <div className="bg-card/[0.99] backdrop-blur-xl border-b border-border/50 shadow-xl">
                 <div className="container py-4">
-                  {/* Nav items */}
                   <div className="space-y-0.5">
                     {navItems.map((item) => (
                       <div key={item.label}>
@@ -314,9 +357,7 @@ const SiteNavbar = () => {
                           <Link
                             to={item.href}
                             className={`flex items-center justify-between px-4 py-3 rounded-xl text-[15px] font-medium transition-all ${
-                              isActive(item)
-                                ? "text-primary bg-primary/[0.05]"
-                                : "text-foreground active:bg-muted/50"
+                              isActive(item) ? "text-primary bg-primary/[0.05]" : "text-foreground active:bg-muted/50"
                             }`}
                           >
                             {item.label}
@@ -358,12 +399,16 @@ const SiteNavbar = () => {
                                       const Icon = sub.icon;
                                       const active = isSubActive(sub.href, sub.isRoute);
                                       const inner = (
-                                        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                                          active ? "bg-primary/[0.06]" : "active:bg-muted/40"
-                                        }`}>
-                                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                            active ? "bg-primary/10 text-primary" : "bg-muted/60 text-muted-foreground"
-                                          }`}>
+                                        <div
+                                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                                            active ? "bg-primary/[0.06]" : "active:bg-muted/40"
+                                          }`}
+                                        >
+                                          <div
+                                            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                              active ? "bg-primary/10 text-primary" : "bg-muted/60 text-muted-foreground"
+                                            }`}
+                                          >
                                             <Icon className="w-4 h-4" />
                                           </div>
                                           <div className="flex-1">
@@ -381,10 +426,20 @@ const SiteNavbar = () => {
                                           </div>
                                         </div>
                                       );
+
                                       return sub.isRoute ? (
-                                        <Link key={sub.label} to={sub.href}>{inner}</Link>
+                                        <Link key={sub.label} to={sub.href}>
+                                          {inner}
+                                        </Link>
                                       ) : (
-                                        <a key={sub.label} href={sub.href}>{inner}</a>
+                                        <a
+                                          key={sub.label}
+                                          href={sub.href}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          {inner}
+                                        </a>
                                       );
                                     })}
                                   </div>
@@ -397,7 +452,6 @@ const SiteNavbar = () => {
                     ))}
                   </div>
 
-                  {/* Mobile CTAs */}
                   <div className="mt-4 pt-4 border-t border-border/50 flex flex-col gap-2">
                     <a
                       href="#"
@@ -406,13 +460,6 @@ const SiteNavbar = () => {
                       <LogIn className="w-4 h-4" />
                       Client Area
                     </a>
-                    <Link
-                      to="/webuzo-hosting"
-                      className="btn-primary flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Get Started
-                    </Link>
                   </div>
                 </div>
               </div>

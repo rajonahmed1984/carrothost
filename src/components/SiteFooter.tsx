@@ -25,8 +25,8 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
       { label: "cPanel Hosting", href: "/cpanel-hosting", isRoute: true },
       { label: "Xeon VPS", href: "/xeon-vps", isRoute: true },
       { label: "BDIX VPS", href: "/bdix-vps", isRoute: true },
-      { label: "Register Domain", href: "#" },
-      { label: "Transfer Domain", href: "#" },
+      { label: "Register Domain", href: "https://portal.carrothost.com/cart.php?a=add&domain=register" },
+      { label: "Transfer Domain", href: "https://portal.carrothost.com/cart.php?a=add&domain=transfer" },
     ],
   },
   {
@@ -72,60 +72,17 @@ const FooterLinkItem = ({ link }: { link: FooterLink }) => {
 const SiteFooter = () => {
   return (
     <footer className="relative overflow-hidden bg-footer text-footer-foreground border-t-4 border-orange-500">
-      <div className="container relative z-10 pt-16 pb-14 md:pt-24 md:pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-3xl border border-footer-border/40 p-8 text-center md:p-14"
-          style={{
-            background:
-              "linear-gradient(135deg, hsl(215 90% 52% / 0.12) 0%, hsl(25 95% 53% / 0.06) 60%, transparent 100%)",
-          }}
-        >
-          <div className="glow-orb absolute -right-28 -top-28 h-[350px] w-[350px] bg-primary/8" />
-          <div className="glow-orb absolute -bottom-12 -left-12 h-[200px] w-[200px] bg-accent/6" />
-
-          <div className="relative z-10 mx-auto max-w-lg">
-            <h2 className="mb-3 text-2xl font-extrabold tracking-tight text-footer-heading md:text-3xl lg:text-4xl">
-              Launch Your Website Today
-            </h2>
-            <p className="mb-8 text-base leading-relaxed text-footer-foreground/80 md:text-lg">
-              Trusted by thousands of businesses across Bangladesh. Start with a free trial and launch on premium hosting built for speed.
-            </p>
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                to="/webuzo-hosting"
-                className="btn-primary inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-[15px] font-semibold"
-              >
-                <Sparkles className="h-4 w-4" />
-                Get Started Free
-              </Link>
-              <a
-                href="#"
-                className="inline-flex items-center gap-2 rounded-xl border border-footer-border/60 px-7 py-3.5 text-[15px] font-medium text-footer-heading/90 transition-all duration-200 hover:bg-footer-border/15"
-              >
-                <Headphones className="h-4 w-4" />
-                Talk to Sales
-              </a>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
       <div className="container relative z-10">
         <div className="border-t border-footer-border/40" />
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-10 py-14 md:grid-cols-2 lg:grid-cols-12">
           <div className="lg:col-span-5 lg:pr-12">
-            <Link to="/" className="group mb-5 inline-flex items-center gap-2">
+            <Link to="/" className="group mb-5 inline-flex items-center">
               <img
                 src={logoSrc}
                 alt="Carrothost logo"
                 className="h-11 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
-              <span className="text-lg font-bold tracking-tight text-footer-heading">Carrothost</span>
             </Link>
             <p className="mb-6 max-w-sm text-sm leading-relaxed text-footer-foreground/65">
               Premium web hosting in Bangladesh with NVMe SSD hosting, cPanel hosting, Webuzo hosting, Xeon VPS, and BDIX VPS built for businesses, developers, and growing websites.

@@ -17,7 +17,6 @@ import {
   Star,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
 const heroHighlights = [
@@ -191,62 +190,6 @@ const testimonials = [
   },
 ];
 
-const faqs = [
-  {
-    question: "What is NVMe SSD hosting?",
-    answer:
-      "NVMe SSD hosting uses high-speed NVMe storage instead of older disk technology. It improves website loading speed, database responsiveness, and overall hosting performance.",
-  },
-  {
-    question: "Why is NVMe SSD hosting faster than regular SSD hosting?",
-    answer:
-      "NVMe storage communicates more efficiently with the server and can handle more data operations at once. That means better speed for websites, applications, and higher-traffic workloads.",
-  },
-  {
-    question: "Which hosting is best for beginners?",
-    answer:
-      "Webuzo Hosting is a strong choice for beginners because it is easier to manage and well suited to simple websites, landing pages, and new online projects.",
-  },
-  {
-    question: "What is the difference between cPanel Hosting and Webuzo Hosting?",
-    answer:
-      "cPanel Hosting is ideal for users who want a more feature-rich environment with LiteSpeed, email tools, and familiar controls. Webuzo Hosting is lighter and simpler for users who prefer an easier panel.",
-  },
-  {
-    question: "What is BDIX VPS?",
-    answer:
-      "BDIX VPS is a VPS hosting solution optimized for local traffic performance in Bangladesh. It helps reduce latency for local users and is useful for websites, services, and applications targeting Bangladesh.",
-  },
-  {
-    question: "Do you provide SSL certificates?",
-    answer:
-      "Yes. Carrothost provides free SSL certificates with hosting plans to help secure websites, protect visitor data, and improve trust.",
-  },
-  {
-    question: "Can I upgrade my hosting plan later?",
-    answer:
-      "Yes. You can upgrade from a starter hosting plan to a larger hosting package or VPS solution as your traffic and resource needs grow.",
-  },
-  {
-    question: "Which hosting plan is best for business websites in Bangladesh?",
-    answer:
-      "For most business websites, cPanel Hosting is the best starting point because it offers strong performance, security, easy management, and room to scale. For larger workloads, Xeon VPS or BDIX VPS can be a better fit.",
-  },
-];
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqs.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: faq.answer,
-    },
-  })),
-};
-
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -277,17 +220,11 @@ const scrollToSection = (id: string) => {
 };
 
 const HomePage = () => {
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
       <section className="relative overflow-hidden bg-[linear-gradient(180deg,#08101f_0%,#0b1426_52%,#eef4fb_100%)] pt-28 md:pt-36">
@@ -373,29 +310,6 @@ const HomePage = () => {
               ))}
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.4 }}
-              className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-2 xl:grid-cols-4"
-            >
-              {[
-                { label: "Storage", value: "NVMe SSD" },
-                { label: "Performance", value: "LiteSpeed Ready" },
-                { label: "Local Speed", value: "BDIX Optimized" },
-                { label: "Support", value: "24/7 Assistance" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-5 text-left backdrop-blur"
-                >
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
-                </div>
-              ))}
-            </motion.div>
           </div>
         </div>
       </section>
@@ -702,93 +616,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="section-spacing bg-white">
-        <div className="container max-w-4xl">
-          <motion.div {...fadeUp} className="text-center">
-            <span className="section-pill-badge">FAQ</span>
-            <h2 className="mt-5 text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
-              Frequently asked questions about hosting in Bangladesh
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted-foreground">
-              Clear answers for customers comparing NVMe SSD hosting, cPanel hosting, Webuzo
-              hosting, VPS hosting, and BDIX VPS.
-            </p>
-          </motion.div>
-
-          <div className="mt-14 space-y-4">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={faq.question}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.18 }}
-                transition={{ duration: 0.4, delay: index * 0.03 }}
-                className="card-premium overflow-hidden rounded-[1.35rem]"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-                >
-                  <span className="text-base font-semibold text-foreground">{faq.question}</span>
-                  <ChevronDown
-                    className={`h-5 w-5 shrink-0 transition-transform duration-300 ${
-                      openFaq === index ? "rotate-180 text-primary" : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-                {openFaq === index && (
-                  <div className="px-5 pb-5 md:px-6">
-                    <p className="text-sm leading-7 text-muted-foreground">{faq.answer}</p>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section-spacing bg-slate-950 text-white">
-        <div className="container">
-          <motion.div
-            {...fadeUp}
-            className="relative overflow-hidden rounded-[2rem] border border-white/10 px-6 py-12 text-center md:px-10 md:py-16"
-            style={{
-              background:
-                "radial-gradient(circle at top left, hsl(25 95% 53% / 0.18), transparent 24%), radial-gradient(circle at 80% 20%, hsl(215 90% 52% / 0.22), transparent 28%), linear-gradient(135deg, rgba(15,23,42,0.96), rgba(2,6,23,0.98))",
-            }}
-          >
-            <div className="mx-auto max-w-3xl">
-              <span className="section-pill-badge border-white/10 bg-white/5 text-orange-300">
-                Ready to Launch
-              </span>
-              <h2 className="mt-5 text-3xl font-bold md:text-4xl lg:text-5xl">
-                Launch your website on clear, performance-focused hosting
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-slate-300">
-                Choose reliable NVMe SSD hosting, secure website infrastructure, and modern server
-                solutions designed for businesses and websites in Bangladesh.
-              </p>
-              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <Link
-                  to="/cpanel-hosting"
-                  className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold md:text-base"
-                >
-                  Get Started Today
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  to="/bdix-vps"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 md:text-base"
-                >
-                  Contact Support
-                  <Headphones className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
     </>
   );
 };
