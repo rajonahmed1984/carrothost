@@ -120,10 +120,10 @@ const SiteNavbar = () => {
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
             <img
               src={logoSrc}
-              alt="HostFlow logo"
+              alt="Carrothost logo"
               className="h-10 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
-            <span className="font-bold text-foreground text-lg tracking-tight hidden sm:block">HostFlow</span>
+            <span className="font-bold text-foreground text-lg tracking-tight hidden sm:block">Carrothost</span>
           </Link>
 
           {/* Desktop Nav — centered */}

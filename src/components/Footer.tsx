@@ -11,7 +11,6 @@ const Footer = () => {
 
   return (
     <footer className="relative border-t border-border">
-      {/* CTA Banner */}
       <div className="section-spacing">
         <div className="container">
           <motion.div
@@ -19,34 +18,32 @@ const Footer = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="card-featured rounded-2xl p-8 md:p-14 text-center relative overflow-hidden"
+            className="card-featured relative overflow-hidden rounded-2xl p-8 text-center md:p-14"
           >
-            <div className="glow-orb w-[300px] h-[300px] bg-primary/8 -top-20 -right-20 absolute" />
-            <div className="glow-orb w-[200px] h-[200px] bg-accent/5 bottom-0 left-0 absolute" />
+            <div className="glow-orb absolute -right-20 -top-20 h-[300px] w-[300px] bg-primary/8" />
+            <div className="glow-orb absolute bottom-0 left-0 h-[200px] w-[200px] bg-accent/5" />
             <div className="relative z-10">
-              <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-4">
-                Ready to Launch?
-              </h2>
-              <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto mb-8">
-                Join 50,000+ websites powered by our infrastructure. Start with a free trial — no credit card required.
+              <h2 className="mb-4 text-2xl font-bold text-foreground md:text-4xl">Ready to Launch?</h2>
+              <p className="mx-auto mb-8 max-w-xl text-base text-muted-foreground md:text-lg">
+                Join 50,000+ websites powered by our infrastructure. Start with a free trial and scale on reliable hosting.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <motion.a
                   href="#pricing"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="btn-glow inline-flex items-center gap-2 px-8 py-4 rounded-xl text-primary-foreground font-semibold text-base"
+                  className="btn-glow inline-flex items-center gap-2 rounded-xl px-8 py-4 text-base font-semibold text-primary-foreground"
                 >
                   Get Started Free
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </motion.a>
                 <motion.a
                   href="#"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-border bg-card text-foreground font-semibold text-base hover:border-primary/30 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-base font-semibold text-foreground transition-colors hover:border-primary/30"
                 >
-                  <Headphones className="w-4 h-4" />
+                  <Headphones className="h-4 w-4" />
                   Contact Support
                 </motion.a>
               </div>
@@ -55,16 +52,15 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Footer links */}
       <div className="container pb-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="mb-12 grid grid-cols-2 gap-8 md:grid-cols-4">
           {Object.entries(links).map(([category, items]) => (
             <div key={category}>
-              <h4 className="font-semibold text-foreground text-sm mb-4">{category}</h4>
+              <h4 className="mb-4 text-sm font-semibold text-foreground">{category}</h4>
               <ul className="space-y-2.5">
                 {items.map((item) => (
                   <li key={item}>
-                    <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <a href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                       {item}
                     </a>
                   </li>
@@ -74,16 +70,14 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">H</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <span className="text-sm font-bold text-primary-foreground">C</span>
             </div>
-            <span className="font-semibold text-foreground">HostFlow</span>
+            <span className="font-semibold text-foreground">Carrothost</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 HostFlow. All rights reserved.
-          </p>
+          <p className="text-sm text-muted-foreground">Copyright 2026 Carrothost. All rights reserved.</p>
         </div>
       </div>
     </footer>
