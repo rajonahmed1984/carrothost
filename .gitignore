@@ -1,68 +1,24 @@
-# CarrotHost .gitignore
-
-# PHP
-*.log
-*.cache
-
-# Session files
-sessions/
-tmp/
-
-# Configuration (if contains sensitive data)
-# Uncomment if your config.php has sensitive credentials
-# config.php
-
-# Vendor
-vendor/
-
-# Environment files
-.env
-.env.local
-.env.*.local
-config.local.php
-
-# IDE
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-.DS_Store
-Thumbs.db
-
-# Backup files
-*.bak
-*.backup
-*.old
-*.tmp
-*~
-
 # Logs
-logs/
+logs
 *.log
-error_log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Images (if you want to keep them separate)
-# Uncomment if images are managed separately
-# assets/images/*.jpg
-# assets/images/*.png
-# assets/images/*.gif
+node_modules
+dist
+dist-ssr
+*.local
 
-# Compiled/minified files
-*.min.js
-*.min.css
-
-# OS generated files
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# Temporary files
-*.swp
-*.swo
-*~
-.*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
