@@ -11,6 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ScrollToTop } from "../components/ScrollToTop";
+import { ThemeProvider } from "../components/theme-provider";
+import { AIChatbot } from "../components/AIChatbot";
 
 function NotFoundComponent() {
   return (
@@ -119,8 +122,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <ThemeProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <ScrollToTop />
+        <AIChatbot />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

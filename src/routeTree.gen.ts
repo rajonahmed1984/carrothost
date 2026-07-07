@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as XeonCloudVpsRouteImport } from './routes/xeon-cloud-vps'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as HostingRouteImport } from './routes/hosting'
 import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +19,16 @@ import { Route as IndexRouteImport } from './routes/index'
 const XeonCloudVpsRoute = XeonCloudVpsRouteImport.update({
   id: '/xeon-cloud-vps',
   path: '/xeon-cloud-vps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostingRoute = HostingRouteImport.update({
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,43 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
+  fullPaths:
+    | '/'
+    | '/bdix-cloud-vps'
+    | '/hosting'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/xeon-cloud-vps'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
-  id: '__root__' | '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
+  to:
+    | '/'
+    | '/bdix-cloud-vps'
+    | '/hosting'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/xeon-cloud-vps'
+  id:
+    | '__root__'
+    | '/'
+    | '/bdix-cloud-vps'
+    | '/hosting'
+    | '/privacy-policy'
+    | '/terms-of-service'
+    | '/xeon-cloud-vps'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   HostingRoute: typeof HostingRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
   XeonCloudVpsRoute: typeof XeonCloudVpsRoute
 }
 
@@ -76,6 +115,20 @@ declare module '@tanstack/react-router' {
       path: '/xeon-cloud-vps'
       fullPath: '/xeon-cloud-vps'
       preLoaderRoute: typeof XeonCloudVpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hosting': {
@@ -106,6 +159,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BdixCloudVpsRoute: BdixCloudVpsRoute,
   HostingRoute: HostingRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
+  TermsOfServiceRoute: TermsOfServiceRoute,
   XeonCloudVpsRoute: XeonCloudVpsRoute,
 }
 export const routeTree = rootRouteImport

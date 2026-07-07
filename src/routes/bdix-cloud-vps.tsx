@@ -2,26 +2,35 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
-  MapPin,
   Cpu,
   HardDrive,
-  Gauge,
   Wifi,
-  Server,
   Shield,
   Zap,
-  HelpCircle,
   Clock,
+  HelpCircle,
+  Server,
+  Star,
   Activity,
+  Lock,
+  Phone,
+  Settings,
+  RefreshCw,
+  Sliders,
+  Terminal,
+  ArrowUpRight
 } from "lucide-react";
+import { useState } from "react";
 import { BdixNetworkMap, SpeedometerIcon } from "@/components/BdixNetworkMap";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 export const Route = createFileRoute("/bdix-cloud-vps")({
   head: () => ({
     meta: [
-      { title: "BDIX VPS — Ultra-Fast Local Hosting | CarrottHost" },
-      { name: "description", content: "BDIX VPS hosting in Bangladesh. Ultra-low latency local servers with full root access, NVMe storage, and 99.9% uptime SLA." },
-      { property: "og:title", content: "BDIX VPS — Ultra-Fast Local Hosting | CarrottHost" },
+      { title: "BDIX VPS Hosting — CarrotHost" },
+      { name: "description", content: "Ultra-fast BDIX VPS hosting in Bangladesh. Low latency Intel Xeon servers with full root access, control panel, DDoS protection, and 24/7 support." },
+      { property: "og:title", content: "BDIX VPS Hosting — CarrotHost" },
       { property: "og:description", content: "Bangladesh BDIX VPS with sub-10ms latency, full root access, and local support." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -30,91 +39,49 @@ export const Route = createFileRoute("/bdix-cloud-vps")({
   component: VpsPage,
 });
 
-function Logo() {
-  return (
-    <Link to="/" className="flex items-center gap-2">
-      <div className="relative h-9 w-9 rounded-xl bg-gradient-brand shadow-elegant flex items-center justify-center">
-        <span className="text-brand-orange-foreground font-extrabold text-lg leading-none">C</span>
-        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-brand-green ring-2 ring-background" />
-      </div>
-      <span className="font-extrabold text-xl tracking-tight">
-        Carrott<span className="text-brand-orange">Host</span>
-      </span>
-    </Link>
-  );
-}
-
-function PageHeader() {
-  return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
-      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-        <Logo />
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition">Home</Link>
-          <Link to="/domains" className="hover:text-foreground transition">Domains</Link>
-          <Link to="/hosting" className="hover:text-foreground transition">Hosting</Link>
-          <Link to="/vps" className="text-foreground font-semibold transition">BDIX VPS</Link>
-          <Link to="/cloud-vps" className="hover:text-foreground transition">Cloud VPS</Link>
-        </nav>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-brand px-4 py-2 text-sm font-semibold text-primary-foreground shadow-elegant hover:opacity-95 transition"
-          >
-            Get Started <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-soft">
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-[0.05] pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 20%, var(--brand-orange) 0, transparent 40%), radial-gradient(circle at 80% 60%, var(--brand-green) 0, transparent 40%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-20 md:pt-24 md:pb-28">
+    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-20 border-b border-border/55">
+      {/* Background ambient glowing spheres */}
+      <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
+
+      <div className="relative mx-auto max-w-7xl px-6">
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand-green">
-              <MapPin className="h-3.5 w-3.5" />
+          <div className="space-y-6">
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-green/10 border border-brand-green/20 px-4 py-1.5 text-xs font-semibold text-brand-green">
+              <MapPinIcon className="h-4.5 w-4.5" />
               Dhaka Data Center · BDIX Connected
             </span>
-            <h1 className="mt-5 text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.05]">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.05] text-foreground">
               Ultra-Fast <span className="text-gradient-brand">Local Hosting</span> for Bangladesh
             </h1>
-            <p className="mt-5 text-lg text-muted-foreground max-w-xl">
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
               BDIX VPS servers located right here in Dhaka deliver sub-10ms latency to Bangladeshi visitors. Perfect for local e-commerce, news portals, and business apps that demand speed.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-4">
               <a
                 href="#pricing"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-6 py-3 font-semibold text-primary-foreground shadow-elegant hover:opacity-95 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-4 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
               >
-                View VPS Plans <ArrowRight className="h-4 w-4" />
+                View VPS Plans <ArrowRight className="h-4.5 w-4.5" />
               </a>
               <Link
-                to="/hosting"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3 font-semibold text-foreground hover:border-brand-orange transition"
+                to="/xeon-cloud-vps"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-4 font-bold text-foreground hover:border-brand-orange hover:bg-secondary/40 transition-all duration-200 hover:-translate-y-0.5"
               >
-                Compare Shared Hosting
+                Compare Xeon VPS
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+            <div className="pt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-t border-border/50">
               <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> Full Root Access</div>
               <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> 99.9% Uptime SLA</div>
               <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> bKash Accepted</div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-soft">
+          <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-soft relative overflow-hidden">
+            <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-brand-orange/5 blur-3xl" />
             <div className="flex items-center gap-3 mb-6">
               <div className="h-10 w-10 rounded-lg border border-border bg-background text-brand-orange flex items-center justify-center">
                 <SpeedometerIcon size={22} />
@@ -128,21 +95,20 @@ function Hero() {
             <div className="mt-6 pt-6 border-t border-border">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-extrabold text-brand-orange">10 Gbps</div>
+                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">10 Gbps</div>
                   <div className="text-xs text-muted-foreground mt-1">BDIX Uplink</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-extrabold text-brand-orange">&lt;10 ms</div>
+                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">&lt;10 ms</div>
                   <div className="text-xs text-muted-foreground mt-1">Avg Latency</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-extrabold text-brand-orange">99.99%</div>
+                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">99.99%</div>
                   <div className="text-xs text-muted-foreground mt-1">Core Uptime</div>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </section>
@@ -174,14 +140,16 @@ function BDIXAdvantage() {
   ];
 
   return (
-    <section className="py-20 md:py-28">
+    <section className="py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-2xl">
-          <span className="text-sm font-semibold text-brand-green">The BDIX Advantage</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            The BDIX Advantage
+          </span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Why BDIX hosting matters for Bangladesh
           </h2>
-          <p className="mt-3 text-muted-foreground">
+          <p className="mt-3 text-muted-foreground leading-relaxed">
             The Bangladesh Internet Exchange (BDIX) connects local ISPs directly, bypassing international bandwidth. That means faster, cheaper, and more reliable hosting for local audiences.
           </p>
         </div>
@@ -204,68 +172,250 @@ function BDIXAdvantage() {
   );
 }
 
+function VpsFacilities() {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const facilities = [
+    {
+      icon: Terminal,
+      title: "Full Root Access",
+      subtitle: "Complete Server Autonomy",
+      desc: "Unlock absolute control over your server environment. Run custom software, modify core kernel settings, manage packages, and optimize configuration files exactly how your application needs.",
+      details: [
+        "Full SSH access credentials",
+        "No restrictions on background processes",
+        "Install any database or language runtime",
+        "Enable custom networking modules"
+      ]
+    },
+    {
+      icon: Cpu,
+      title: "Intel Xeon Hardware",
+      subtitle: "Dedicated Enterprise Power",
+      desc: "Experience zero lag with 100% dedicated hardware resources. We use high-performance Intel Xeon E5 processors (2.40 GHz) coupled with server-grade ECC memory to ensure consistent, stable workloads.",
+      details: [
+        "Pure Intel Xeon computing cores",
+        "Enterprise-grade RAM allocations",
+        "No CPU stealing or overselling",
+        "Optimized virtual cores for high I/O"
+      ]
+    },
+    {
+      icon: Sliders,
+      title: "VPS Management Panel",
+      subtitle: "Remote Server Control",
+      desc: "Manage your VPS entirely from a visual control dashboard. Reboot, shut down, check bandwidth usage, or reinstall the operating system in just a few clicks.",
+      details: [
+        "1-click remote reboot & boot",
+        "Real-time CPU & RAM monitoring graphs",
+        "Instant OS rebuild tool",
+        "VNC console access in browser"
+      ]
+    },
+    {
+      icon: Settings,
+      title: "Flexible OS Options",
+      subtitle: " CentOS, Ubuntu & Debian",
+      desc: "Choose the operating system environment that fits your workflow. We offer standard installations for the most popular Linux distributions, or you can mount custom ISOs.",
+      details: [
+        "Ubuntu 20.04 & 22.04 LTS templates",
+        "AlmaLinux & Rocky Linux support",
+        "CentOS Stream & Debian templates",
+        "Custom ISO installation interface"
+      ]
+    },
+    {
+      icon: Shield,
+      title: "Advanced Uptime & Security",
+      subtitle: "DDoS Guard & Off-site Backups",
+      desc: "Protect your database and applications from malicious attacks. Our VPS plans feature network-level DDoS traffic scrubbing, along with cPGuard integration and customizable auto backups.",
+      details: [
+        "Always-on DDoS mitigation layer",
+        "Isolated network environment",
+        "Off-site backup automation options",
+        "Malware protection & security patches"
+      ]
+    },
+    {
+      icon: Activity,
+      title: "Seamless Resource Scaling",
+      subtitle: "No-Downtime Upgrades",
+      desc: "As your project grows, your server resources should scale with it. Upgrade your CPU cores, RAM, and NVMe SSD storage instantly through our portal, without complex data migrations.",
+      details: [
+        "Instant resource upgrade requests",
+        "Zero data migration or transfer required",
+        "Keep your IP addresses and DNS configuration",
+        "Pay only for the resources you scale to"
+      ]
+    }
+  ];
+
+  return (
+    <section className="py-20 md:py-28 bg-secondary/20 border-y border-border">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            VPS Facilities & Features
+          </span>
+          <h2 className="mt-3 text-3xl md:text-5xl font-extrabold tracking-tight">
+            Enterprise-grade virtual servers
+          </h2>
+          <p className="mt-3 text-muted-foreground text-base md:text-lg">
+            Manage your websites, applications, and database nodes with dedicated virtual machine control, backed by premium hardware and local sub-10ms network routing.
+          </p>
+        </div>
+
+        {/* Tabbed interface layout */}
+        <div className="grid lg:grid-cols-12 gap-8 items-stretch mt-12">
+          {/* Tabs selector */}
+          <div className="lg:col-span-4 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 border-b lg:border-b-0 lg:border-r border-border pb-4 lg:pb-0 lg:pr-4 shrink-0">
+            {facilities.map((fac, idx) => (
+              <button
+                key={fac.title}
+                onClick={() => setActiveTab(idx)}
+                className={`flex items-center gap-3 w-full text-left rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 whitespace-nowrap lg:whitespace-normal shrink-0 ${
+                  activeTab === idx
+                    ? "bg-gradient-brand text-primary-foreground shadow-elegant scale-[1.02]"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <fac.icon className="h-5 w-5 shrink-0" />
+                <div>
+                  <span className="block text-xs opacity-75 font-normal">{fac.subtitle}</span>
+                  <span className="block">{fac.title}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Active Tab Content */}
+          <div className="lg:col-span-8 bg-card rounded-3xl border border-border p-6 md:p-10 flex flex-col justify-between shadow-soft hover:shadow-elegant transition duration-300">
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-border/60 pb-6">
+                <div className="h-14 w-14 rounded-2xl bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                  {(() => {
+                    const ActiveIcon = facilities[activeTab].icon;
+                    return <ActiveIcon className="h-7 w-7" />;
+                  })()}
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">{facilities[activeTab].subtitle}</span>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">{facilities[activeTab].title}</h3>
+                </div>
+              </div>
+              <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
+                {facilities[activeTab].desc}
+              </p>
+              
+              <div className="grid sm:grid-cols-2 gap-4 pt-4">
+                {facilities[activeTab].details.map((point) => (
+                  <div key={point} className="flex items-center gap-3 text-sm font-semibold text-foreground/80">
+                    <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
+                      <Check className="h-3.5 w-3.5 text-brand-green" />
+                    </div>
+                    <span>{point}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-10 pt-6 border-t border-border/50 flex flex-wrap gap-4 items-center justify-between text-xs text-muted-foreground">
+              <span>Standard features on all BDIX VPS packages</span>
+              <a
+                href="https://portal.carrothost.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-brand-orange hover:underline"
+              >
+                Launch VPS Manager <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Pricing() {
   const plans = [
     {
-      name: "VPS Lite",
-      price: "৳1,499",
-      tag: "For starters",
-      cpu: "2 vCPU Cores",
-      ram: "2 GB DDR4 RAM",
-      storage: "40 GB NVMe SSD",
-      bandwidth: "2 TB Bandwidth",
-      features: ["Full Root Access", "1 Gbps Port", "DDoS Protection", "Weekly Backups", "Bangla Support"],
+      name: "BDIX Standard",
+      price: "৳1,550.00",
+      period: "/mo",
+      tag: "Best for start",
+      cpu: "2 Cores CPU",
+      ram: "2 GB RAM",
+      storage: "25 GB Storage",
+      bandwidth: "1000 GB/m Bandwidth",
+      link: "https://portal.carrothost.com/store/bdix-vps/bdix-standard",
+      features: [
+        "1 Gbps BDIX Speed",
+        "100 Mbps Internet Speed",
+        "Full Root Access",
+        "DDoS Protection",
+        "KVM Virtualization",
+        "24/7 Live Support",
+      ],
     },
     {
-      name: "VPS Pro",
-      price: "৳2,999",
+      name: "BDIX Enhanced",
+      price: "৳2,700.00",
+      period: "/mo",
       tag: "Most popular",
       highlight: true,
-      cpu: "4 vCPU Cores",
-      ram: "4 GB DDR4 RAM",
-      storage: "80 GB NVMe SSD",
-      bandwidth: "4 TB Bandwidth",
-      features: ["Full Root Access", "1 Gbps Port", "DDoS Protection", "Daily Backups", "Priority Support", "Free Migration"],
+      cpu: "4 Cores CPU",
+      ram: "4 GB RAM",
+      storage: "50 GB Storage",
+      bandwidth: "1500 GB/m Bandwidth",
+      link: "https://portal.carrothost.com/store/bdix-vps/bdix-enhanced",
+      features: [
+        "1 Gbps BDIX Speed",
+        "100 Mbps Internet Speed",
+        "Full Root Access",
+        "DDoS Protection",
+        "KVM Virtualization",
+        "Priority Support",
+      ],
     },
     {
-      name: "VPS Business",
-      price: "৳5,499",
+      name: "BDIX Premium",
+      price: "৳4,900.00",
+      period: "/mo",
       tag: "For power users",
-      cpu: "6 vCPU Cores",
-      ram: "8 GB DDR4 RAM",
-      storage: "160 GB NVMe SSD",
-      bandwidth: "6 TB Bandwidth",
-      features: ["Full Root Access", "10 Gbps BDIX", "DDoS Protection", "Daily Backups", "24/7 Phone Support", "Free Migration", "Dedicated IP"],
-    },
-    {
-      name: "VPS Enterprise",
-      price: "৳9,999",
-      tag: "For heavy workloads",
-      cpu: "8 vCPU Cores",
-      ram: "16 GB DDR4 RAM",
-      storage: "320 GB NVMe SSD",
-      bandwidth: "10 TB Bandwidth",
-      features: ["Full Root Access", "10 Gbps BDIX", "DDoS Protection", "Hourly Backups", "24/7 Phone Support", "Free Migration", "2 Dedicated IPs", "Custom ISO"],
+      cpu: "6 Cores CPU",
+      ram: "8 GB RAM",
+      storage: "100 GB Storage",
+      bandwidth: "2000 GB/m Bandwidth",
+      link: "https://portal.carrothost.com/store/bdix-vps/bdix-premium",
+      features: [
+        "1 Gbps BDIX Speed",
+        "100 Mbps Internet Speed",
+        "Full Root Access",
+        "DDoS Protection",
+        "KVM Virtualization",
+        "Dedicated Resources",
+      ],
     },
   ];
 
   return (
-    <section id="pricing" className="py-20 md:py-28 bg-gradient-soft border-y border-border">
+    <section id="pricing" className="py-20 md:py-28 bg-gradient-soft">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green">Pricing</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Pricing</span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             BDIX VPS plans that scale with you
           </h2>
           <p className="mt-3 text-muted-foreground">
             All plans include full root access, BDIX connectivity, and our 99.9% uptime SLA. Upgrade anytime with zero downtime.
           </p>
         </div>
-        <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-14 grid md:grid-cols-3 gap-6">
           {plans.map((p) => (
             <div
               key={p.name}
-              className={`relative rounded-2xl border p-6 flex flex-col ${
+              className={`relative rounded-2xl border p-8 flex flex-col ${
                 p.highlight
                   ? "border-brand-orange bg-card shadow-elegant scale-[1.02]"
                   : "border-border bg-card shadow-soft"
@@ -278,47 +428,49 @@ function Pricing() {
               )}
               <div className="text-sm font-semibold text-brand-green">{p.name}</div>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-3xl font-extrabold">{p.price}</span>
-                <span className="text-muted-foreground">/mo</span>
+                <span className="text-4xl font-extrabold">{p.price}</span>
+                <span className="text-muted-foreground text-sm font-semibold">{p.period}</span>
               </div>
-              {!p.highlight && <p className="mt-1 text-xs text-muted-foreground">{p.tag}</p>}
+              {!p.highlight && <p className="mt-1 text-sm text-muted-foreground">{p.tag}</p>}
 
-              <div className="mt-5 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span>{p.cpu}</span>
+              <div className="mt-6 space-y-3.5 text-sm border-y border-border/60 py-5 my-5">
+                <div className="flex items-center gap-3">
+                  <Cpu className="h-4.5 w-4.5 text-brand-orange shrink-0" />
+                  <span className="text-foreground/90 font-medium">{p.cpu}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span>{p.ram}</span>
+                <div className="flex items-center gap-3">
+                  <Activity className="h-4.5 w-4.5 text-brand-orange shrink-0" />
+                  <span className="text-foreground/90 font-medium">{p.ram}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <HardDrive className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span>{p.storage}</span>
+                <div className="flex items-center gap-3">
+                  <HardDrive className="h-4.5 w-4.5 text-brand-orange shrink-0" />
+                  <span className="text-foreground/90 font-medium">{p.storage}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Wifi className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span>{p.bandwidth}</span>
+                <div className="flex items-center gap-3">
+                  <Wifi className="h-4.5 w-4.5 text-brand-orange shrink-0" />
+                  <span className="text-foreground/90 font-medium">{p.bandwidth}</span>
                 </div>
               </div>
 
-              <ul className="mt-5 space-y-2 text-xs flex-1">
+              <ul className="space-y-3 text-sm flex-1">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
-                    <Check className="h-3.5 w-3.5 text-brand-green mt-0.5 shrink-0" />
+                    <Check className="h-4 w-4 text-brand-green mt-0.5 shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <a
-                href="#signup"
-                className={`mt-6 inline-flex justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                href={p.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-8 inline-flex justify-center items-center gap-2 rounded-xl px-4 py-3.5 font-bold transition ${
                   p.highlight
-                    ? "bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
-                    : "border border-border hover:border-brand-orange"
+                    ? "bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95 animate-pulse"
+                    : "border border-border bg-card hover:border-brand-orange text-foreground"
                 }`}
               >
-                Choose {p.name}
+                🛒 Order Now
               </a>
             </div>
           ))}
@@ -330,18 +482,18 @@ function Pricing() {
 
 function DataCenter() {
   const features = [
-    { icon: MapPin, title: "Dhaka Tier-III Facility", desc: "Located in the heart of Dhaka with redundant power, cooling, and 24/7 physical security." },
+    { icon: MapPinIcon, title: "Dhaka Tier-III Facility", desc: "Located in the heart of Dhaka with redundant power, cooling, and 24/7 physical security." },
     { icon: Shield, title: "Enterprise Security", desc: "Biometric access, CCTV surveillance, and armed guards protect our infrastructure around the clock." },
     { icon: Zap, title: "Redundant Power", desc: "N+1 UPS systems and diesel generators ensure 100% power availability even during grid outages." },
     { icon: Activity, title: "Carrier Neutral", desc: "Connected to multiple upstream providers and BDIX for true redundancy and the best possible routes." },
   ];
 
   return (
-    <section className="py-20 md:py-28">
+    <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-sm font-semibold text-brand-green">Data Center</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Data Center</span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Bangladesh&apos;s most connected facility
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
@@ -382,8 +534,8 @@ function NetworkPerformance() {
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green">Network Performance</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Network Performance</span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Built for speed and reliability
           </h2>
           <p className="mt-3 text-muted-foreground">
@@ -420,11 +572,11 @@ function Included() {
   ];
 
   return (
-    <section className="py-20 md:py-28">
+    <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green">Everything Included</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Everything Included</span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             The extras that make a difference
           </h2>
         </div>
@@ -489,26 +641,34 @@ function FAQ() {
 
 function CTA() {
   return (
-    <section className="py-20 md:py-24">
+    <section className="py-20 md:py-24 bg-card">
       <div className="mx-auto max-w-4xl px-6">
         <div className="rounded-3xl bg-gradient-brand p-10 md:p-14 text-center text-primary-foreground shadow-elegant relative overflow-hidden">
           <div aria-hidden className="absolute inset-0 opacity-20" style={{
             backgroundImage: "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
           }} />
           <div className="relative">
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
               Ready for ultra-fast local hosting?
             </h2>
-            <p className="mt-4 max-w-xl mx-auto opacity-90">
+            <p className="mt-4 max-w-xl mx-auto opacity-95 text-base md:text-lg">
               Deploy your BDIX VPS in under 60 seconds and experience the difference local connectivity makes.
             </p>
-            <a
-              href="#pricing"
-              className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-brand-orange hover:bg-white/90 transition"
-            >
-              Get Started <ArrowRight className="h-4 w-4" />
-            </a>
-            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm opacity-90">
+            <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+              <a
+                href="#pricing"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-bold text-brand-orange hover:bg-white/95 transition shadow-soft animate-bounce"
+              >
+                View BDIX VPS Plans <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href="tel:01787882277"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
+              >
+                📞 Call: 01787-882277
+              </a>
+            </div>
+            <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs opacity-90">
               <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Free migration</span>
               <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> 30-day guarantee</span>
               <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> bKash accepted</span>
@@ -520,67 +680,33 @@ function CTA() {
   );
 }
 
-function Footer() {
+function MapPinIcon(props: React.ComponentProps<"svg">) {
   return (
-    <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10">
-          <div className="sm:col-span-2 md:col-span-1">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="relative h-9 w-9 rounded-xl bg-gradient-brand shadow-elegant flex items-center justify-center">
-                <span className="text-brand-orange-foreground font-extrabold text-lg leading-none">C</span>
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-brand-green ring-2 ring-background" />
-              </div>
-              <span className="font-extrabold text-xl tracking-tight">
-                Carrott<span className="text-brand-orange">Host</span>
-              </span>
-            </Link>
-            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-              Reliable domain & hosting for Bangladesh. BDIX-optimized, locally supported, and built to scale.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-4">Services</h4>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/domains" className="hover:text-foreground transition">Domain Registration</Link></li>
-              <li><Link to="/hosting" className="hover:text-foreground transition">Shared Hosting</Link></li>
-              <li><Link to="/vps" className="hover:text-foreground transition">BDIX VPS</Link></li>
-              <li><Link to="/cloud-vps" className="hover:text-foreground transition">Cloud VPS</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-4">Company</h4>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/" className="hover:text-foreground transition">About</Link></li>
-              <li><Link to="/" className="hover:text-foreground transition">Contact</Link></li>
-              <li><Link to="/" className="hover:text-foreground transition">Terms</Link></li>
-              <li><Link to="/" className="hover:text-foreground transition">Privacy</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-4">Support</h4>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/" className="hover:text-foreground transition">Help Center</Link></li>
-              <li><Link to="/" className="hover:text-foreground transition">Status</Link></li>
-              <li><Link to="/" className="hover:text-foreground transition">Migrate to Us</Link></li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-12 pt-8 border-t border-border text-sm text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-4">
-          <p>&copy; {new Date().getFullYear()} CarrottHost. All rights reserved.</p>
-          <p>Made with care in Dhaka, Bangladesh.</p>
-        </div>
-      </div>
-    </footer>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0Z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
   );
 }
 
 function VpsPage() {
   return (
     <div>
-      <PageHeader />
+      <Header />
       <Hero />
       <BDIXAdvantage />
+      <VpsFacilities />
       <Pricing />
       <DataCenter />
       <NetworkPerformance />
