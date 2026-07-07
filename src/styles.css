@@ -1,0 +1,147 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-orange-foreground: var(--brand-orange-foreground);
+  --color-brand-green: var(--brand-green);
+  --color-brand-green-foreground: var(--brand-green-foreground);
+  --font-sans: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Clean off-white / light grey canvas */
+  --background: oklch(0.995 0.002 120);
+  --foreground: oklch(0.16 0.01 150);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0.01 150);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.01 150);
+
+  /* Solid vivid brand orange as primary */
+  --primary: oklch(0.70 0.19 47);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.97 0.005 150);
+  --secondary-foreground: oklch(0.22 0.02 150);
+
+  --muted: oklch(0.975 0.003 120);
+  --muted-foreground: oklch(0.48 0.01 150);
+
+  --accent: oklch(0.97 0.01 60);
+  --accent-foreground: oklch(0.28 0.02 60);
+
+  --destructive: oklch(0.62 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Thin, crisp 1px borders */
+  --border: oklch(0.93 0.004 150);
+  --input: oklch(0.93 0.004 150);
+  --ring: oklch(0.70 0.19 47);
+
+  /* Brand hues */
+  --brand-orange: oklch(0.70 0.19 47);
+  --brand-orange-foreground: oklch(1 0 0);
+  --brand-green: oklch(0.60 0.14 150);
+  --brand-green-foreground: oklch(1 0 0);
+
+  /* Very faint glow tokens */
+  --glow-orange: color-mix(in oklab, oklch(0.78 0.16 47) 10%, transparent);
+  --glow-green: color-mix(in oklab, oklch(0.70 0.14 150) 9%, transparent);
+
+  /* Premium minimal shadows */
+  --shadow-elegant: 0 1px 2px oklch(0.15 0.02 150 / 0.04), 0 8px 24px -12px oklch(0.15 0.02 150 / 0.08);
+  --shadow-soft: 0 1px 2px oklch(0.15 0.02 150 / 0.03);
+
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Solid dark "brand" surface — replaces the old colorful gradient */
+@utility bg-gradient-brand {
+  background-color: var(--primary);
+  background-image: none;
+  color: var(--primary-foreground);
+}
+
+/* Section backdrop: clean white with two very soft, blurred brand glows */
+@utility bg-gradient-soft {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(60rem 32rem at 15% -10%, var(--glow-orange), transparent 60%),
+    radial-gradient(50rem 28rem at 100% 110%, var(--glow-green), transparent 60%);
+  background-repeat: no-repeat;
+}
+
+/* Optional discrete glow utilities (behind key elements) */
+@utility glow-orange {
+  background: radial-gradient(closest-side, var(--glow-orange), transparent 70%);
+  filter: blur(40px);
+}
+@utility glow-green {
+  background: radial-gradient(closest-side, var(--glow-green), transparent 70%);
+  filter: blur(40px);
+}
+
+@utility shadow-elegant {
+  box-shadow: var(--shadow-elegant);
+}
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+/* Solid brand-orange accent — single color, no gradient */
+@utility text-gradient-brand {
+  color: var(--brand-orange);
+  background-image: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+}
+
