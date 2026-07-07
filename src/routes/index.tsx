@@ -11,55 +11,16 @@ import {
 } from "lucide-react";
 import { HeroNetwork } from "@/components/HeroNetwork";
 import { DomainIcon, HostingIcon, BdixIcon, CloudIcon } from "@/components/ServiceIcons";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="relative h-9 w-9 rounded-xl bg-gradient-brand shadow-elegant flex items-center justify-center">
-        <span className="text-brand-orange-foreground font-extrabold text-lg leading-none">C</span>
-        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-brand-green ring-2 ring-background" />
-      </div>
-      <span className="font-extrabold text-xl tracking-tight">
-        Carrott<span className="text-brand-orange">Host</span>
-      </span>
-    </div>
-  );
-}
 
-function Nav() {
-  return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
-      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-        <Logo />
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#services" className="hover:text-foreground transition">Services</a>
-          <Link to="/domains" className="hover:text-foreground transition">Domains</Link>
-          <Link to="/hosting" className="hover:text-foreground transition">Hosting</Link>
-          <Link to="/vps" className="hover:text-foreground transition">BDIX VPS</Link>
-          <Link to="/cloud-vps" className="hover:text-foreground transition">Cloud VPS</Link>
-          <a href="#pricing" className="hover:text-foreground transition">Pricing</a>
-          <a href="#why" className="hover:text-foreground transition">Why Us</a>
-        </nav>
-        <div className="flex items-center gap-3">
-          <a href="#login" className="hidden sm:inline text-sm font-medium hover:text-brand-orange transition">
-            Client Login
-          </a>
-          <a
-            href="#pricing"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-brand px-4 py-2 text-sm font-semibold text-primary-foreground shadow-elegant hover:opacity-95 transition"
-          >
-            Get Started <ArrowRight className="h-4 w-4" />
-          </a>
-        </div>
-      </div>
-    </header>
-  );
-}
+
 
 function Hero() {
   return (
@@ -207,7 +168,7 @@ function Services() {
             Everything you need to be online
           </h2>
           <p className="mt-3 text-muted-foreground">
-            From your first domain to enterprise-grade infrastructure — CarrottHost grows with you.
+            From your first domain to enterprise-grade infrastructure — CarrotHost grows with you.
           </p>
         </div>
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -241,7 +202,7 @@ function WhyUs() {
     <section id="why" className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-sm font-semibold text-brand-green">Why CarrottHost</span>
+          <span className="text-sm font-semibold text-brand-green">Why CarrotHost</span>
           <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
             The hosting partner Bangladesh trusts
           </h2>
@@ -358,7 +319,7 @@ function Testimonials() {
     {
       name: "Rafiq Ahmed",
       role: "Founder, Dhaka Threads",
-      body: "Migrating to CarrottHost cut our page load time in half. Support answered on WhatsApp within minutes.",
+      body: "Migrating to CarrotHost cut our page load time in half. Support answered on WhatsApp within minutes.",
     },
     {
       name: "Nusrat Jahan",
@@ -454,7 +415,7 @@ function CTA() {
                 Ready to launch your website?
               </h2>
               <p className="mt-3 opacity-90">
-                Join thousands of Bangladeshi entrepreneurs on CarrottHost today. Free migration included.
+                Join thousands of Bangladeshi entrepreneurs on CarrotHost today. Free migration included.
               </p>
             </div>
             <a
@@ -474,49 +435,12 @@ function CTA() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-14 grid gap-10 md:grid-cols-4">
-        <div>
-          <Logo />
-          <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-            Bangladesh's trusted partner for domain registration and premium web hosting.
-          </p>
-        </div>
-        {[
-          { title: "Services", links: ["Domains", "Shared Hosting", "BDIX VPS", "Cloud VPS", "Reseller", "SSL"] },
-          { title: "Company", links: ["About", "Blog", "Careers", "Contact"] },
-          { title: "Support", links: ["Knowledge Base", "24/7 Chat", "Status", "Terms", "Privacy"] },
-        ].map((c) => (
-          <div key={c.title}>
-            <div className="font-semibold text-sm">{c.title}</div>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              {c.links.map((l) => (
-                <li key={l}>
-                  <a href="#" className="hover:text-brand-orange transition">{l}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-border">
-        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-          <div>© {new Date().getFullYear()} CarrottHost. All rights reserved. Dhaka, Bangladesh.</div>
-          <div className="flex items-center gap-4">
-            <span>Accepts bKash · Nagad · Visa · Mastercard</span>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
+
 
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Nav />
+      <Header />
       <main>
         <Hero />
         <TrustBar />

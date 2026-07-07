@@ -11,7 +11,7 @@ export function HeroNetwork() {
       <svg
         viewBox="0 0 500 400"
         role="img"
-        aria-label="CarrottHost cloud network and server infrastructure"
+        aria-label="CarrotHost cloud network and server infrastructure"
         className="relative w-full h-full"
       >
         <defs>

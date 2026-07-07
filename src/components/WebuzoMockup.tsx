@@ -20,7 +20,7 @@ export function WebuzoMockup() {
           <span className="h-2.5 w-2.5 rounded-full bg-border" />
           <span className="h-2.5 w-2.5 rounded-full bg-border" />
           <div className="ml-3 flex-1 rounded-md border border-border bg-background px-3 py-1 text-[11px] text-muted-foreground font-mono">
-            webuzo.carrotthost.com/panel
+            https://earth.carrothost.com
           </div>
         </div>
 

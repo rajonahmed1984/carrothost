@@ -9,15 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VpsRouteImport } from './routes/vps'
+import { Route as XeonCloudVpsRouteImport } from './routes/xeon-cloud-vps'
 import { Route as HostingRouteImport } from './routes/hosting'
-import { Route as DomainsRouteImport } from './routes/domains'
-import { Route as CloudVpsRouteImport } from './routes/cloud-vps'
+import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
 import { Route as IndexRouteImport } from './routes/index'
 
-const VpsRoute = VpsRouteImport.update({
-  id: '/vps',
-  path: '/vps',
+const XeonCloudVpsRoute = XeonCloudVpsRouteImport.update({
+  id: '/xeon-cloud-vps',
+  path: '/xeon-cloud-vps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostingRoute = HostingRouteImport.update({
@@ -25,14 +24,9 @@ const HostingRoute = HostingRouteImport.update({
   path: '/hosting',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DomainsRoute = DomainsRouteImport.update({
-  id: '/domains',
-  path: '/domains',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CloudVpsRoute = CloudVpsRouteImport.update({
-  id: '/cloud-vps',
-  path: '/cloud-vps',
+const BdixCloudVpsRoute = BdixCloudVpsRouteImport.update({
+  id: '/bdix-cloud-vps',
+  path: '/bdix-cloud-vps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,49 +37,45 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/cloud-vps': typeof CloudVpsRoute
-  '/domains': typeof DomainsRoute
+  '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
-  '/vps': typeof VpsRoute
+  '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/cloud-vps': typeof CloudVpsRoute
-  '/domains': typeof DomainsRoute
+  '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
-  '/vps': typeof VpsRoute
+  '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/cloud-vps': typeof CloudVpsRoute
-  '/domains': typeof DomainsRoute
+  '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
-  '/vps': typeof VpsRoute
+  '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cloud-vps' | '/domains' | '/hosting' | '/vps'
+  fullPaths: '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cloud-vps' | '/domains' | '/hosting' | '/vps'
-  id: '__root__' | '/' | '/cloud-vps' | '/domains' | '/hosting' | '/vps'
+  to: '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
+  id: '__root__' | '/' | '/bdix-cloud-vps' | '/hosting' | '/xeon-cloud-vps'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CloudVpsRoute: typeof CloudVpsRoute
-  DomainsRoute: typeof DomainsRoute
+  BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   HostingRoute: typeof HostingRoute
-  VpsRoute: typeof VpsRoute
+  XeonCloudVpsRoute: typeof XeonCloudVpsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/vps': {
-      id: '/vps'
-      path: '/vps'
-      fullPath: '/vps'
-      preLoaderRoute: typeof VpsRouteImport
+    '/xeon-cloud-vps': {
+      id: '/xeon-cloud-vps'
+      path: '/xeon-cloud-vps'
+      fullPath: '/xeon-cloud-vps'
+      preLoaderRoute: typeof XeonCloudVpsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hosting': {
@@ -95,18 +85,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HostingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/domains': {
-      id: '/domains'
-      path: '/domains'
-      fullPath: '/domains'
-      preLoaderRoute: typeof DomainsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cloud-vps': {
-      id: '/cloud-vps'
-      path: '/cloud-vps'
-      fullPath: '/cloud-vps'
-      preLoaderRoute: typeof CloudVpsRouteImport
+    '/bdix-cloud-vps': {
+      id: '/bdix-cloud-vps'
+      path: '/bdix-cloud-vps'
+      fullPath: '/bdix-cloud-vps'
+      preLoaderRoute: typeof BdixCloudVpsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,11 +104,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CloudVpsRoute: CloudVpsRoute,
-  DomainsRoute: DomainsRoute,
+  BdixCloudVpsRoute: BdixCloudVpsRoute,
   HostingRoute: HostingRoute,
-  VpsRoute: VpsRoute,
+  XeonCloudVpsRoute: XeonCloudVpsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

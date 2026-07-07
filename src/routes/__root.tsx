@@ -77,9 +77,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CarrottHost — Reliable Domain & Web Hosting in Bangladesh" },
-      { name: "description", content: "CarrottHost offers fast, secure, and affordable domain registration and web hosting in Bangladesh with 99.9% uptime and 24/7 local support." },
-      { property: "og:title", content: "CarrottHost — Reliable Domain & Web Hosting in Bangladesh" },
+      { title: "CarrotHost — Reliable Domain & Web Hosting in Bangladesh" },
+      { name: "description", content: "CarrotHost offers fast, secure, and affordable domain registration and web hosting in Bangladesh with 99.9% uptime and 24/7 local support." },
+      { property: "og:title", content: "CarrotHost — Reliable Domain & Web Hosting in Bangladesh" },
       { property: "og:description", content: "Fast, secure, and affordable domain & hosting with 99.9% uptime and 24/7 local support." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -87,6 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" },

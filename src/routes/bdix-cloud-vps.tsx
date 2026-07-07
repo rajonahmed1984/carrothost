@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { BdixNetworkMap, SpeedometerIcon } from "@/components/BdixNetworkMap";
 
-export const Route = createFileRoute("/vps")({
+export const Route = createFileRoute("/bdix-cloud-vps")({
   head: () => ({
     meta: [
       { title: "BDIX VPS — Ultra-Fast Local Hosting | CarrottHost" },
