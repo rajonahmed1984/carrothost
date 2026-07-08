@@ -94,6 +94,18 @@ const indexHtml = `<!DOCTYPE html>
   </script>
 </head>
 <body>
+  <script>
+    window.$_TSR = {
+      buffer: [],
+      router: {
+        matches: []
+      },
+      h() {},
+      e() {},
+      c() {},
+      p(e) { e(); }
+    };
+  </script>
   <script type="module" src="/assets/${entryJs}"></script>
 </body>
 </html>
