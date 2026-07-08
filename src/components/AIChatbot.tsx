@@ -44,58 +44,157 @@ export function AIChatbot() {
   const getAIResponse = (query: string): { text: string; actionLink?: { label: string; url: string; external?: boolean } } => {
     const text = query.toLowerCase();
 
-    if (text.includes("gtm") || text.includes("tracking") || text.includes("server-side")) {
+    // 1. Pricing, Payment Methods, Dam, Koto, Tk (MFS like bKash, Nagad)
+    if (
+      text.includes("price") ||
+      text.includes("dam") ||
+      text.includes("koto") ||
+      text.includes("tk") ||
+      text.includes("taka") ||
+      text.includes("payment") ||
+      text.includes("bkash") ||
+      text.includes("nagad") ||
+      text.includes("rocket") ||
+      text.includes("টাকা") ||
+      text.includes("দাম") ||
+      text.includes("বিকাশ") ||
+      text.includes("নগদ") ||
+      text.includes("রকেট") ||
+      text.includes("পেমেন্ট")
+    ) {
       return {
-        text: "Our Shared Webuzo Hosting is optimized for Google Tag Manager (GTM) Server-Side Tracking! We removed heavy Node.js processes and implemented tracking proxies directly in Nginx. This lets you track 100% of customer journeys with zero RAM drain.",
-        actionLink: { label: "View Shared Hosting", url: "/hosting" }
+        text: "আমরা বিকাশ (bKash), নগদ (Nagad), রকেট (Rocket), স্থানীয় ব্যাংক এবং আন্তর্জাতিক কার্ড পেমেন্ট সাপোর্ট করি!\n\nআমাদের সেবাগুলোর মূল্যসমূহ:\n• ওয়েবুজো শেয়ার্ড হোস্টিং: বার্ষিক ৪,২০০ টাকা থেকে শুরু\n• BDIX ভিপিএস হোস্টিং: মাসিক ১,৫৫০ টাকা থেকে শুরু\n• Xeon ক্লাউড ভিপিএস: মাসিক ৬০৭ টাকা থেকে শুরু\n• .com ডোমেইন রেজিস্ট্রেশন: বার্ষিক ১,১৯০ টাকা",
+        actionLink: { label: "ওয়েবসাইট প্ল্যান দেখুন", url: "/" }
       };
     }
 
-    if (text.includes("bdix") || text.includes("local") || text.includes("bangladesh")) {
+    // 2. Google Tag Manager (GTM) tracking
+    if (
+      text.includes("gtm") ||
+      text.includes("tracking") ||
+      text.includes("server-side") ||
+      text.includes("pixel") ||
+      text.includes("কনভার্সন") ||
+      text.includes("পিক্সেল") ||
+      text.includes("ট্র্যাকিং")
+    ) {
       return {
-        text: "Our BDIX VPS servers are located in a Tier-III data center in Dhaka, offering ultra-low sub-10ms latency to local visitors. Plans start from ৳1,550/mo with full root access and KVM virtualization.",
-        actionLink: { label: "View BDIX VPS Plans", url: "/bdix-cloud-vps" }
+        text: "আমাদের Webuzo শেয়ার্ড হোস্টিং-এ আপনি সম্পূর্ণ Node-free 100% Google Tag Manager (GTM) Server-Side tracking সেটআপ করতে পারবেন। আমরা Nginx-এ সরাসরি ট্র্যাকিং প্রক্সি সেটআপ করেছি, যা আপনার ডাটা লস কমায় এবং ব্রাউজার অ্যাড-ব্লকার বাইপাস করতে সাহায্য করে।",
+        actionLink: { label: "সার্ভার-সাইড হোস্টিং দেখুন", url: "/hosting" }
       };
     }
 
-    if (text.includes("xeon") || text.includes("intel") || text.includes("webdock")) {
+    // 3. BDIX Dhaka Server
+    if (
+      text.includes("bdix") ||
+      text.includes("local") ||
+      text.includes("bangladesh") ||
+      text.includes("dhaka") ||
+      text.includes("ping") ||
+      text.includes("ঢাকা") ||
+      text.includes("বিডিআইএক্স") ||
+      text.includes("লোকাল")
+    ) {
       return {
-        text: "Our Xeon Cloud VPS uses high-end Intel Xeon Platinum processors coupled with the Webdock management dashboard (visual reboot, rebuild, transactional emails). Plans start from only ৳607/mo (NVMe Nano4) up to 30 threads and 64 GB RAM.",
-        actionLink: { label: "View Xeon VPS Plans", url: "/xeon-cloud-vps" }
+        text: "আমাদের BDIX VPS সার্ভারগুলো ঢাকার ধানমন্ডির প্রিমিয়াম Tier-III ডেটাসেন্টারে কো-লোকেটেড। বাংলাদেশের ভেতরের ভিজিটরদের জন্য এটি sub-10ms ল্যাটেন্সি (Ping) দেয়। লোকাল ই-কমার্স, নিউজ পেপার বা ইনভেন্টরি অ্যাপের জন্য এটি সেরা পছন্দ।",
+        actionLink: { label: "BDIX VPS প্ল্যান দেখুন", url: "/bdix-cloud-vps" }
       };
     }
 
-    if (text.includes("hosting") || text.includes("shared") || text.includes("webuzo")) {
+    // 4. Xeon Server
+    if (
+      text.includes("xeon") ||
+      text.includes("intel") ||
+      text.includes("webdock") ||
+      text.includes("জিয়ন") ||
+      text.includes("ইনটেল")
+    ) {
       return {
-        text: "We offer next-gen Webuzo Shared Hosting optimized from the Linux kernel level up to handle high traffic and Flash Sales easily. Plans:\n• Starter: ৳4,200/yr\n• Standard: ৳8,400/yr\n• Advanced: ৳12,000/yr.",
-        actionLink: { label: "Explore Shared Hosting", url: "/hosting" }
+        text: "আমাদের Xeon Cloud VPS-এ ব্যবহার করা হয়েছে হাই-এন্ড Intel Xeon Platinum প্রসেসর। এটি গ্লোবাল ক্লাউড নেটওয়ার্কে হোস্ট করা এবং এর সাথে পাচ্ছেন Webdock-এর রিমোট ড্যাশবোর্ড প্যানেল (গ্রাফিক্যাল রিবুট, রিইন্সটল, ব্যাকআপ ম্যানেজমেন্ট)। এটি যেকোনো ভারী অ্যাপ ডেভেলপমেন্ট বা কম্পাইলেশনের জন্য উপযুক্ত।",
+        actionLink: { label: "Xeon VPS প্ল্যান দেখুন", url: "/xeon-cloud-vps" }
       };
     }
 
-    if (text.includes("vps") || text.includes("vps compare")) {
+    // 5. Shared Hosting & LiteSpeed
+    if (
+      text.includes("hosting") ||
+      text.includes("shared") ||
+      text.includes("webuzo") ||
+      text.includes("litespeed") ||
+      text.includes("হোস্টিং") ||
+      text.includes("শেয়ার্ড")
+    ) {
       return {
-        text: "We offer two types of virtual servers:\n1. BDIX VPS: Located in Dhaka for sub-10ms latency to Bangladeshi visitors.\n2. Xeon VPS: Global high-performance virtual nodes powered by Intel Xeon Platinum, featuring Webdock's custom dashboard.",
-        actionLink: { label: "Compare BDIX VPS", url: "/bdix-cloud-vps" }
+        text: "আমাদের শেয়ার্ড হোস্টিং প্ল্যানে Webuzo কন্ট্রোল প্যানেল দেওয়া হয় যা cPanel-এর চেয়ে হালকা ও দ্রুতগতির। এটি LiteSpeed এন্টারপ্রাইজ ওয়েব সার্ভার এবং সম্পূর্ণ NVMe SSD ড্রাইভ দ্বারা চালিত। ওয়ার্ডপ্রেস বা ই-কমার্স সাইটের স্পিড ৩ গুণ বাড়ানোর জন্য এটি চমৎকার।\n\nপ্ল্যানসমূহ:\n• Starter (10GB): ৪,২০০ টাকা/বছর\n• Standard (25GB): ৮,৪০০ টাকা/বছর\n• Advanced (50GB): ১২,০০০ টাকা/বছর",
+        actionLink: { label: "শেয়ার্ড হোস্টিং দেখুন", url: "/hosting" }
       };
     }
 
-    if (text.includes("domain") || text.includes("register") || text.includes("search")) {
+    // 6. Domain Registration
+    if (
+      text.includes("domain") ||
+      text.includes("register") ||
+      text.includes("search") ||
+      text.includes("ডোমেইন") ||
+      text.includes("ডোমেন") ||
+      text.includes("রেজিস্ট্রেশন")
+    ) {
       return {
-        text: "You can register .com (৳1,190/yr), .net, .xyz, and .com.bd (৳1,800/yr) domains instantly. DNS management is completely free.",
-        actionLink: { label: "Register Domain Now", url: "https://portal.carrothost.com/cart.php?a=add&domain=register", external: true }
+        text: "CarrotHost থেকে আপনি যেকোনো সময় instant ডোমেইন রেজিস্ট্রেশন করতে পারেন। ডোমেইন সার্চ ও বুকিং সম্পূর্ণ স্বয়ংক্রিয়।\n\nমূল্য তালিকা:\n• .com ডোমেইন: ১,১৯০ টাকা/বছর\n• .net ডোমেইন: ১,৪৫০ টাকা/বছর\n• .com.bd ডোমেইন: ১,৮০০ টাকা/বছর (২ বছরের জন্য ৩,৬০০ টাকা ন্যূনতম রেজিস্ট্রেশন ফী)",
+        actionLink: { label: "ডোমেইন রেজিস্ট্রেশন করুন", url: "https://portal.carrothost.com/cart.php?a=add&domain=register", external: true }
       };
     }
 
-    if (text.includes("support") || text.includes("phone") || text.includes("contact") || text.includes("whatsapp") || text.includes("number")) {
+    // 7. Migration / Transfer
+    if (
+      text.includes("migrate") ||
+      text.includes("migration") ||
+      text.includes("transfer") ||
+      text.includes("নিয়ে আস") ||
+      text.includes("ট্রান্সফার") ||
+      text.includes("মাইগ্রেশন") ||
+      text.includes("মুভ")
+    ) {
       return {
-        text: "We offer 24/7 Bangla & English support! You can reach our sales and technical engineers directly by calling or messaging our hotline.",
-        actionLink: { label: "Call Hotline: 01787-882277", url: "tel:01787882277", external: true }
+        text: "আমরা সম্পূর্ণ ফ্রিতে আপনার বর্তমান হোস্টিং (cPanel/Webuzo/Plesk) থেকে সাইট CarrotHost-এ মাইগ্রেশন বা ট্রান্সফার করে দেব। আপনার ওয়েবসাইটের কোনো ডাউনটাইম (Downtime) ছাড়াই আমাদের ইঞ্জিনিয়াররা পুরো কাজ নিরাপদে সম্পন্ন করবেন।",
+        actionLink: { label: "হোয়াটসঅ্যাপে আমাদের জানান", url: "https://wa.me/8801787882277", external: true }
+      };
+    }
+
+    // 8. Contact & Hotline (Bangla support)
+    if (
+      text.includes("support") ||
+      text.includes("phone") ||
+      text.includes("contact") ||
+      text.includes("whatsapp") ||
+      text.includes("number") ||
+      text.includes("call") ||
+      text.includes("hotline") ||
+      text.includes("helpline") ||
+      text.includes("যোগাযোগ") ||
+      text.includes("হেল্পলাইন") ||
+      text.includes("নাম্বার") ||
+      text.includes("ফোন") ||
+      text.includes("কল") ||
+      text.includes("হেল্প")
+    ) {
+      return {
+        text: "আমাদের ২৪/৭ বাংলা ও ইংরেজি কাস্টমার সাপোর্ট টিম সর্বদা প্রস্তুত! যেকোনো প্রয়োজনে কল করুন অথবা হোয়াটসঅ্যাপ মেসেজ করুন:\n\n• হেল্পলাইন নম্বর: 01787-882277\n• ইমেইল: support@carrothost.com",
+        actionLink: { label: "সরাসরি কল করুন", url: "tel:01787882277", external: true }
+      };
+    }
+
+    // 9. VPS Comparison
+    if (text.includes("vps") || text.includes("ভিপিএস")) {
+      return {
+        text: "আমাদের ভিপিএস সার্ভার দুটি ক্যাটাগরির:\n১. BDIX VPS: বাংলাদেশ (ঢাকা) ডেটাসেন্টার, লোকাল স্পিডের জন্য বেস্ট।\n২. Xeon Cloud VPS: গ্লোবাল হাই-পারফরম্যান্স সার্ভার (Intel Xeon Platinum প্রসেসর), ডেভেলপমেন্ট ও টেস্ট সার্ভারের জন্য সেরা।",
+        actionLink: { label: "BDIX VPS কম্পেয়ার করুন", url: "/bdix-cloud-vps" }
       };
     }
 
     return {
-      text: "I want to make sure you get the right info! I can explain GTM Server-Side tracking, compare BDIX/Xeon VPS, or check domain prices. Alternatively, you can speak directly with our team at 01787-882277.",
-      actionLink: { label: "Talk to Sales on WhatsApp", url: "https://wa.me/8801787882277", external: true }
+      text: "আমি আপনাকে CarrotHost-এর হোস্টিং প্যাক, ডোমেন প্রাইস, GTM ট্র্যাকিং প্রক্সি, অথবা BDIX/Xeon VPS সার্ভার কম্পেয়ার করতে সাহায্য করতে পারি। আপনি কি জানতে চান তা একটু বিস্তারিত বলুন, অথবা আমাদের সাপোর্টে সরাসরি যোগাযোগ করুন।",
+      actionLink: { label: "হোয়াটসঅ্যাপে কথা বলুন 💬", url: "https://wa.me/8801787882277", external: true }
     };
   };
 
