@@ -32,7 +32,7 @@ export function Footer() {
           </div>
           <div>
             <h4 className="font-semibold text-sm mb-4">Accept and Social</h4>
-            <img src="/payments.png" alt="Accepted Payments" className="h-20 w-auto opacity-95 hover:opacity-100 transition dark:brightness-95" />
+            <img src="/payments.png" alt="Accepted Payments" className="h-auto w-auto opacity-95 hover:opacity-100 transition dark:brightness-95" />
             <div className="mt-5 flex items-center gap-3">
               <a
                 href="https://www.facebook.com/carrothost"
