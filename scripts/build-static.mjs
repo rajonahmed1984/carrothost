@@ -1,153 +1,155 @@
 /**
  * Post-build script for shared hosting (cPanel) deployment.
  *
- * Reads the Vite client-build manifest to discover the hashed entry-point JS
- * and CSS files, then writes a minimal SPA index.html that boots the React app
- * client-side. Copies .htaccess and public assets into a single upload-ready
- * folder.
+ * Runs the Vite/Nitro build with the node-server preset, starts the SSR server
+ * locally in the background, fetches pre-rendered pages to get the exact HTML
+ * and $_TSR hydration data, then stops the server. Finally, copies public assets
+ * and pre-rendered pages into the upload-ready folder.
  *
- * Usage:  node scripts/build-static.mjs
+ * Usage: node scripts/build-static.mjs
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execSync, spawn } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const OUTPUT_PUBLIC = path.join(ROOT, ".output", "public");
 const UPLOAD_DIR = path.join(ROOT, "upload-ready");
 
-// ── 1. Discover entry JS & CSS from the built assets ──────────────────────
-const assetsDir = path.join(OUTPUT_PUBLIC, "assets");
-if (!fs.existsSync(assetsDir)) {
-  console.error("❌ No .output/public/assets found. Run 'npm run build:static' first.");
+const ROUTES = [
+  { path: "/", file: "index.html" },
+  { path: "/about-us", file: "about-us/index.html" },
+  { path: "/bdix-cloud-vps", file: "bdix-cloud-vps/index.html" },
+  { path: "/hosting", file: "hosting/index.html" },
+  { path: "/privacy-policy", file: "privacy-policy/index.html" },
+  { path: "/terms-of-service", file: "terms-of-service/index.html" },
+  { path: "/whois", file: "whois/index.html" },
+  { path: "/xeon-cloud-vps", file: "xeon-cloud-vps/index.html" }
+];
+
+console.log("🚀 Starting static site generation...");
+
+// 1. Build client and server with node-server preset
+console.log("📦 Building client & server bundles (preset: node-server)...");
+try {
+  execSync("npx vite build", {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NITRO_PRESET: "node-server"
+    }
+  });
+} catch (err) {
+  console.error("❌ Vite build failed.");
   process.exit(1);
 }
 
-const assetFiles = fs.readdirSync(assetsDir);
-const entryJs = assetFiles.find((f) => f.startsWith("index-") && f.endsWith(".js"));
-const entryCss = assetFiles.find((f) => f.startsWith("styles-") && f.endsWith(".css"));
-
-if (!entryJs) {
-  console.error("❌ Could not find entry JS bundle in .output/public/assets/");
-  process.exit(1);
-}
-
-console.log(`📦 Entry JS:  assets/${entryJs}`);
-console.log(`🎨 Entry CSS: assets/${entryCss || "(none)"}`);
-
-// ── 2. Generate index.html ────────────────────────────────────────────────
-const indexHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CarrotHost — Reliable Domain & Web Hosting in Bangladesh</title>
-  <meta name="description" content="CarrotHost offers fast, secure, and affordable domain registration and web hosting in Bangladesh with 99.9% uptime and 24/7 local support." />
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="CarrotHost — Reliable Domain & Web Hosting in Bangladesh" />
-  <meta property="og:description" content="CarrotHost offers fast, secure, and affordable domain registration and web hosting in Bangladesh with 99.9% uptime and 24/7 local support." />
-  <meta property="og:image" content="/og-image.png" />
-  <meta property="og:url" content="https://carrothost.com/" />
-  <meta property="og:site_name" content="CarrotHost" />
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="CarrotHost — Reliable Domain & Web Hosting in Bangladesh" />
-  <meta name="twitter:description" content="CarrotHost offers fast, secure, and affordable domain registration and web hosting in Bangladesh with 99.9% uptime and 24/7 local support." />
-  <meta name="twitter:image" content="/og-image.png" />
-
-  <!-- Favicon -->
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-
-  <!-- Styles -->
-  ${entryCss ? `<link rel="stylesheet" href="/assets/${entryCss}" />` : ""}
-
-  <!-- Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "CarrotHost",
-    "url": "https://carrothost.com",
-    "logo": "https://carrothost.com/logo.png",
-    "description": "Fast, secure, and affordable domain registration and web hosting in Bangladesh."
+// 2. Start the built node server
+console.log("🔌 Starting background SSR server...");
+const serverProcess = spawn("node", [".output/server/index.mjs"], {
+  cwd: ROOT,
+  stdio: "ignore",
+  env: {
+    ...process.env,
+    PORT: "3000"
   }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "CarrotHost",
-    "url": "https://carrothost.com"
+});
+
+// Helper to wait
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Helper to fetch HTML from server
+async function fetchPage(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  return await res.text();
+}
+
+async function main() {
+  try {
+    // Wait for server to start
+    let connected = false;
+    for (let i = 0; i < 15; i++) {
+      try {
+        await fetch("http://localhost:3000/");
+        connected = true;
+        break;
+      } catch {
+        await sleep(500);
+      }
+    }
+
+    if (!connected) {
+      throw new Error("Could not connect to the local SSR server after 7.5 seconds.");
+    }
+
+    console.log("✨ SSR server running. Scraping pages...");
+    const pageContents = {};
+
+    for (const route of ROUTES) {
+      console.log(`   📄 Scraping ${route.path}...`);
+      pageContents[route.path] = await fetchPage(`http://localhost:3000${route.path}`);
+    }
+
+    // Stop the server
+    console.log("🛑 Stopping background SSR server...");
+    serverProcess.kill("SIGTERM");
+
+    // 3. Create upload-ready directory
+    if (fs.existsSync(UPLOAD_DIR)) {
+      fs.rmSync(UPLOAD_DIR, { recursive: true, force: true });
+    }
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+    // Copy all .output/public contents
+    console.log("📂 Copying assets and public files...");
+    copyDirSync(OUTPUT_PUBLIC, UPLOAD_DIR);
+
+    // Write pre-rendered HTML files
+    console.log("✍️ Writing pre-rendered pages...");
+    for (const route of ROUTES) {
+      const filePath = path.join(UPLOAD_DIR, route.file);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, pageContents[route.path]);
+    }
+
+    // Copy .htaccess
+    const htaccessSrc = path.join(ROOT, ".htaccess");
+    if (fs.existsSync(htaccessSrc)) {
+      fs.copyFileSync(htaccessSrc, path.join(UPLOAD_DIR, ".htaccess"));
+    }
+
+    // Copy robots.txt from root if not already present
+    const robotsSrc = path.join(ROOT, "robots.txt");
+    const robotsDst = path.join(UPLOAD_DIR, "robots.txt");
+    if (fs.existsSync(robotsSrc) && !fs.existsSync(robotsDst)) {
+      fs.copyFileSync(robotsSrc, robotsDst);
+    }
+
+    console.log("");
+    console.log("✅ Static site successfully generated and optimized:");
+    console.log(`   📁 ${UPLOAD_DIR}`);
+    console.log("");
+    listDir(UPLOAD_DIR, "   ");
+    console.log("");
+    console.log("🚀 cPanel-এ আপলোড করতে:");
+    console.log("   1. upload-ready/ ফোল্ডারের ভেতরের সব কিছু ZIP করো");
+    console.log("   2. cPanel File Manager-এ public_html/ ফোল্ডারে আপলোড করো");
+    console.log("   3. ZIP extract করো");
+    console.log("   4. Done! 🎉");
+
+  } catch (err) {
+    console.error("❌ Static generation failed:", err);
+    serverProcess.kill("SIGTERM");
+    process.exit(1);
   }
-  </script>
-</head>
-<body>
-  <script>
-    window.$_TSR = {
-      buffer: [],
-      router: {
-        matches: []
-      },
-      h() {},
-      e() {},
-      c() {},
-      p(e) { e(); }
-    };
-  </script>
-  <script type="module" src="/assets/${entryJs}"></script>
-</body>
-</html>
-`;
-
-
-// ── 3. Create upload-ready directory ──────────────────────────────────────
-if (fs.existsSync(UPLOAD_DIR)) {
-  fs.rmSync(UPLOAD_DIR, { recursive: true, force: true });
-}
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-// Copy all .output/public contents
-copyDirSync(OUTPUT_PUBLIC, UPLOAD_DIR);
-
-// Write index.html
-fs.writeFileSync(path.join(UPLOAD_DIR, "index.html"), indexHtml);
-
-// Copy .htaccess
-const htaccessSrc = path.join(ROOT, ".htaccess");
-if (fs.existsSync(htaccessSrc)) {
-  fs.copyFileSync(htaccessSrc, path.join(UPLOAD_DIR, ".htaccess"));
 }
 
-// Copy robots.txt from root if not already present
-const robotsSrc = path.join(ROOT, "robots.txt");
-const robotsDst = path.join(UPLOAD_DIR, "robots.txt");
-if (fs.existsSync(robotsSrc) && !fs.existsSync(robotsDst)) {
-  fs.copyFileSync(robotsSrc, robotsDst);
-}
-
-console.log("");
-console.log("✅ Upload-ready folder created:");
-console.log(`   📁 ${UPLOAD_DIR}`);
-console.log("");
-listDir(UPLOAD_DIR, "   ");
-console.log("");
-console.log("🚀 cPanel-এ আপলোড করতে:");
-console.log("   1. upload-ready/ ফোল্ডারের ভেতরের সব কিছু ZIP করো");
-console.log("   2. cPanel File Manager-এ public_html/ ফোল্ডারে আপলোড করো");
-console.log("   3. ZIP extract করো");
-console.log("   4. Done! 🎉");
+main();
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function copyDirSync(src, dst) {
