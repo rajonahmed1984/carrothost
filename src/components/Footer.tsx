@@ -32,7 +32,7 @@ export function Footer() {
           </div>
           <div>
             <h4 className="font-semibold text-sm mb-4">Accept and Social</h4>
-            <img src="/payments.png" alt="Accepted Payments" className="h-auto w-auto opacity-95 hover:opacity-100 transition dark:brightness-95" />
+            <img src="/payments.webp" alt="Accepted Payments" width={300} height={149} className="h-auto w-auto opacity-95 hover:opacity-100 transition dark:brightness-95" />
             <div className="mt-5 flex items-center gap-3">
               <a
                 href="https://www.facebook.com/carrothost"
@@ -53,7 +53,7 @@ export function Footer() {
                 <Youtube className="h-4.5 w-4.5" />
               </a>
               <a href="/dmca-validation.html" target="_blank" rel="noopener noreferrer" className="hover:opacity-90 transition-opacity">
-                <img src="/DMCA_logo-grn-btn.png" alt="DMCA Protection Status" className="h-5 w-auto" />
+                <img src="/DMCA_logo-grn-btn.png" alt="DMCA Protection Status" width={100} height={36} className="h-5 w-auto" />
               </a>
             </div>
           </div>

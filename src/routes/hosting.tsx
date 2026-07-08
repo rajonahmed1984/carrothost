@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
@@ -134,20 +134,6 @@ function Hero() {
               >
                 <Phone className="h-4.5 w-4.5 text-brand-green animate-bounce" /> Call 01787-882277
               </a>
-            </div>
-            <div className="pt-6 grid grid-cols-3 gap-4 border-t border-border/50 max-w-md">
-              <div>
-                <div className="text-xl md:text-2xl font-extrabold text-brand-orange">99.9%</div>
-                <div className="text-xs text-muted-foreground">Uptime Guarantee</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-extrabold text-brand-orange">&lt; 15m</div>
-                <div className="text-xs text-muted-foreground">Response SLA</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-extrabold text-brand-orange">Free</div>
-                <div className="text-xs text-muted-foreground">Site Migration</div>
-              </div>
             </div>
           </div>
           <div className="lg:col-span-5 relative">
@@ -802,11 +788,31 @@ function MigrationCTA() {
   );
 }
 
+function TrustBar() {
+  return (
+    <section className="border-b border-border bg-card">
+      <div className="mx-auto max-w-7xl px-6 py-10 grid grid-cols-3 gap-8 text-center">
+        {[
+          { k: "99.9%", v: "Uptime Guarantee" },
+          { k: "< 15m", v: "Response SLA" },
+          { k: "Free", v: "Site Migration" },
+        ].map((s) => (
+          <div key={s.v}>
+            <div className="text-3xl md:text-4xl font-extrabold text-gradient-brand">{s.k}</div>
+            <div className="mt-1 text-sm text-muted-foreground font-medium">{s.v}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HostingPage() {
   return (
     <div>
       <Header />
       <Hero />
+      <TrustBar />
       <CoreOptimization />
       <ExclusiveFeatures />
       <WebuzoFacilities />

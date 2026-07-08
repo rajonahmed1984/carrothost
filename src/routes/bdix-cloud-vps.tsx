@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
@@ -152,26 +152,6 @@ function Hero() {
               </div>
             </div>
             <BdixNetworkMap />
-            <div className="mt-6 pt-6 border-t border-border">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">
-                    10 Gbps
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">BDIX Uplink</div>
-                </div>
-                <div>
-                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">
-                    &lt;10 ms
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">Avg Latency</div>
-                </div>
-                <div>
-                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">99.99%</div>
-                  <div className="text-xs text-muted-foreground mt-1">Core Uptime</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -848,11 +828,31 @@ function MapPinIcon(props: React.ComponentProps<"svg">) {
   );
 }
 
+function TrustBar() {
+  return (
+    <section className="border-b border-border bg-card">
+      <div className="mx-auto max-w-7xl px-6 py-10 grid grid-cols-3 gap-8 text-center">
+        {[
+          { k: "10 Gbps", v: "BDIX Uplink" },
+          { k: "<10 ms", v: "Avg Latency" },
+          { k: "99.99%", v: "Core Uptime" },
+        ].map((s) => (
+          <div key={s.v}>
+            <div className="text-3xl md:text-4xl font-extrabold text-gradient-brand">{s.k}</div>
+            <div className="mt-1 text-sm text-muted-foreground font-medium">{s.v}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function VpsPage() {
   return (
     <div>
       <Header />
       <Hero />
+      <TrustBar />
       <BDIXAdvantage />
       <VpsFacilities />
       <Pricing />

@@ -1,0 +1,15 @@
+# CarrotHost
+
+> CarrotHost provides fast, secure, and affordable domain registration, Webuzo web hosting, BDIX VPS, and Xeon Cloud VPS hosting services in Bangladesh with 24/7 local support.
+
+## Key Services
+- [Shared Webuzo Hosting](https://carrothost.com/hosting): High-performance shared hosting optimized for high traffic e-commerce. Features LiteSpeed, NVMe storage, server-side tracking, and Hourly Auto-Unlock Guard.
+- [BDIX Cloud VPS](https://carrothost.com/bdix-cloud-vps): Dhaka-based KVM virtual servers connected directly to BDIX, delivering sub-10ms latency for local audiences.
+- [Xeon Cloud VPS](https://carrothost.com/xeon-cloud-vps): Enterprise Intel Xeon Platinum hypervisors with full root access, unmetered port, and scalable resources.
+- [Domain Registration](https://portal.carrothost.com/cart.php?a=add&domain=register): Domain search and registration portal.
+
+## Tools and Support
+- [WHOIS & DNS Check](https://carrothost.com/whois): Real-time WHOIS search and DNS resolution utility.
+- [About Us](https://carrothost.com/about-us): Company journey, mission, and background (active since 2014, formerly known as RD Network BD).
+- [Terms of Service](https://carrothost.com/terms-of-service): Terms and conditions for using CarrotHost services.
+- [Privacy Policy](https://carrothost.com/privacy-policy): Privacy and data protection policies.
