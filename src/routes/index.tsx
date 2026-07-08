@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   Globe,
@@ -10,19 +10,59 @@ import {
   MapPin,
   Cpu,
   Server,
-  Network
+  Network,
+  Phone,
 } from "lucide-react";
 import { HeroNetwork } from "@/components/HeroNetwork";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { breadcrumbSchema, createSeoMeta, faqSchema, jsonLdScript } from "@/lib/seo";
+
+const HOME_FAQS = [
+  {
+    q: "Do you accept bKash and Nagad?",
+    a: "Yes — we accept bKash, Nagad, Rocket, bank transfer, and international cards.",
+  },
+  {
+    q: "Where are your servers located?",
+    a: "We operate data centers in Singapore, USA, and a Tier-III facility right here in Dhaka for low-latency delivery in Bangladesh.",
+  },
+  {
+    q: "Can I migrate my existing site?",
+    a: "Absolutely. Our team handles free migration from any host — usually within 24 hours with zero downtime.",
+  },
+  {
+    q: "Is there a money-back guarantee?",
+    a: "Yes, all hosting plans come with a 30-day money-back guarantee, no questions asked.",
+  },
+];
 
 export const Route = createFileRoute("/")({
+  head: () => {
+    const seo = createSeoMeta({
+      title: "CarrotHost — Reliable Domain & Web Hosting in Bangladesh",
+      description:
+        "Fast, secure, and affordable domain registration, Webuzo hosting, BDIX VPS, and Xeon VPS for Bangladesh with local support.",
+      path: "/",
+    });
+
+    return {
+      ...seo,
+      scripts: [
+        jsonLdScript("ld-home-breadcrumbs", breadcrumbSchema([{ name: "Home", path: "/" }])),
+        jsonLdScript(
+          "ld-home-faq",
+          faqSchema(HOME_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
+        ),
+      ],
+    };
+  },
   component: Landing,
 });
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-24 border-b border-border/55">
+    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-12 border-b border-border/55">
       {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
@@ -38,7 +78,8 @@ function Hero() {
               Hosting Built for <span className="text-gradient-brand">Bangladeshi Brands</span>
             </h1>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Blazing fast GTM tracking shared hosting, local sub-10ms BDIX VPS, and enterprise Intel Xeon Cloud servers. Backed by 24/7 expert support and local payment methods.
+              Blazing fast GTM tracking shared hosting, local sub-10ms BDIX VPS, and enterprise
+              Intel Xeon Cloud servers. Backed by 24/7 expert support and local payment methods.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <Link
@@ -57,9 +98,15 @@ function Hero() {
               </a>
             </div>
             <div className="pt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-t border-border/50">
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> Free Migration</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> bKash & Nagad</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> 99.9% Uptime SLA</div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> Free Migration
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> bKash & Nagad
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> 99.9% Uptime SLA
+              </div>
             </div>
           </div>
 
@@ -101,21 +148,21 @@ function Services() {
       title: "Shared Webuzo Hosting",
       desc: "LiteSpeed & NVMe storage optimized for high traffic e-commerce. Features 100% Node-Free GTM server-side tracking proxies and Hourly Auto-Unlock Guard.",
       to: "/hosting",
-      price: "From ৳4,200.00 / year"
+      price: "From ৳4,200.00 / year",
     },
     {
       icon: Network,
       title: "BDIX Cloud VPS",
       desc: "Dhaka-based KVM virtual servers connected directly to BDIX. Delivers lightning-fast sub-10ms speeds to local audiences, perfect for local portals.",
       to: "/bdix-cloud-vps",
-      price: "From ৳1,550.00 / month"
+      price: "From ৳1,550.00 / month",
     },
     {
       icon: Cpu,
       title: "Xeon Cloud VPS",
       desc: "Enterprise Intel Xeon Platinum hypervisors powered by Webdock remote dashboard panel. Ideal for compute-heavy workloads and compilation pipelines.",
       to: "/xeon-cloud-vps",
-      price: "From ৳607.00 / month"
+      price: "From ৳607.00 / month",
     },
   ];
 
@@ -130,7 +177,8 @@ function Services() {
             High-availability cloud hosting
           </h2>
           <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            Choose the perfect infrastructure for your business, backed by direct local peering and responsive support.
+            Choose the perfect infrastructure for your business, backed by direct local peering and
+            responsive support.
           </p>
         </div>
 
@@ -167,22 +215,41 @@ function Services() {
 
 function WhyUs() {
   const rows = [
-    { icon: Zap, title: "Tuned Linux Kernel", desc: "We customize server socket buffers, scheduling variables, and Nginx connections to handle traffic easily." },
-    { icon: Shield, title: "Enterprise Mitigation", desc: "Network-level DDoS traffic scrubbing up to 100 Gbps guards your virtual servers 24/7." },
-    { icon: HeadphonesIcon, title: "24/7 Local Support", desc: "Resolve server issues instantly with local technical engineers over phone or WhatsApp." },
-    { icon: Check, title: "bKash & Nagad Gateways", desc: "Pay securely in BDT via local mobile banking options with instant checkout processing." },
+    {
+      icon: Zap,
+      title: "Tuned Linux Kernel",
+      desc: "We customize server socket buffers, scheduling variables, and Nginx connections to handle traffic easily.",
+    },
+    {
+      icon: Shield,
+      title: "Enterprise Mitigation",
+      desc: "Network-level DDoS traffic scrubbing up to 100 Gbps guards your virtual servers 24/7.",
+    },
+    {
+      icon: HeadphonesIcon,
+      title: "24/7 Local Support",
+      desc: "Resolve server issues instantly with local technical engineers over phone or WhatsApp.",
+    },
+    {
+      icon: Check,
+      title: "bKash & Nagad Gateways",
+      desc: "Pay securely in BDT via local mobile banking options with instant checkout processing.",
+    },
   ];
 
   return (
     <section id="why" className="py-20 md:py-28 bg-card border-y border-border/50">
       <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Why CarrotHost</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Why CarrotHost
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             The hosting partner Bangladesh trusts
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            We combine high-performance global network peering with local features designed for Bangladesh — from bKash integrations to Bangla-speaking engineers.
+            We combine high-performance global network peering with local features designed for
+            Bangladesh — from bKash integrations to Bangla-speaking engineers.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
@@ -195,13 +262,16 @@ function WhyUs() {
               href="tel:01787882277"
               className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-6 py-3 font-bold text-foreground hover:bg-secondary/40 transition"
             >
-              📞 01787-882277
+              <Phone className="h-4 w-4 text-brand-green" /> 01787-882277
             </a>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-5">
           {rows.map((r) => (
-            <div key={r.title} className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:shadow-elegant transition duration-300">
+            <div
+              key={r.title}
+              className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:shadow-elegant transition duration-300"
+            >
               <div className="h-10 w-10 rounded-lg bg-brand-orange/10 text-brand-orange flex items-center justify-center">
                 <r.icon className="h-5 w-5" />
               </div>
@@ -238,14 +308,19 @@ function Testimonials() {
     <section className="py-20 md:py-28 bg-gradient-soft">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Reviews</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Reviews
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Loved by local developers & agencies
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
           {quotes.map((q) => (
-            <figure key={q.name} className="rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft flex flex-col justify-between hover:shadow-elegant transition duration-300">
+            <figure
+              key={q.name}
+              className="rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft flex flex-col justify-between hover:shadow-elegant transition duration-300"
+            >
               <div>
                 <div className="flex gap-0.5 text-brand-orange">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -274,18 +349,15 @@ function Testimonials() {
 }
 
 function FAQ() {
-  const faqs = [
-    { q: "Do you accept bKash and Nagad?", a: "Yes — we accept bKash, Nagad, Rocket, bank transfer, and international cards." },
-    { q: "Where are your servers located?", a: "We operate data centers in Singapore, USA, and a Tier-III facility right here in Dhaka for low-latency delivery in Bangladesh." },
-    { q: "Can I migrate my existing site?", a: "Absolutely. Our team handles free migration from any host — usually within 24 hours with zero downtime." },
-    { q: "Is there a money-back guarantee?", a: "Yes, all hosting plans come with a 30-day money-back guarantee, no questions asked." },
-  ];
+  const faqs = HOME_FAQS;
 
   return (
     <section id="faq" className="py-20 md:py-28 bg-card border-t border-border/50">
       <div className="mx-auto max-w-4xl px-6">
         <div className="text-center mb-14">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">FAQ</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            FAQ
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Frequently asked questions
           </h2>
@@ -316,15 +388,21 @@ function CTA() {
     <section className="py-20 bg-card border-t border-border/50">
       <div className="mx-auto max-w-6xl px-6">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-brand p-10 md:p-16 shadow-elegant text-center">
-          <div aria-hidden className="absolute inset-0 opacity-20" style={{
-            backgroundImage: "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
-          }} />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
+            }}
+          />
           <div className="relative z-10 text-primary-foreground max-w-2xl mx-auto space-y-6">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
               Ready to launch your website?
             </h2>
             <p className="opacity-95 text-base md:text-lg">
-              Join thousands of Bangladeshi entrepreneurs on CarrotHost today. Free migration included.
+              Join thousands of Bangladeshi entrepreneurs on CarrotHost today. Free migration
+              included.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row justify-center items-center gap-4">
               <Link
@@ -337,7 +415,7 @@ function CTA() {
                 href="tel:01787882277"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
               >
-                📞 Call: 01787-882277
+                <Phone className="h-4 w-4" /> Call: 01787-882277
               </a>
             </div>
           </div>

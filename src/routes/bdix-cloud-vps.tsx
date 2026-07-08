@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
@@ -18,30 +18,82 @@ import {
   RefreshCw,
   Sliders,
   Terminal,
-  ArrowUpRight
+  ArrowUpRight,
 } from "lucide-react";
 import { useState } from "react";
 import { BdixNetworkMap, SpeedometerIcon } from "@/components/BdixNetworkMap";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import {
+  breadcrumbSchema,
+  createSeoMeta,
+  faqSchema,
+  jsonLdScript,
+  webHostingServiceSchema,
+} from "@/lib/seo";
+
+const BDIX_FAQS = [
+  {
+    q: "What is BDIX and why does it matter?",
+    a: "BDIX (Bangladesh Internet Exchange) is a local internet exchange point where Bangladeshi ISPs peer directly. Traffic between BDIX-connected servers and local users never leaves the country, resulting in much lower latency and cost.",
+  },
+  {
+    q: "Can I upgrade my VPS resources later?",
+    a: "Yes. You can upgrade CPU, RAM, and storage anytime with just a reboot — no data migration needed. Downgrades are also available on request.",
+  },
+  {
+    q: "Which operating systems are available?",
+    a: "We offer Ubuntu, Debian, AlmaLinux, and CentOS out of the box. You can also upload your own ISO for custom operating systems.",
+  },
+  {
+    q: "Do you offer managed VPS services?",
+    a: "Our VPS plans are self-managed by default. We also offer a managed add-on where our team handles security patches, monitoring, and routine maintenance for you.",
+  },
+];
 
 export const Route = createFileRoute("/bdix-cloud-vps")({
-  head: () => ({
-    meta: [
-      { title: "BDIX VPS Hosting — CarrotHost" },
-      { name: "description", content: "Ultra-fast BDIX VPS hosting in Bangladesh. Low latency Intel Xeon servers with full root access, control panel, DDoS protection, and 24/7 support." },
-      { property: "og:title", content: "BDIX VPS Hosting — CarrotHost" },
-      { property: "og:description", content: "Bangladesh BDIX VPS with sub-10ms latency, full root access, and local support." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => {
+    const seo = createSeoMeta({
+      title: "BDIX VPS Hosting — CarrotHost",
+      description:
+        "Ultra-fast BDIX VPS hosting in Bangladesh. Low latency Intel Xeon servers with full root access, control panel, DDoS protection, and 24/7 support.",
+      path: "/bdix-cloud-vps",
+    });
+
+    return {
+      ...seo,
+      scripts: [
+        jsonLdScript(
+          "ld-bdix-breadcrumbs",
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "BDIX VPS", path: "/bdix-cloud-vps" },
+          ]),
+        ),
+        jsonLdScript(
+          "ld-bdix-service",
+          webHostingServiceSchema({
+            name: "BDIX VPS Hosting",
+            description:
+              "Bangladesh BDIX VPS with sub-10ms latency, full root access, KVM virtualization, DDoS protection, and local support.",
+            path: "/bdix-cloud-vps",
+            serviceType: "BDIX Cloud VPS Hosting",
+            priceFrom: "1550",
+          }),
+        ),
+        jsonLdScript(
+          "ld-bdix-faq",
+          faqSchema(BDIX_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
+        ),
+      ],
+    };
+  },
   component: VpsPage,
 });
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-20 border-b border-border/55">
+    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-12 border-b border-border/55">
       {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
@@ -57,7 +109,9 @@ function Hero() {
               Ultra-Fast <span className="text-gradient-brand">Local Hosting</span> for Bangladesh
             </h1>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              BDIX VPS servers located right here in Dhaka deliver sub-10ms latency to Bangladeshi visitors. Perfect for local e-commerce, news portals, and business apps that demand speed.
+              BDIX VPS servers located right here in Dhaka deliver sub-10ms latency to Bangladeshi
+              visitors. Perfect for local e-commerce, news portals, and business apps that demand
+              speed.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-4">
               <a
@@ -74,9 +128,15 @@ function Hero() {
               </Link>
             </div>
             <div className="pt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-t border-border/50">
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> Full Root Access</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> 99.9% Uptime SLA</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> bKash Accepted</div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> Full Root Access
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> 99.9% Uptime SLA
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> bKash Accepted
+              </div>
             </div>
           </div>
 
@@ -95,11 +155,15 @@ function Hero() {
             <div className="mt-6 pt-6 border-t border-border">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">10 Gbps</div>
+                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">
+                    10 Gbps
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">BDIX Uplink</div>
                 </div>
                 <div>
-                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">&lt;10 ms</div>
+                  <div className="text-xl md:text-2xl font-extrabold text-brand-orange">
+                    &lt;10 ms
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">Avg Latency</div>
                 </div>
                 <div>
@@ -150,7 +214,9 @@ function BDIXAdvantage() {
             Why BDIX hosting matters for Bangladesh
           </h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
-            The Bangladesh Internet Exchange (BDIX) connects local ISPs directly, bypassing international bandwidth. That means faster, cheaper, and more reliable hosting for local audiences.
+            The Bangladesh Internet Exchange (BDIX) connects local ISPs directly, bypassing
+            international bandwidth. That means faster, cheaper, and more reliable hosting for local
+            audiences.
           </p>
         </div>
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -185,8 +251,8 @@ function VpsFacilities() {
         "Full SSH access credentials",
         "No restrictions on background processes",
         "Install any database or language runtime",
-        "Enable custom networking modules"
-      ]
+        "Enable custom networking modules",
+      ],
     },
     {
       icon: Cpu,
@@ -197,8 +263,8 @@ function VpsFacilities() {
         "Pure Intel Xeon computing cores",
         "Enterprise-grade RAM allocations",
         "No CPU stealing or overselling",
-        "Optimized virtual cores for high I/O"
-      ]
+        "Optimized virtual cores for high I/O",
+      ],
     },
     {
       icon: Sliders,
@@ -209,8 +275,8 @@ function VpsFacilities() {
         "1-click remote reboot & boot",
         "Real-time CPU & RAM monitoring graphs",
         "Instant OS rebuild tool",
-        "VNC console access in browser"
-      ]
+        "VNC console access in browser",
+      ],
     },
     {
       icon: Settings,
@@ -221,8 +287,8 @@ function VpsFacilities() {
         "Ubuntu 20.04 & 22.04 LTS templates",
         "AlmaLinux & Rocky Linux support",
         "CentOS Stream & Debian templates",
-        "Custom ISO installation interface"
-      ]
+        "Custom ISO installation interface",
+      ],
     },
     {
       icon: Shield,
@@ -233,8 +299,8 @@ function VpsFacilities() {
         "Always-on DDoS mitigation layer",
         "Isolated network environment",
         "Off-site backup automation options",
-        "Malware protection & security patches"
-      ]
+        "Malware protection & security patches",
+      ],
     },
     {
       icon: Activity,
@@ -245,9 +311,9 @@ function VpsFacilities() {
         "Instant resource upgrade requests",
         "Zero data migration or transfer required",
         "Keep your IP addresses and DNS configuration",
-        "Pay only for the resources you scale to"
-      ]
-    }
+        "Pay only for the resources you scale to",
+      ],
+    },
   ];
 
   return (
@@ -261,7 +327,8 @@ function VpsFacilities() {
             Enterprise-grade virtual servers
           </h2>
           <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            Manage your websites, applications, and database nodes with dedicated virtual machine control, backed by premium hardware and local sub-10ms network routing.
+            Manage your websites, applications, and database nodes with dedicated virtual machine
+            control, backed by premium hardware and local sub-10ms network routing.
           </p>
         </div>
 
@@ -299,17 +366,24 @@ function VpsFacilities() {
                   })()}
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">{facilities[activeTab].subtitle}</span>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">{facilities[activeTab].title}</h3>
+                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">
+                    {facilities[activeTab].subtitle}
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">
+                    {facilities[activeTab].title}
+                  </h3>
                 </div>
               </div>
               <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
                 {facilities[activeTab].desc}
               </p>
-              
+
               <div className="grid sm:grid-cols-2 gap-4 pt-4">
                 {facilities[activeTab].details.map((point) => (
-                  <div key={point} className="flex items-center gap-3 text-sm font-semibold text-foreground/80">
+                  <div
+                    key={point}
+                    className="flex items-center gap-3 text-sm font-semibold text-foreground/80"
+                  >
                     <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
                       <Check className="h-3.5 w-3.5 text-brand-green" />
                     </div>
@@ -403,12 +477,15 @@ function Pricing() {
     <section id="pricing" className="py-20 md:py-28 bg-gradient-soft">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Pricing</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Pricing
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             BDIX VPS plans that scale with you
           </h2>
           <p className="mt-3 text-muted-foreground">
-            All plans include full root access, BDIX connectivity, and our 99.9% uptime SLA. Upgrade anytime with zero downtime.
+            All plans include full root access, BDIX connectivity, and our 99.9% uptime SLA. Upgrade
+            anytime with zero downtime.
           </p>
         </div>
         <div className="mt-14 grid md:grid-cols-3 gap-6">
@@ -470,7 +547,7 @@ function Pricing() {
                     : "border border-border bg-card hover:border-brand-orange text-foreground"
                 }`}
               >
-                🛒 Order Now
+                Order Now
               </a>
             </div>
           ))}
@@ -482,22 +559,42 @@ function Pricing() {
 
 function DataCenter() {
   const features = [
-    { icon: MapPinIcon, title: "Dhaka Tier-III Facility", desc: "Located in the heart of Dhaka with redundant power, cooling, and 24/7 physical security." },
-    { icon: Shield, title: "Enterprise Security", desc: "Biometric access, CCTV surveillance, and armed guards protect our infrastructure around the clock." },
-    { icon: Zap, title: "Redundant Power", desc: "N+1 UPS systems and diesel generators ensure 100% power availability even during grid outages." },
-    { icon: Activity, title: "Carrier Neutral", desc: "Connected to multiple upstream providers and BDIX for true redundancy and the best possible routes." },
+    {
+      icon: MapPinIcon,
+      title: "Dhaka Tier-III Facility",
+      desc: "Located in the heart of Dhaka with redundant power, cooling, and 24/7 physical security.",
+    },
+    {
+      icon: Shield,
+      title: "Enterprise Security",
+      desc: "Biometric access, CCTV surveillance, and armed guards protect our infrastructure around the clock.",
+    },
+    {
+      icon: Zap,
+      title: "Redundant Power",
+      desc: "N+1 UPS systems and diesel generators ensure 100% power availability even during grid outages.",
+    },
+    {
+      icon: Activity,
+      title: "Carrier Neutral",
+      desc: "Connected to multiple upstream providers and BDIX for true redundancy and the best possible routes.",
+    },
   ];
 
   return (
     <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Data Center</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Data Center
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Bangladesh&apos;s most connected facility
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Our Dhaka data center is purpose-built for performance and reliability. With direct BDIX peering, carrier-neutral connectivity, and enterprise-grade infrastructure, your workloads run on the best network in the country.
+            Our Dhaka data center is purpose-built for performance and reliability. With direct BDIX
+            peering, carrier-neutral connectivity, and enterprise-grade infrastructure, your
+            workloads run on the best network in the country.
           </p>
           <ul className="mt-8 space-y-4">
             {[
@@ -515,7 +612,10 @@ function DataCenter() {
         </div>
         <div className="grid sm:grid-cols-2 gap-5">
           {features.map((f) => (
-            <div key={f.title} className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:border-brand-orange hover:shadow-elegant transition">
+            <div
+              key={f.title}
+              className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:border-brand-orange hover:shadow-elegant transition"
+            >
               <div className="h-10 w-10 rounded-lg bg-gradient-brand text-primary-foreground flex items-center justify-center">
                 <f.icon className="h-5 w-5" />
               </div>
@@ -534,24 +634,54 @@ function NetworkPerformance() {
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Network Performance</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Network Performance
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Built for speed and reliability
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Our network is engineered to deliver the lowest possible latency to Bangladeshi users while maintaining robust international connectivity.
+            Our network is engineered to deliver the lowest possible latency to Bangladeshi users
+            while maintaining robust international connectivity.
           </p>
         </div>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { value: "10 Gbps", label: "BDIX Uplink Capacity", desc: "Direct, uncongested peering with all major Bangladeshi ISPs." },
-            { value: "1 Gbps", label: "International Uplink", desc: "Redundant paths to Singapore, Hong Kong, and Europe." },
-            { value: "<10 ms", label: "Local Latency", desc: "Average ping from major Bangladeshi cities to our Dhaka node." },
-            { value: "<80 ms", label: "APAC Latency", desc: "Ping to Singapore and major Asian hubs for regional reach." },
-            { value: "99.99%", label: "Core Network Uptime", desc: "Fully redundant switching and routing infrastructure." },
-            { value: "100 Gbps", label: "DDoS Mitigation", desc: "Always-on protection with automatic traffic scrubbing." },
+            {
+              value: "10 Gbps",
+              label: "BDIX Uplink Capacity",
+              desc: "Direct, uncongested peering with all major Bangladeshi ISPs.",
+            },
+            {
+              value: "1 Gbps",
+              label: "International Uplink",
+              desc: "Redundant paths to Singapore, Hong Kong, and Europe.",
+            },
+            {
+              value: "<10 ms",
+              label: "Local Latency",
+              desc: "Average ping from major Bangladeshi cities to our Dhaka node.",
+            },
+            {
+              value: "<80 ms",
+              label: "APAC Latency",
+              desc: "Ping to Singapore and major Asian hubs for regional reach.",
+            },
+            {
+              value: "99.99%",
+              label: "Core Network Uptime",
+              desc: "Fully redundant switching and routing infrastructure.",
+            },
+            {
+              value: "100 Gbps",
+              label: "DDoS Mitigation",
+              desc: "Always-on protection with automatic traffic scrubbing.",
+            },
           ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-border bg-card p-6 shadow-soft"
+            >
               <div className="text-3xl font-extrabold text-gradient-brand">{stat.value}</div>
               <div className="mt-2 font-semibold text-sm">{stat.label}</div>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{stat.desc}</p>
@@ -565,24 +695,45 @@ function NetworkPerformance() {
 
 function Included() {
   const items = [
-    { icon: Server, title: "KVM Virtualization", desc: "True hardware-level virtualization with dedicated resources. No overselling, no neighbor noise." },
-    { icon: Shield, title: "Free DDoS Protection", desc: "Automatic mitigation filters malicious traffic before it reaches your VPS." },
-    { icon: Zap, title: "NVMe Storage", desc: "Blazing-fast read/write speeds with enterprise-grade NVMe SSDs in RAID." },
-    { icon: HelpCircle, title: "Bangla Support", desc: "Talk to real humans in Bangla or English — 24 hours a day, 365 days a year." },
+    {
+      icon: Server,
+      title: "KVM Virtualization",
+      desc: "True hardware-level virtualization with dedicated resources. No overselling, no neighbor noise.",
+    },
+    {
+      icon: Shield,
+      title: "Free DDoS Protection",
+      desc: "Automatic mitigation filters malicious traffic before it reaches your VPS.",
+    },
+    {
+      icon: Zap,
+      title: "NVMe Storage",
+      desc: "Blazing-fast read/write speeds with enterprise-grade NVMe SSDs in RAID.",
+    },
+    {
+      icon: HelpCircle,
+      title: "Bangla Support",
+      desc: "Talk to real humans in Bangla or English — 24 hours a day, 365 days a year.",
+    },
   ];
 
   return (
     <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Everything Included</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Everything Included
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             The extras that make a difference
           </h2>
         </div>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((i) => (
-            <div key={i.title} className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition">
+            <div
+              key={i.title}
+              className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition"
+            >
               <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center text-brand-green group-hover:bg-gradient-brand group-hover:text-primary-foreground transition">
                 <i.icon className="h-6 w-6" strokeWidth={1.75} />
               </div>
@@ -597,31 +748,16 @@ function Included() {
 }
 
 function FAQ() {
-  const faqs = [
-    {
-      q: "What is BDIX and why does it matter?",
-      a: "BDIX (Bangladesh Internet Exchange) is a local internet exchange point where Bangladeshi ISPs peer directly. Traffic between BDIX-connected servers and local users never leaves the country, resulting in much lower latency and cost.",
-    },
-    {
-      q: "Can I upgrade my VPS resources later?",
-      a: "Yes. You can upgrade CPU, RAM, and storage anytime with just a reboot — no data migration needed. Downgrades are also available on request.",
-    },
-    {
-      q: "Which operating systems are available?",
-      a: "We offer Ubuntu, Debian, AlmaLinux, and CentOS out of the box. You can also upload your own ISO for custom operating systems.",
-    },
-    {
-      q: "Do you offer managed VPS services?",
-      a: "Our VPS plans are self-managed by default. We also offer a managed add-on where our team handles security patches, monitoring, and routine maintenance for you.",
-    },
-  ];
+  const faqs = BDIX_FAQS;
 
   return (
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-4xl px-6">
         <div className="text-center">
           <span className="text-sm font-semibold text-brand-green">FAQ</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Common questions about BDIX VPS</h2>
+          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Common questions about BDIX VPS
+          </h2>
         </div>
         <div className="mt-14 space-y-4">
           {faqs.map((faq) => (
@@ -644,15 +780,21 @@ function CTA() {
     <section className="py-20 md:py-24 bg-card">
       <div className="mx-auto max-w-4xl px-6">
         <div className="rounded-3xl bg-gradient-brand p-10 md:p-14 text-center text-primary-foreground shadow-elegant relative overflow-hidden">
-          <div aria-hidden className="absolute inset-0 opacity-20" style={{
-            backgroundImage: "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
-          }} />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
+            }}
+          />
           <div className="relative">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
               Ready for ultra-fast local hosting?
             </h2>
             <p className="mt-4 max-w-xl mx-auto opacity-95 text-base md:text-lg">
-              Deploy your BDIX VPS in under 60 seconds and experience the difference local connectivity makes.
+              Deploy your BDIX VPS in under 60 seconds and experience the difference local
+              connectivity makes.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
               <a
@@ -665,13 +807,19 @@ function CTA() {
                 href="tel:01787882277"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
               >
-                📞 Call: 01787-882277
+                <Phone className="h-4 w-4" /> Call: 01787-882277
               </a>
             </div>
             <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs opacity-90">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Free migration</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> 30-day guarantee</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> bKash accepted</span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> Free migration
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> 30-day guarantee
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> bKash accepted
+              </span>
             </div>
           </div>
         </div>

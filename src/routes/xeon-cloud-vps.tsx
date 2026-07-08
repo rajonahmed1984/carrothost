@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
@@ -15,6 +15,7 @@ import {
   Monitor,
   Layers,
   Activity,
+  Phone,
   HeadphonesIcon,
   Clock,
   Award,
@@ -24,30 +25,82 @@ import {
   Building2,
   Mail,
   FolderOpen,
-  ArrowUpRight
+  ArrowUpRight,
 } from "lucide-react";
 import { useState } from "react";
 import { CloudStackIllustration } from "@/components/CloudStackIllustration";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import {
+  breadcrumbSchema,
+  createSeoMeta,
+  faqSchema,
+  jsonLdScript,
+  webHostingServiceSchema,
+} from "@/lib/seo";
+
+const XEON_FAQS = [
+  {
+    q: "What processors power the Xeon VPS?",
+    a: "Our virtual servers are powered 100% by high-end Intel Xeon Platinum series processors, which are optimized for dynamic server workloads and concurrent tasks.",
+  },
+  {
+    q: "Can I upgrade my Xeon resources later?",
+    a: "Yes. Scaling up cores, memory, or storage is instant and can be requested directly from our portal with no data migration required.",
+  },
+  {
+    q: "Which operating systems are available?",
+    a: "We offer pre-configured templates for Ubuntu, Debian, CentOS, AlmaLinux, and Rocky Linux. You can also upload your own ISO.",
+  },
+  {
+    q: "Do you offer transactional email integrations?",
+    a: "Yes, our Xeon VPS packages support sending transactional emails directly through secure ports, letting you execute transactional mail services without third-party tools.",
+  },
+];
 
 export const Route = createFileRoute("/xeon-cloud-vps")({
-  head: () => ({
-    meta: [
-      { title: "Intel Xeon VPS Hosting — CarrotHost" },
-      { name: "description", content: "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, and NVMe SSD storage. Deploy in under 60 seconds with 99.9% uptime." },
-      { property: "og:title", content: "Intel Xeon VPS Hosting — CarrotHost" },
-      { property: "og:description", content: "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, and NVMe SSD storage." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => {
+    const seo = createSeoMeta({
+      title: "Intel Xeon VPS Hosting — CarrotHost",
+      description:
+        "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, and NVMe SSD storage. Deploy in under 60 seconds with 99.9% uptime.",
+      path: "/xeon-cloud-vps",
+    });
+
+    return {
+      ...seo,
+      scripts: [
+        jsonLdScript(
+          "ld-xeon-breadcrumbs",
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Xeon Cloud VPS", path: "/xeon-cloud-vps" },
+          ]),
+        ),
+        jsonLdScript(
+          "ld-xeon-service",
+          webHostingServiceSchema({
+            name: "Intel Xeon VPS Hosting",
+            description:
+              "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, NVMe SSD storage, and scalable cloud resources.",
+            path: "/xeon-cloud-vps",
+            serviceType: "Xeon Cloud VPS Hosting",
+            priceFrom: "607",
+          }),
+        ),
+        jsonLdScript(
+          "ld-xeon-faq",
+          faqSchema(XEON_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
+        ),
+      ],
+    };
+  },
   component: XeonVpsPage,
 });
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-20 border-b border-border/55">
+    <section className="relative overflow-hidden bg-gradient-soft py-12 md:py-12 border-b border-border/55">
       {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
@@ -63,7 +116,9 @@ function Hero() {
               High-Performance <span className="text-gradient-brand">Xeon Cloud VPS</span>
             </h1>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Power your workloads, sites, and applications with enterprise-grade Intel Xeon Platinum virtual servers. Get blazing performance, dedicated NVMe storage, and 100% cloud scalability.
+              Power your workloads, sites, and applications with enterprise-grade Intel Xeon
+              Platinum virtual servers. Get blazing performance, dedicated NVMe storage, and 100%
+              cloud scalability.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-4">
               <a
@@ -80,9 +135,15 @@ function Hero() {
               </Link>
             </div>
             <div className="pt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-t border-border/50">
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> Full Root Access</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> 100% NVMe RAID SSD</div>
-              <div className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" /> Scalable On-Demand</div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> Full Root Access
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> 100% NVMe RAID SSD
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-brand-green" /> Scalable On-Demand
+              </div>
             </div>
           </div>
 
@@ -111,8 +172,8 @@ function XeonFacilities() {
         "High single-core CPU clock speeds",
         "Dedicated vCPU allocation per instance",
         "Optimized for database & high-traffic nodes",
-        "AVX-512 vector acceleration support"
-      ]
+        "AVX-512 vector acceleration support",
+      ],
     },
     {
       icon: HardDrive,
@@ -123,8 +184,8 @@ function XeonFacilities() {
         "Up to 3,500 MB/s read/write speeds",
         "RAID-10 hardware redundancy",
         "No disk-throttling constraints",
-        "Ideal for content-heavy and dynamic sites"
-      ]
+        "Ideal for content-heavy and dynamic sites",
+      ],
     },
     {
       icon: Wifi,
@@ -135,8 +196,8 @@ function XeonFacilities() {
         "1 Gbit/s burstable port capacity",
         "Unmetered incoming data transfer",
         "Redundant upstream carrier paths",
-        "Sub-ms latency to major global exchanges"
-      ]
+        "Sub-ms latency to major global exchanges",
+      ],
     },
     {
       icon: Monitor,
@@ -147,8 +208,8 @@ function XeonFacilities() {
         "1-click VPS reboot/boot/shutdown",
         "Automated OS re-installation panel",
         "VNC terminal console in your browser",
-        "Real-time bandwidth, RAM & CPU graphs"
-      ]
+        "Real-time bandwidth, RAM & CPU graphs",
+      ],
     },
     {
       icon: Shield,
@@ -159,8 +220,8 @@ function XeonFacilities() {
         "Inbound DDoS scrubbers",
         "Isolated virtual machine hypervisors",
         "Configurable firewalls & SSH keys",
-        "Regular malware scans and updates"
-      ]
+        "Regular malware scans and updates",
+      ],
     },
     {
       icon: Clock,
@@ -171,9 +232,9 @@ function XeonFacilities() {
         "Incremental snapshot technology",
         "Restore entire VM in 1-click",
         "Keep up to 7 snapshots history",
-        "Download backups locally anytime"
-      ]
-    }
+        "Download backups locally anytime",
+      ],
+    },
   ];
 
   return (
@@ -187,7 +248,8 @@ function XeonFacilities() {
             Built for performance & control
           </h2>
           <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            Manage your apps, systems, and staging pipelines on dedicated virtual nodes backed by Webdock-powered technologies.
+            Manage your apps, systems, and staging pipelines on dedicated virtual nodes backed by
+            Webdock-powered technologies.
           </p>
         </div>
 
@@ -225,17 +287,24 @@ function XeonFacilities() {
                   })()}
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">{facilities[activeTab].subtitle}</span>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">{facilities[activeTab].title}</h3>
+                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">
+                    {facilities[activeTab].subtitle}
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">
+                    {facilities[activeTab].title}
+                  </h3>
                 </div>
               </div>
               <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
                 {facilities[activeTab].desc}
               </p>
-              
+
               <div className="grid sm:grid-cols-2 gap-4 pt-4">
                 {facilities[activeTab].features.map((point) => (
-                  <div key={point} className="flex items-center gap-3 text-sm font-semibold text-foreground/80">
+                  <div
+                    key={point}
+                    className="flex items-center gap-3 text-sm font-semibold text-foreground/80"
+                  >
                     <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
                       <Check className="h-3.5 w-3.5 text-brand-green" />
                     </div>
@@ -346,12 +415,15 @@ function Pricing() {
     <section id="pricing" className="py-20 md:py-28 bg-gradient-soft">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Pricing</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Pricing
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Xeon VPS hosting plans built to scale
           </h2>
           <p className="mt-3 text-muted-foreground">
-            All plans include dedicated Intel Xeon Platinum cores, full root access, and unmetered ports.
+            All plans include dedicated Intel Xeon Platinum cores, full root access, and unmetered
+            ports.
           </p>
         </div>
         <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -413,7 +485,7 @@ function Pricing() {
                     : "border border-border bg-card hover:border-brand-orange text-foreground"
                 }`}
               >
-                🛒 Order Now
+                Order Now
               </a>
             </div>
           ))}
@@ -425,22 +497,42 @@ function Pricing() {
 
 function Infrastructure() {
   const features = [
-    { icon: Server, title: "Enterprise Hardware", desc: "Latest Intel Xeon Platinum processors with ECC memory and enterprise NVMe SSD arrays for consistent performance." },
-    { icon: Shield, title: "DDoS Protection", desc: "Always-on mitigation up to 100 Gbps keeps your services online even during large-scale attacks." },
-    { icon: Zap, title: "Redundant Power", desc: "N+1 UPS and diesel generators at every facility ensure uninterrupted power for critical workloads." },
-    { icon: Globe, title: "Multi-Region Redundancy", desc: "Replicate backups across multiple secure facilities for geographic disaster recovery." },
+    {
+      icon: Server,
+      title: "Enterprise Hardware",
+      desc: "Latest Intel Xeon Platinum processors with ECC memory and enterprise NVMe SSD arrays for consistent performance.",
+    },
+    {
+      icon: Shield,
+      title: "DDoS Protection",
+      desc: "Always-on mitigation up to 100 Gbps keeps your services online even during large-scale attacks.",
+    },
+    {
+      icon: Zap,
+      title: "Redundant Power",
+      desc: "N+1 UPS and diesel generators at every facility ensure uninterrupted power for critical workloads.",
+    },
+    {
+      icon: Globe,
+      title: "Multi-Region Redundancy",
+      desc: "Replicate backups across multiple secure facilities for geographic disaster recovery.",
+    },
   ];
 
   return (
     <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Infrastructure</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Infrastructure
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             High-availability cloud environment
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Our cloud stack is engineered from the ground up to prevent single points of failure. With enterprise Xeon processors, redundant network paths, and automatic backup systems, your virtual servers stay secure and online.
+            Our cloud stack is engineered from the ground up to prevent single points of failure.
+            With enterprise Xeon processors, redundant network paths, and automatic backup systems,
+            your virtual servers stay secure and online.
           </p>
           <ul className="mt-8 space-y-4">
             {[
@@ -458,7 +550,10 @@ function Infrastructure() {
         </div>
         <div className="grid sm:grid-cols-2 gap-5">
           {features.map((f) => (
-            <div key={f.title} className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:border-brand-orange hover:shadow-elegant transition">
+            <div
+              key={f.title}
+              className="rounded-2xl bg-card border border-border p-5 shadow-soft hover:border-brand-orange hover:shadow-elegant transition"
+            >
               <div className="h-10 w-10 rounded-lg bg-gradient-brand text-primary-foreground flex items-center justify-center">
                 <f.icon className="h-5 w-5" />
               </div>
@@ -477,21 +572,39 @@ function NetworkPerformance() {
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Network Performance</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Network Performance
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             Engineered for global reach
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Our networking routes traffic through the lowest latency paths available, ensuring fast page load speeds across all target user geographies.
+            Our networking routes traffic through the lowest latency paths available, ensuring fast
+            page load speeds across all target user geographies.
           </p>
         </div>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { value: "1 Gbit/s", label: "Port Speed Capacity", desc: "Dedicated high-bandwidth ports on all virtual server instances." },
-            { value: "Unmetered", label: "Incoming Transfer", desc: "Receive unlimited data uploads to your server with zero charges." },
-            { value: "99.9% Uptime", label: "Network SLA", desc: "Guaranteed network availability backed by service SLAs." },
+            {
+              value: "1 Gbit/s",
+              label: "Port Speed Capacity",
+              desc: "Dedicated high-bandwidth ports on all virtual server instances.",
+            },
+            {
+              value: "Unmetered",
+              label: "Incoming Transfer",
+              desc: "Receive unlimited data uploads to your server with zero charges.",
+            },
+            {
+              value: "99.9% Uptime",
+              label: "Network SLA",
+              desc: "Guaranteed network availability backed by service SLAs.",
+            },
           ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-border bg-card p-6 shadow-soft"
+            >
               <div className="text-3xl font-extrabold text-gradient-brand">{stat.value}</div>
               <div className="mt-2 font-semibold text-sm">{stat.label}</div>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{stat.desc}</p>
@@ -505,24 +618,45 @@ function NetworkPerformance() {
 
 function Included() {
   const items = [
-    { icon: Server, title: "LXD & KVM Hypervisors", desc: "Full hardware-level isolated environments. No resource contention or neighbor impact." },
-    { icon: Shield, title: "Malware Scans", desc: "Automatic background scans detect security vulnerabilities before they threaten your database." },
-    { icon: Zap, title: "Fast NVMe RAID", desc: "RAID SSD architectures ensure maximum read/write rates for all files." },
-    { icon: HelpCircle, title: "Bangla Support", desc: "Talk to real support engineers in Bangla or English — 24 hours a day, 365 days a year." },
+    {
+      icon: Server,
+      title: "LXD & KVM Hypervisors",
+      desc: "Full hardware-level isolated environments. No resource contention or neighbor impact.",
+    },
+    {
+      icon: Shield,
+      title: "Malware Scans",
+      desc: "Automatic background scans detect security vulnerabilities before they threaten your database.",
+    },
+    {
+      icon: Zap,
+      title: "Fast NVMe RAID",
+      desc: "RAID SSD architectures ensure maximum read/write rates for all files.",
+    },
+    {
+      icon: HelpCircle,
+      title: "Bangla Support",
+      desc: "Talk to real support engineers in Bangla or English — 24 hours a day, 365 days a year.",
+    },
   ];
 
   return (
     <section className="py-20 md:py-28 bg-card">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">Everything Included</span>
+          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
+            Everything Included
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
             The extras that make a difference
           </h2>
         </div>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((i) => (
-            <div key={i.title} className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition">
+            <div
+              key={i.title}
+              className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition"
+            >
               <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center text-brand-green group-hover:bg-gradient-brand group-hover:text-primary-foreground transition">
                 <i.icon className="h-6 w-6" strokeWidth={1.75} />
               </div>
@@ -537,31 +671,16 @@ function Included() {
 }
 
 function FAQ() {
-  const faqs = [
-    {
-      q: "What processors power the Xeon VPS?",
-      a: "Our virtual servers are powered 100% by high-end Intel Xeon Platinum series processors, which are optimized for dynamic server workloads and concurrent tasks.",
-    },
-    {
-      q: "Can I upgrade my Xeon resources later?",
-      a: "Yes. Scaling up cores, memory, or storage is instant and can be requested directly from our portal with no data migration required.",
-    },
-    {
-      q: "Which operating systems are available?",
-      a: "We offer pre-configured templates for Ubuntu, Debian, CentOS, AlmaLinux, and Rocky Linux. You can also upload your own ISO.",
-    },
-    {
-      q: "Do you offer transactional email integrations?",
-      a: "Yes, our Xeon VPS packages support sending transactional emails directly through secure ports, letting you execute transactional mail services without third-party tools.",
-    },
-  ];
+  const faqs = XEON_FAQS;
 
   return (
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-4xl px-6">
         <div className="text-center">
           <span className="text-sm font-semibold text-brand-green">FAQ</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Common questions about Xeon VPS</h2>
+          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Common questions about Xeon VPS
+          </h2>
         </div>
         <div className="mt-14 space-y-4">
           {faqs.map((faq) => (
@@ -584,15 +703,21 @@ function CTA() {
     <section className="py-20 md:py-24 bg-card">
       <div className="mx-auto max-w-4xl px-6">
         <div className="rounded-3xl bg-gradient-brand p-10 md:p-14 text-center text-primary-foreground shadow-elegant relative overflow-hidden">
-          <div aria-hidden className="absolute inset-0 opacity-20" style={{
-            backgroundImage: "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
-          }} />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
+            }}
+          />
           <div className="relative">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
               Ready for high-performance Xeon hosting?
             </h2>
             <p className="mt-4 max-w-xl mx-auto opacity-95 text-base md:text-lg">
-              Deploy your Intel Xeon VPS server instance in under 60 seconds and gain full control over your cloud resources.
+              Deploy your Intel Xeon VPS server instance in under 60 seconds and gain full control
+              over your cloud resources.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
               <a
@@ -605,13 +730,19 @@ function CTA() {
                 href="tel:01787882277"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
               >
-                📞 Call: 01787-882277
+                <Phone className="h-4 w-4" /> Call: 01787-882277
               </a>
             </div>
             <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs opacity-90">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Free migration</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> 30-day guarantee</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> bKash accepted</span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> Free migration
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> 30-day guarantee
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> bKash accepted
+              </span>
             </div>
           </div>
         </div>

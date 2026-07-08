@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   ArrowRight,
@@ -22,34 +22,86 @@ import {
   Code,
   Settings,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { WebuzoMockup } from "@/components/WebuzoMockup";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import {
+  breadcrumbSchema,
+  createSeoMeta,
+  faqSchema,
+  jsonLdScript,
+  webHostingServiceSchema,
+} from "@/lib/seo";
+
+const HOSTING_FAQS = [
+  {
+    q: "What is Webuzo and why do you use it?",
+    a: "Webuzo is a modern, lightweight control panel that makes managing websites, databases, and emails simple. We chose it because it is faster, cleaner, and more affordable than legacy panels — and it gives you one-click access to 400+ apps.",
+  },
+  {
+    q: "Can I migrate my existing site for free?",
+    a: "Yes. Our team handles free migration from any cPanel or Webuzo host. Most transfers are completed within 24 hours with zero downtime.",
+  },
+  {
+    q: "Do I get email accounts with hosting?",
+    a: "Every plan includes professional email hosting. Create unlimited @yourdomain.com addresses, set up forwarders, and access webmail from any browser.",
+  },
+  {
+    q: "What if I outgrow shared hosting?",
+    a: "Upgrading is seamless. Move to our BDIX VPS or Cloud VPS plans with a few clicks — your data, emails, and settings transfer automatically.",
+  },
+];
 
 export const Route = createFileRoute("/hosting")({
-  head: () => ({
-    meta: [
-      { title: "High-Performance Webuzo Hosting — CarrotHost" },
-      { name: "description", content: "Fast, reliable shared hosting in Bangladesh powered by Webuzo. LiteSpeed, NVMe SSD, server-side tracking, and 24/7 local support." },
-      { property: "og:title", content: "High-Performance Webuzo Hosting — CarrotHost" },
-      { property: "og:description", content: "Bangladesh shared hosting with Webuzo control panel, LiteSpeed servers, and transparent pricing." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => {
+    const seo = createSeoMeta({
+      title: "High-Performance Webuzo Hosting — CarrotHost",
+      description:
+        "Fast, reliable shared hosting in Bangladesh powered by Webuzo. LiteSpeed, NVMe SSD, server-side tracking, and 24/7 local support.",
+      path: "/hosting",
+    });
+
+    return {
+      ...seo,
+      scripts: [
+        jsonLdScript(
+          "ld-hosting-breadcrumbs",
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Hosting", path: "/hosting" },
+          ]),
+        ),
+        jsonLdScript(
+          "ld-hosting-service",
+          webHostingServiceSchema({
+            name: "High-Performance Webuzo Hosting",
+            description:
+              "Fast shared hosting in Bangladesh with LiteSpeed, NVMe SSD, server-side tracking, Webuzo control panel, and 24/7 support.",
+            path: "/hosting",
+            serviceType: "Shared Web Hosting",
+            priceFrom: "4200",
+          }),
+        ),
+        jsonLdScript(
+          "ld-hosting-faq",
+          faqSchema(HOSTING_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
+        ),
+      ],
+    };
+  },
   component: HostingPage,
 });
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-soft border-b border-border/55 py-12 md:py-20">
+    <section className="relative overflow-hidden bg-gradient-soft border-b border-border/55 py-12 md:py-12">
       {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
-      
+
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6">
@@ -58,13 +110,16 @@ function Hero() {
               Next-Gen Cloud Infrastructure
             </span>
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05] text-foreground">
-              Next-Gen High-Performance <span className="text-gradient-brand">Cloud Hosting</span>
+              High-Performance <span className="text-gradient-brand">Cloud Hosting</span>
             </h1>
             <p className="text-lg md:text-xl font-bold text-foreground/90">
               Your Website’s Speed, Security, and Tracking—Fully Managed!
             </p>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              Are you tired of slow loading times, random server crashes, and poor tracking data that ruins your ad campaigns? It’s time to upgrade. We run a fully customized, enterprise-grade Cloud Hosting platform engineered to handle high-traffic e-commerce ecosystems effortlessly.
+              Are you tired of slow loading times, random server crashes, and poor tracking data
+              that ruins your ad campaigns? It’s time to upgrade. We run a fully customized,
+              enterprise-grade Cloud Hosting platform engineered to handle high-traffic e-commerce
+              ecosystems effortlessly.
             </p>
             <div className="pt-4 flex flex-wrap gap-4 items-center">
               <a
@@ -120,14 +175,17 @@ function CoreOptimization() {
                 Optimized from the Linux Kernel Up
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                Unlike traditional hosting companies that rely on default, restricted configurations, we optimize our servers from the Linux kernel level up. This ensures your business gets blistering speeds, server-side stability, and unmatched reliability under heavy traffic loads.
+                Unlike traditional hosting companies that rely on default, restricted
+                configurations, we optimize our servers from the Linux kernel level up. This ensures
+                your business gets blistering speeds, server-side stability, and unmatched
+                reliability under heavy traffic loads.
               </p>
               <div className="space-y-4">
                 {[
                   "Optimized network socket buffers for low-latency transmission",
                   "Fine-tuned CPU scheduling to prioritize high-traffic web requests",
                   "I/O scheduler adjustments for blazing NVMe SSD read/write speeds",
-                  "Pre-configured Nginx kernel variables to eliminate packet drops"
+                  "Pre-configured Nginx kernel variables to eliminate packet drops",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 text-sm">
                     <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
@@ -145,7 +203,9 @@ function CoreOptimization() {
                   <span className="h-2.5 w-2.5 rounded-full bg-brand-green animate-ping" />
                   carrot-stack-optimization.conf
                 </h3>
-                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">STABLE</span>
+                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">
+                  STABLE
+                </span>
               </div>
               <div className="space-y-3.5 font-mono text-xs text-slate-300">
                 <div className="flex justify-between border-b border-slate-800 pb-2">
@@ -181,39 +241,44 @@ function ExclusiveFeatures() {
   const features = [
     {
       icon: Activity,
-      badge: "⚡ Performance Upgrade",
+      badge: "Performance Upgrade",
       title: "100% Node-Free Server-Side Tracking",
       desc: "If you are a digital marketer or e-commerce owner using Google Tag Manager (GTM) Server-Side Tracking, our hosting is the ultimate solution. We have eliminated heavy, crash-prone Node.js processes and integrated tracking proxies directly into the Nginx core.",
-      benefit: "Track 100% of your customer journey even if third-party cookies are blocked, without draining your server's RAM or slowing down your main website by even a millisecond."
+      benefit:
+        "Track 100% of your customer journey even if third-party cookies are blocked, without draining your server's RAM or slowing down your main website by even a millisecond.",
     },
     {
       icon: Shield,
-      badge: "🛡️ Auto-Recovery",
+      badge: "Auto-Recovery",
       title: "Auto-Unlock & Permission Guard",
       desc: "A common frustration with standard hosting is when automated background scripts or updates break file permissions, locking you out with a '403 Forbidden' error.",
-      benefit: "Our servers feature a custom 24/7 background automation script that detects and instantly fixes locked directories every hour. Your site stays accessible, always."
+      benefit:
+        "Our servers feature a custom 24/7 background automation script that detects and instantly fixes locked directories every hour. Your site stays accessible, always.",
     },
     {
       icon: Zap,
-      badge: "🏎️ High Capacity",
+      badge: "High Capacity",
       title: "10x More Traffic Capacity",
       desc: "Most hosting environments crash when a few thousand visitors hit the site simultaneously during a flash sale or ad spike.",
-      benefit: "We have scaled our server's Linux kernel constraints and Nginx file descriptor limits from the standard 1,024 up to 65,535 concurrent connections. No matter how big your Facebook or Google ad campaigns get, your site remains smooth and responsive."
+      benefit:
+        "We have scaled our server's Linux kernel constraints and Nginx file descriptor limits from the standard 1,024 up to 65,535 concurrent connections. No matter how big your Facebook or Google ad campaigns get, your site remains smooth and responsive.",
     },
     {
       icon: Lock,
-      badge: "🔒 SSL Automation",
+      badge: "SSL Automation",
       title: "One-Click Custom Subdomains & Auto-SSL",
       desc: "Need a dedicated subdomain (e.g., ss.yourdomain.com) for tracking or isolated landing pages? You don't have to manually deal with complex SSL installations.",
-      benefit: "Simply point your DNS to our server, and our background cron architecture will automatically issue and configure a free Let's Encrypt SSL certificate within 10 minutes."
+      benefit:
+        "Simply point your DNS to our server, and our background cron architecture will automatically issue and configure a free Let's Encrypt SSL certificate within 10 minutes.",
     },
     {
       icon: LayoutDashboard,
-      badge: "📊 Simple & Lightweight",
+      badge: "Simple & Lightweight",
       title: "Lightweight Webuzo Control Panel",
       desc: "Say goodbye to bloated, slow, and expensive control panels.",
-      benefit: "Our lightweight Webuzo panel gives you an intuitive, lightning-fast interface to manage your file manager, databases, and professional email accounts with zero technical hassle."
-    }
+      benefit:
+        "Our lightweight Webuzo panel gives you an intuitive, lightning-fast interface to manage your file manager, databases, and professional email accounts with zero technical hassle.",
+    },
   ];
 
   return (
@@ -227,7 +292,8 @@ function ExclusiveFeatures() {
             Features you only get with our hosting
           </h2>
           <p className="mt-3 text-muted-foreground">
-            We have custom-tuned our hosting platform to provide features that default setups simply cannot match.
+            We have custom-tuned our hosting platform to provide features that default setups simply
+            cannot match.
           </p>
         </div>
         <div className="mt-16 grid gap-8 lg:grid-cols-2">
@@ -235,7 +301,9 @@ function ExclusiveFeatures() {
             <div
               key={f.title}
               className={`rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft hover:shadow-elegant hover:border-brand-orange transition duration-300 flex flex-col justify-between ${
-                idx === 0 ? "lg:col-span-2 border-brand-green/30 bg-gradient-to-r from-card to-secondary/30" : ""
+                idx === 0
+                  ? "lg:col-span-2 border-brand-green/30 bg-gradient-to-r from-card to-secondary/30"
+                  : ""
               }`}
             >
               <div>
@@ -253,7 +321,7 @@ function ExclusiveFeatures() {
                 </p>
               </div>
               <div className="mt-6 p-4 rounded-xl bg-secondary/50 border-l-4 border-brand-green text-sm">
-                <span className="font-bold text-foreground block mb-1">💡 The Benefit:</span>
+                <span className="font-bold text-foreground block mb-1">The Benefit:</span>
                 <p className="text-muted-foreground leading-relaxed">{f.benefit}</p>
               </div>
             </div>
@@ -277,8 +345,8 @@ function WebuzoFacilities() {
         "Instant one-click updates",
         "Backup before update option",
         "Automatic database creation",
-        "Cloning & staging sites setup"
-      ]
+        "Cloning & staging sites setup",
+      ],
     },
     {
       icon: Mail,
@@ -289,8 +357,8 @@ function WebuzoFacilities() {
         "IMAP/SMTP/POP3 support",
         "Modern Roundcube webmail interface",
         "Email forwarders & autoresponders",
-        "Inbound spam assassin protection"
-      ]
+        "Inbound spam assassin protection",
+      ],
     },
     {
       icon: Database,
@@ -301,8 +369,8 @@ function WebuzoFacilities() {
         "One-click phpMyAdmin launch",
         "Manage DB users and hosts",
         "Secure remote database access",
-        "Automatic backups & optimizations"
-      ]
+        "Automatic backups & optimizations",
+      ],
     },
     {
       icon: Settings,
@@ -313,8 +381,8 @@ function WebuzoFacilities() {
         "Supports PHP 7.4, 8.0, 8.1, 8.2, 8.3",
         "Toggle extensions & config limits",
         "Max file upload size controls",
-        "Direct php.ini variables editing"
-      ]
+        "Direct php.ini variables editing",
+      ],
     },
     {
       icon: FolderOpen,
@@ -325,8 +393,8 @@ function WebuzoFacilities() {
         "Drag & drop file upload",
         "Built-in code editor",
         "Fast zip & extract utilities",
-        "Visual file permissions control"
-      ]
+        "Visual file permissions control",
+      ],
     },
     {
       icon: RefreshCw,
@@ -337,9 +405,9 @@ function WebuzoFacilities() {
         "Auto Let's Encrypt SSL issuance",
         "Auto-renews every 90 days",
         "Full DNS zone editing panel",
-        "Redirect HTTP to HTTPS in 1-click"
-      ]
-    }
+        "Redirect HTTP to HTTPS in 1-click",
+      ],
+    },
   ];
 
   return (
@@ -353,7 +421,8 @@ function WebuzoFacilities() {
             Control panel built for ultimate speed
           </h2>
           <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            Say goodbye to bloated, expensive dashboards. Our lightweight Webuzo panel gives you an intuitive, lightning-fast interface with zero technical hassle.
+            Say goodbye to bloated, expensive dashboards. Our lightweight Webuzo panel gives you an
+            intuitive, lightning-fast interface with zero technical hassle.
           </p>
         </div>
 
@@ -391,17 +460,24 @@ function WebuzoFacilities() {
                   })()}
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">{facilities[activeTab].subtitle}</span>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">{facilities[activeTab].title}</h3>
+                  <span className="text-xs font-bold text-brand-green uppercase tracking-wider">
+                    {facilities[activeTab].subtitle}
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-foreground">
+                    {facilities[activeTab].title}
+                  </h3>
                 </div>
               </div>
               <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
                 {facilities[activeTab].desc}
               </p>
-              
+
               <div className="grid sm:grid-cols-2 gap-4 pt-4">
                 {facilities[activeTab].points.map((point) => (
-                  <div key={point} className="flex items-center gap-3 text-sm font-semibold text-foreground/80">
+                  <div
+                    key={point}
+                    className="flex items-center gap-3 text-sm font-semibold text-foreground/80"
+                  >
                     <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
                       <Check className="h-3 w-3 text-brand-green" />
                     </div>
@@ -434,18 +510,18 @@ function TargetAudience() {
     {
       icon: ShoppingBag,
       title: "E-Commerce & F-Commerce Brands",
-      desc: "Businesses running heavy ad spend who need maximum uptime, zero dropped checkouts, and blazing page load speeds during high-traffic spikes."
+      desc: "Businesses running heavy ad spend who need maximum uptime, zero dropped checkouts, and blazing page load speeds during high-traffic spikes.",
     },
     {
       icon: TrendingUp,
       title: "Growth Marketers & Performance Agencies",
-      desc: "Professionals and agencies who demand flawless conversion tracking data via reliable, server-side setups."
+      desc: "Professionals and agencies who demand flawless conversion tracking data via reliable, server-side setups.",
     },
     {
       icon: Users,
       title: "High-Traffic Blogs & Corporate Portals",
-      desc: "Publishers requiring seamless page speeds and server stability for thousands of daily readers."
-    }
+      desc: "Publishers requiring seamless page speeds and server stability for thousands of daily readers.",
+    },
   ];
 
   return (
@@ -459,7 +535,10 @@ function TargetAudience() {
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {groups.map((g) => (
-            <div key={g.title} className="rounded-2xl bg-card border border-border p-6 shadow-soft hover:shadow-elegant hover:border-brand-orange transition duration-300">
+            <div
+              key={g.title}
+              className="rounded-2xl bg-card border border-border p-6 shadow-soft hover:shadow-elegant hover:border-brand-orange transition duration-300"
+            >
               <div className="h-12 w-12 rounded-xl bg-gradient-brand text-primary-foreground flex items-center justify-center mb-5">
                 <g.icon className="h-6 w-6" />
               </div>
@@ -539,10 +618,11 @@ function Pricing() {
           {plans.map((p) => (
             <div
               key={p.name}
-              className={`relative rounded-2xl border p-8 flex flex-col ${p.highlight
+              className={`relative rounded-2xl border p-8 flex flex-col ${
+                p.highlight
                   ? "border-brand-orange bg-card shadow-elegant scale-[1.02]"
                   : "border-border bg-card shadow-soft"
-                }`}
+              }`}
             >
               {p.highlight && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-brand px-3 py-1 text-xs font-bold text-primary-foreground">
@@ -567,12 +647,13 @@ function Pricing() {
                 href={p.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`mt-8 inline-flex justify-center items-center gap-2 rounded-xl px-4 py-3 font-semibold transition ${p.highlight
+                className={`mt-8 inline-flex justify-center items-center gap-2 rounded-xl px-4 py-3 font-semibold transition ${
+                  p.highlight
                     ? "bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95 animate-pulse"
                     : "border border-border bg-card hover:border-brand-orange text-foreground"
-                  }`}
+                }`}
               >
-                🛒 Order Now
+                Order Now
               </a>
             </div>
           ))}
@@ -584,10 +665,26 @@ function Pricing() {
 
 function Included() {
   const items = [
-    { icon: Zap, title: "LiteSpeed Cache", desc: "Built-in server-level caching makes WordPress and static sites load instantly." },
-    { icon: Shield, title: "Free SSL", desc: "AutoSSL issues and renews Let’s Encrypt certificates for every domain." },
-    { icon: Clock, title: "Daily Backups", desc: "Incremental backups stored off-site. Restore any file or database in one click." },
-    { icon: HelpCircle, title: "Bangla Support", desc: "Talk to real humans in Bangla or English — 24 hours a day, 365 days a year." },
+    {
+      icon: Zap,
+      title: "LiteSpeed Cache",
+      desc: "Built-in server-level caching makes WordPress and static sites load instantly.",
+    },
+    {
+      icon: Shield,
+      title: "Free SSL",
+      desc: "AutoSSL issues and renews Let’s Encrypt certificates for every domain.",
+    },
+    {
+      icon: Clock,
+      title: "Daily Backups",
+      desc: "Incremental backups stored off-site. Restore any file or database in one click.",
+    },
+    {
+      icon: HelpCircle,
+      title: "Bangla Support",
+      desc: "Talk to real humans in Bangla or English — 24 hours a day, 365 days a year.",
+    },
   ];
 
   return (
@@ -601,7 +698,10 @@ function Included() {
         </div>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((i) => (
-            <div key={i.title} className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition">
+            <div
+              key={i.title}
+              className="group rounded-2xl border border-border bg-card p-6 hover:border-brand-orange hover:shadow-elegant transition"
+            >
               <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center text-brand-green group-hover:bg-gradient-brand group-hover:text-primary-foreground transition">
                 <i.icon className="h-6 w-6" strokeWidth={1.75} />
               </div>
@@ -616,31 +716,16 @@ function Included() {
 }
 
 function FAQ() {
-  const faqs = [
-    {
-      q: "What is Webuzo and why do you use it?",
-      a: "Webuzo is a modern, lightweight control panel that makes managing websites, databases, and emails simple. We chose it because it is faster, cleaner, and more affordable than legacy panels — and it gives you one-click access to 400+ apps.",
-    },
-    {
-      q: "Can I migrate my existing site for free?",
-      a: "Yes. Our team handles free migration from any cPanel or Webuzo host. Most transfers are completed within 24 hours with zero downtime.",
-    },
-    {
-      q: "Do I get email accounts with hosting?",
-      a: "Every plan includes professional email hosting. Create unlimited @yourdomain.com addresses, set up forwarders, and access webmail from any browser.",
-    },
-    {
-      q: "What if I outgrow shared hosting?",
-      a: "Upgrading is seamless. Move to our BDIX VPS or Cloud VPS plans with a few clicks — your data, emails, and settings transfer automatically.",
-    },
-  ];
+  const faqs = HOSTING_FAQS;
 
   return (
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
       <div className="mx-auto max-w-4xl px-6">
         <div className="text-center">
           <span className="text-sm font-semibold text-brand-green">FAQ</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Common questions about hosting</h2>
+          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Common questions about hosting
+          </h2>
         </div>
         <div className="mt-14 space-y-4">
           {faqs.map((faq) => (
@@ -663,18 +748,25 @@ function MigrationCTA() {
     <section className="py-20 md:py-24 bg-card">
       <div className="mx-auto max-w-4xl px-6">
         <div className="rounded-3xl bg-gradient-brand p-10 md:p-14 text-center text-primary-foreground shadow-elegant relative overflow-hidden">
-          <div aria-hidden className="absolute inset-0 opacity-20" style={{
-            backgroundImage: "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
-          }} />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 10% 20%, white 0, transparent 30%), radial-gradient(circle at 90% 80%, white 0, transparent 30%)",
+            }}
+          />
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white mb-4">
-              🎁 100% Free Website Migration
+              100% Free Website Migration
             </span>
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
               Migrate to Our Server Today—100% Free!
             </h2>
             <p className="mt-4 max-w-2xl mx-auto opacity-95 text-base md:text-lg">
-              Don't let migration worries hold you back. Our engineering team will handle your entire website transfer completely free of charge, ensuring zero downtime for your business.
+              Don't let migration worries hold you back. Our engineering team will handle your
+              entire website transfer completely free of charge, ensuring zero downtime for your
+              business.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
               <a
@@ -689,13 +781,19 @@ function MigrationCTA() {
                 href="tel:01787882277"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
               >
-                📞 Call: 01787-882277
+                <Phone className="h-4 w-4" /> Call: 01787-882277
               </a>
             </div>
             <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs opacity-90">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Full Website Transfer</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Zero Downtime Guarantee</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> SSL & DNS Configuration</span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> Full Website Transfer
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> Zero Downtime Guarantee
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" /> SSL & DNS Configuration
+              </span>
             </div>
           </div>
         </div>

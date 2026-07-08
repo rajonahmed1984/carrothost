@@ -10,15 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as XeonCloudVpsRouteImport } from './routes/xeon-cloud-vps'
+import { Route as WhoisRouteImport } from './routes/whois'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as HostingRouteImport } from './routes/hosting'
 import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
+import { Route as AboutUsRouteImport } from './routes/about-us'
 import { Route as IndexRouteImport } from './routes/index'
 
 const XeonCloudVpsRoute = XeonCloudVpsRouteImport.update({
   id: '/xeon-cloud-vps',
   path: '/xeon-cloud-vps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WhoisRoute = WhoisRouteImport.update({
+  id: '/whois',
+  path: '/whois',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
@@ -41,6 +48,11 @@ const BdixCloudVpsRoute = BdixCloudVpsRouteImport.update({
   path: '/bdix-cloud-vps',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutUsRoute = AboutUsRouteImport.update({
+  id: '/about-us',
+  path: '/about-us',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,62 +61,76 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/whois': typeof WhoisRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/whois': typeof WhoisRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/whois': typeof WhoisRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
     | '/privacy-policy'
     | '/terms-of-service'
+    | '/whois'
     | '/xeon-cloud-vps'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
     | '/privacy-policy'
     | '/terms-of-service'
+    | '/whois'
     | '/xeon-cloud-vps'
   id:
     | '__root__'
     | '/'
+    | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
     | '/privacy-policy'
     | '/terms-of-service'
+    | '/whois'
     | '/xeon-cloud-vps'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutUsRoute: typeof AboutUsRoute
   BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   HostingRoute: typeof HostingRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  WhoisRoute: typeof WhoisRoute
   XeonCloudVpsRoute: typeof XeonCloudVpsRoute
 }
 
@@ -115,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/xeon-cloud-vps'
       fullPath: '/xeon-cloud-vps'
       preLoaderRoute: typeof XeonCloudVpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/whois': {
+      id: '/whois'
+      path: '/whois'
+      fullPath: '/whois'
+      preLoaderRoute: typeof WhoisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms-of-service': {
@@ -145,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BdixCloudVpsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about-us': {
+      id: '/about-us'
+      path: '/about-us'
+      fullPath: '/about-us'
+      preLoaderRoute: typeof AboutUsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -157,10 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutUsRoute: AboutUsRoute,
   BdixCloudVpsRoute: BdixCloudVpsRoute,
   HostingRoute: HostingRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  WhoisRoute: WhoisRoute,
   XeonCloudVpsRoute: XeonCloudVpsRoute,
 }
 export const routeTree = rootRouteImport
