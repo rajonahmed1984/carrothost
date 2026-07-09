@@ -1,8 +1,8 @@
 # CarrotHost - Apache SPA Routing
 # Upload this file to the root of your public_html directory
 
-# Fallback: Route Apache 404 errors directly to the main HTML entrypoint
-ErrorDocument 404 /index.html
+# Fallback: Route Apache 404 errors directly to the main 404 page
+ErrorDocument 404 /404.html
 
 # Enable rewrite engine
 RewriteEngine On
@@ -15,8 +15,8 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Otherwise, serve the index.html for client-side routing
-RewriteRule ^(.*)$ index.html [L,QSA]
+# Otherwise, serve the 404.html for client-side routing on unknown pages
+RewriteRule ^(.*)$ 404.html [L,QSA]
 
 # ============================================================
 # Performance: Browser caching for static assets

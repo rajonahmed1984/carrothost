@@ -27,7 +27,8 @@ const ROUTES = [
   { path: "/privacy-policy", file: "privacy-policy/index.html" },
   { path: "/terms-of-service", file: "terms-of-service/index.html" },
   { path: "/whois", file: "whois/index.html" },
-  { path: "/xeon-cloud-vps", file: "xeon-cloud-vps/index.html" }
+  { path: "/xeon-cloud-vps", file: "xeon-cloud-vps/index.html" },
+  { path: "/404", file: "404.html" }
 ];
 
 console.log("🚀 Starting static site generation...");

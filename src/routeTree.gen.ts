@@ -16,6 +16,7 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as HostingRouteImport } from './routes/hosting'
 import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
 import { Route as AboutUsRouteImport } from './routes/about-us'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 
 const XeonCloudVpsRoute = XeonCloudVpsRouteImport.update({
@@ -53,6 +54,11 @@ const AboutUsRoute = AboutUsRouteImport.update({
   path: '/about-us',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,6 +67,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$'
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   AboutUsRoute: typeof AboutUsRoute
   BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   HostingRoute: typeof HostingRoute
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutUsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   AboutUsRoute: AboutUsRoute,
   BdixCloudVpsRoute: BdixCloudVpsRoute,
   HostingRoute: HostingRoute,

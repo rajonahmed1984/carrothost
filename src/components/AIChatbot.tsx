@@ -238,14 +238,29 @@ export function AIChatbot() {
       }));
 
       let reply = "";
+      let responseActionLink: Message["actionLink"] = undefined;
 
-      try {
-        // Try the server function first
-        const data = await chatResponseFn({ data: { messages: history } });
-        reply = data.response;
-      } catch (rpcErr) {
-        console.warn("Server function failed (running on static host). Falling back to direct browser call...");
-        
+      // Detect if we are on a static live site (where server functions are not available)
+      const isStaticDeployment = typeof window !== "undefined" && 
+        window.location.hostname !== "localhost" && 
+        window.location.hostname !== "127.0.0.1" &&
+        !window.location.hostname.includes("gitpod") && 
+        !window.location.hostname.includes("codesandbox");
+
+      let useServerFunction = !isStaticDeployment;
+
+      if (useServerFunction) {
+        try {
+          // Try the server function first
+          const data = await chatResponseFn({ data: { messages: history } });
+          reply = data.response;
+        } catch (rpcErr) {
+          console.warn("Server function failed. Falling back to direct browser call...");
+          useServerFunction = false;
+        }
+      }
+
+      if (!useServerFunction) {
         // Client-side fallback variables (injected by Vite during build if prefixed with VITE_)
         const clientGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
         const clientOpenaiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -295,8 +310,10 @@ export function AIChatbot() {
           };
           reply = resJson.choices[0]?.message?.content || "";
         } else {
-          // If no client-side keys are compiled, re-throw to hit local offline heuristics
-          throw rpcErr;
+          // If no client-side keys are compiled, use local offline heuristics
+          const fallback = getAIResponseFallback(lastMessageText);
+          reply = fallback.text;
+          responseActionLink = fallback.actionLink;
         }
       }
 
@@ -304,6 +321,7 @@ export function AIChatbot() {
         sender: "bot",
         text: reply,
         timestamp: new Date(),
+        actionLink: responseActionLink,
       };
 
       setMessages((prev) => [...prev, botResponse]);
