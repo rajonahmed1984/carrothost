@@ -11,6 +11,31 @@ interface Message {
   actionLink?: { label: string; url: string; external?: boolean };
 }
 
+const SYSTEM_PROMPT = `You are the official representative and AI Assistant of CarrotHost, a premier web hosting company in Bangladesh.
+CarrotHost offers the following high-performance services:
+1. Domain Registration: Fully automated instant domain search and registration.
+   - NOTE: You must NEVER mention, guess, or output domain prices directly to the user (e.g., do not say a .com is 1190 TK or any other number). If the user asks about domain availability, registration costs, TLD extensions, renewals, or pricing, you MUST output this exact message:
+     "For real-time domain pricing and instant registration, please use our official portal: [Check Domain Pricing](https://portal.carrothost.com/cart.php?a=add&domain=register)"
+2. Shared Hosting: Fast and reliable hosting powered by the Webuzo Control Panel. Webuzo is lightweight, faster, and more affordable than cPanel. It uses LiteSpeed Enterprise Web Servers and NVMe SSDs. It supports 100% Node-Free Google Tag Manager (GTM) Server-Side tracking proxies via Nginx proxy configs to bypass adblockers and capture 100% of conversion data.
+3. BDIX VPS: KVM-based virtual servers connected directly to BDIX. Hosted in a Tier-III facility in Dhanmondi, Dhaka. Delivers lightning-fast sub-10ms local network latency in Bangladesh. Ideal for local news portals and e-commerce stores.
+4. Xeon Cloud VPS: High-compute virtual servers powered by Intel Xeon Platinum processors on global cloud networks, managed via the Webdock dashboard panel. Perfect for heavy compilation, dynamic tests, and backend pipelines.
+5. Free Migration: Free transfer from any host (cPanel/Webuzo) with zero downtime.
+6. Support: 24/7 support over phone/WhatsApp (01787-882277) and email (support@carrothost.com).
+
+Conversation Rules:
+- Keep your tone professional, fast, helpful, and concise.
+- Respond in the language the user uses (Bangla, English, or Banglish).
+- If you suggest a URL link, format it as a standard Markdown link (e.g., [Hosting Plans](/hosting) or [BDIX VPS](/bdix-cloud-vps)).
+- Only use standard pages:
+  - Home: /
+  - Shared Hosting: /hosting
+  - BDIX VPS: /bdix-cloud-vps
+  - Xeon VPS: /xeon-cloud-vps
+  - About Us: /about-us
+  - Contact / Submit Ticket: https://portal.carrothost.com/submitticket.php
+  - Client Login: https://portal.carrothost.com/login
+- Never guess pricing for domains! Always direct to the link above.`;
+
 export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -205,25 +230,86 @@ export function AIChatbot() {
       return;
     }
 
-    // 2. Fetch response from OpenAI backend Server Function (Conversational Memory)
+    // 2. Fetch response from Server Function, or fall back to direct browser fetch if it's static hosting
     try {
       const history = currentMessages.slice(-10).map((msg) => ({
         role: msg.sender === "user" ? ("user" as const) : ("assistant" as const),
         content: msg.text,
       }));
 
-      const data = await chatResponseFn({ data: { messages: history } });
+      let reply = "";
+
+      try {
+        // Try the server function first
+        const data = await chatResponseFn({ data: { messages: history } });
+        reply = data.response;
+      } catch (rpcErr) {
+        console.warn("Server function failed (running on static host). Falling back to direct browser call...");
+        
+        // Client-side fallback variables (injected by Vite during build if prefixed with VITE_)
+        const clientGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const clientOpenaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+        if (clientGeminiKey) {
+          const contents = history.map((m) => ({
+            role: m.role === "user" ? ("user" as const) : ("model" as const),
+            parts: [{ text: m.content }],
+          }));
+
+          const apiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientGeminiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                contents: contents,
+                generationConfig: { temperature: 0.5, maxOutputTokens: 500 },
+              }),
+            }
+          );
+
+          if (!apiResponse.ok) throw new Error("Client-side Gemini API failed");
+          const resJson = await apiResponse.json() as {
+            candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+          };
+          reply = resJson.candidates[0]?.content?.parts[0]?.text || "";
+        } else if (clientOpenaiKey) {
+          const apiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${clientOpenaiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+              temperature: 0.5,
+              max_tokens: 500,
+            }),
+          });
+
+          if (!apiResponse.ok) throw new Error("Client-side OpenAI API failed");
+          const resJson = await apiResponse.json() as {
+            choices: Array<{ message: { content: string } }>;
+          };
+          reply = resJson.choices[0]?.message?.content || "";
+        } else {
+          // If no client-side keys are compiled, re-throw to hit local offline heuristics
+          throw rpcErr;
+        }
+      }
 
       const botResponse: Message = {
         sender: "bot",
-        text: data.response,
+        text: reply,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, botResponse]);
     } catch (err) {
       console.error("AI Chatbot API failed, falling back to heuristics:", err);
-      // Fallback
+      // Local fallback
       const fallback = getAIResponseFallback(lastMessageText);
       const botResponse: Message = {
         sender: "bot",
