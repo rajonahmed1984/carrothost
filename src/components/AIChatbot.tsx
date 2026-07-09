@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Send, Carrot, Sparkles, Phone, ArrowUpRight, Bot } from "lucide-react";
+import { X, Send, Carrot, Sparkles, ArrowUpRight, Bot, HelpCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "./ui/button";
+import { chatResponseFn } from "../lib/chat";
 
 interface Message {
   sender: "user" | "bot";
@@ -12,7 +15,7 @@ export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize with a welcome message
@@ -31,20 +34,104 @@ export function AIChatbot() {
   // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isThinking]);
 
   const quickReplies = [
-    { label: "⚡ GTM Tracking Hosting", query: "gtm tracking" },
-    { label: "🇧🇩 BDIX VPS Plans", query: "bdix vps" },
-    { label: "🚀 Xeon VPS Plans", query: "xeon cloud vps" },
-    { label: "🌐 Domain Registration", query: "domains" },
-    { label: "📞 Support Hotline", query: "support" },
+    { label: "⚡ GTM Tracking Hosting", query: "Can you explain GTM Server-Side tracking?" },
+    { label: "🇧🇩 BDIX VPS Plans", query: "Tell me about your BDIX VPS plans." },
+    { label: "🚀 Xeon VPS Plans", query: "What are the Xeon VPS plans?" },
+    { label: "🌐 Domain Registration", query: "How do I register a domain?" },
+    { label: "📞 Support Hotline", query: "How do I contact support?" },
   ];
 
-  const getAIResponse = (query: string): { text: string; actionLink?: { label: string; url: string; external?: boolean } } => {
+  // Helper to parse markdown links: [label](url)
+  const renderMessageText = (text: string) => {
+    const parts: React.ReactNode[] = [];
+    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      const label = match[1];
+      const url = match[2];
+      const isExternal = url.startsWith("http") || url.startsWith("tel:");
+
+      parts.push(
+        isExternal ? (
+          <a
+            key={match.index}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-orange hover:underline font-bold inline-flex items-center gap-0.5"
+          >
+            {label} <ArrowUpRight className="h-3 w-3.5 inline shrink-0" />
+          </a>
+        ) : (
+          <Link
+            key={match.index}
+            to={url as any}
+            className="text-brand-orange hover:underline font-bold inline-flex items-center gap-0.5"
+          >
+            {label} <ArrowUpRight className="h-3 w-3.5 inline shrink-0" />
+          </Link>
+        )
+      );
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
+  // Frontend interceptor for domain pricing, availability, and renewals
+  const isDomainQuery = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    
+    // Domain keywords
+    const domainKeywords = ["domain", "ডোমেইন", "ডোমেন", "tld", "tlds"];
+    const tlds = [".com", ".net", ".org", ".info", ".xyz", ".bd", ".co", ".com.bd", ".net.bd"];
+    
+    // Query intent keywords
+    const intentKeywords = [
+      "price", "cost", "pricing", "dam", "koto", "taka", "tk", "টাকা", "দাম", "কত", 
+      "register", "registration", "buy", "purchase", "renew", "renewal", "check", 
+      "avail", "available", "availability", "search", "বুক", "বুকিং", "খুজ", "খোঁজ"
+    ];
+
+    // Check if user is asking about domain pricing or registration
+    const hasDomainWord = domainKeywords.some(keyword => lower.includes(keyword));
+    const hasTld = tlds.some(tld => lower.includes(tld));
+    const hasIntent = intentKeywords.some(intent => lower.includes(intent));
+
+    // If they ask about domain generally with pricing/registration intent
+    if (hasDomainWord && hasIntent) {
+      return true;
+    }
+
+    // If they mention a TLD directly with pricing/registration intent (e.g., ".com price")
+    if (hasTld && hasIntent) {
+      return true;
+    }
+
+    // Direct phrases like "how much for .com", "price of domain"
+    if (lower.includes("how much") && (hasDomainWord || hasTld)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Legacy static AI response fallback (retained for resilience if API call fails)
+  const getAIResponseFallback = (query: string): { text: string; actionLink?: { label: string; url: string; external?: boolean } } => {
     const text = query.toLowerCase();
 
-    // 1. Pricing, Payment Methods, Dam, Koto, Tk (MFS like bKash, Nagad)
     if (
       text.includes("price") ||
       text.includes("dam") ||
@@ -54,148 +141,100 @@ export function AIChatbot() {
       text.includes("payment") ||
       text.includes("bkash") ||
       text.includes("nagad") ||
-      text.includes("rocket") ||
-      text.includes("টাকা") ||
-      text.includes("দাম") ||
-      text.includes("বিকাশ") ||
-      text.includes("নগদ") ||
-      text.includes("রকেট") ||
-      text.includes("পেমেন্ট")
+      text.includes("rocket")
     ) {
       return {
-        text: "আমরা বিকাশ (bKash), নগদ (Nagad), রকেট (Rocket), স্থানীয় ব্যাংক এবং আন্তর্জাতিক কার্ড পেমেন্ট সাপোর্ট করি!\n\nআমাদের সেবাগুলোর মূল্যসমূহ:\n• ওয়েবুজো শেয়ার্ড হোস্টিং: বার্ষিক ৪,২০০ টাকা থেকে শুরু\n• BDIX ভিপিএস হোস্টিং: মাসিক ১,৫৫০ টাকা থেকে শুরু\n• Xeon ক্লাউড ভিপিএস: মাসিক ৬০৭ টাকা থেকে শুরু\n• .com ডোমেইন রেজিস্ট্রেশন: বার্ষিক ১,১৯০ টাকা",
-        actionLink: { label: "ওয়েবসাইট প্ল্যান দেখুন", url: "/" }
+        text: "We support bKash, Nagad, Rocket, bank transfers, and credit cards.\n\nOur service prices:\n• Shared Hosting: from ৳4,200/year\n• BDIX VPS: from ৳1,550/month\n• Xeon Cloud VPS: from ৳607/month\nFor domain pricing, check the domain portal.",
+        actionLink: { label: "View Hosting Plans", url: "/hosting" }
       };
     }
 
-    // 2. Google Tag Manager (GTM) tracking
-    if (
-      text.includes("gtm") ||
-      text.includes("tracking") ||
-      text.includes("server-side") ||
-      text.includes("pixel") ||
-      text.includes("কনভার্সন") ||
-      text.includes("পিক্সেল") ||
-      text.includes("ট্র্যাকিং")
-    ) {
+    if (text.includes("gtm") || text.includes("tracking") || text.includes("server-side")) {
       return {
-        text: "আমাদের Webuzo শেয়ার্ড হোস্টিং-এ আপনি সম্পূর্ণ Node-free 100% Google Tag Manager (GTM) Server-Side tracking সেটআপ করতে পারবেন। আমরা Nginx-এ সরাসরি ট্র্যাকিং প্রক্সি সেটআপ করেছি, যা আপনার ডাটা লস কমায় এবং ব্রাউজার অ্যাড-ব্লকার বাইপাস করতে সাহায্য করে।",
-        actionLink: { label: "সার্ভার-সাইড হোস্টিং দেখুন", url: "/hosting" }
+        text: "Our Webuzo Shared Hosting features standard Node-free Google Tag Manager (GTM) Server-Side tracking proxies via Nginx configuration, bypassing ad-blockers and preventing data loss.",
+        actionLink: { label: "Shared Hosting Plans", url: "/hosting" }
       };
     }
 
-    // 3. BDIX Dhaka Server
-    if (
-      text.includes("bdix") ||
-      text.includes("local") ||
-      text.includes("bangladesh") ||
-      text.includes("dhaka") ||
-      text.includes("ping") ||
-      text.includes("ঢাকা") ||
-      text.includes("বিডিআইএক্স") ||
-      text.includes("লোকাল")
-    ) {
+    if (text.includes("bdix") || text.includes("local") || text.includes("dhaka") || text.includes("ping")) {
       return {
-        text: "আমাদের BDIX VPS সার্ভারগুলো ঢাকার ধানমন্ডির প্রিমিয়াম Tier-III ডেটাসেন্টারে কো-লোকেটেড। বাংলাদেশের ভেতরের ভিজিটরদের জন্য এটি sub-10ms ল্যাটেন্সি (Ping) দেয়। লোকাল ই-কমার্স, নিউজ পেপার বা ইনভেন্টরি অ্যাপের জন্য এটি সেরা পছন্দ।",
-        actionLink: { label: "BDIX VPS প্ল্যান দেখুন", url: "/bdix-cloud-vps" }
+        text: "BDIX VPS servers are located in a Tier-III facility in Dhanmondi, Dhaka. They provide ultra-low latency (<10ms) network speeds for visitors in Bangladesh.",
+        actionLink: { label: "BDIX VPS Plans", url: "/bdix-cloud-vps" }
       };
     }
 
-    // 4. Xeon Server
-    if (
-      text.includes("xeon") ||
-      text.includes("intel") ||
-      text.includes("webdock") ||
-      text.includes("জিয়ন") ||
-      text.includes("ইনটেল")
-    ) {
+    if (text.includes("xeon") || text.includes("intel") || text.includes("webdock")) {
       return {
-        text: "আমাদের Xeon Cloud VPS-এ ব্যবহার করা হয়েছে হাই-এন্ড Intel Xeon Platinum প্রসেসর। এটি গ্লোবাল ক্লাউড নেটওয়ার্কে হোস্ট করা এবং এর সাথে পাচ্ছেন Webdock-এর রিমোট ড্যাশবোর্ড প্যানেল (গ্রাফিক্যাল রিবুট, রিইন্সটল, ব্যাকআপ ম্যানেজমেন্ট)। এটি যেকোনো ভারী অ্যাপ ডেভেলপমেন্ট বা কম্পাইলেশনের জন্য উপযুক্ত।",
-        actionLink: { label: "Xeon VPS প্ল্যান দেখুন", url: "/xeon-cloud-vps" }
+        text: "Xeon Cloud VPS servers utilize Intel Xeon Platinum processors and integrate the Webdock dashboard for easy node management and OS rebuilds.",
+        actionLink: { label: "Xeon VPS Plans", url: "/xeon-cloud-vps" }
       };
     }
 
-    // 5. Shared Hosting & LiteSpeed
-    if (
-      text.includes("hosting") ||
-      text.includes("shared") ||
-      text.includes("webuzo") ||
-      text.includes("litespeed") ||
-      text.includes("হোস্টিং") ||
-      text.includes("শেয়ার্ড")
-    ) {
+    if (text.includes("support") || text.includes("phone") || text.includes("contact") || text.includes("whatsapp")) {
       return {
-        text: "আমাদের শেয়ার্ড হোস্টিং প্ল্যানে Webuzo কন্ট্রোল প্যানেল দেওয়া হয় যা cPanel-এর চেয়ে হালকা ও দ্রুতগতির। এটি LiteSpeed এন্টারপ্রাইজ ওয়েব সার্ভার এবং সম্পূর্ণ NVMe SSD ড্রাইভ দ্বারা চালিত। ওয়ার্ডপ্রেস বা ই-কমার্স সাইটের স্পিড ৩ গুণ বাড়ানোর জন্য এটি চমৎকার।\n\nপ্ল্যানসমূহ:\n• Starter (10GB): ৪,২০০ টাকা/বছর\n• Standard (25GB): ৮,৪০০ টাকা/বছর\n• Advanced (50GB): ১২,০০০ টাকা/বছর",
-        actionLink: { label: "শেয়ার্ড হোস্টিং দেখুন", url: "/hosting" }
-      };
-    }
-
-    // 6. Domain Registration
-    if (
-      text.includes("domain") ||
-      text.includes("register") ||
-      text.includes("search") ||
-      text.includes("ডোমেইন") ||
-      text.includes("ডোমেন") ||
-      text.includes("রেজিস্ট্রেশন")
-    ) {
-      return {
-        text: "CarrotHost থেকে আপনি যেকোনো সময় instant ডোমেইন রেজিস্ট্রেশন করতে পারেন। ডোমেইন সার্চ ও বুকিং সম্পূর্ণ স্বয়ংক্রিয়।\n\nমূল্য তালিকা:\n• .com ডোমেইন: ১,১৯০ টাকা/বছর\n• .net ডোমেইন: ১,৪৫০ টাকা/বছর\n• .com.bd ডোমেইন: ১,৮০০ টাকা/বছর (২ বছরের জন্য ৩,৬০০ টাকা ন্যূনতম রেজিস্ট্রেশন ফী)",
-        actionLink: { label: "ডোমেইন রেজিস্ট্রেশন করুন", url: "https://portal.carrothost.com/cart.php?a=add&domain=register", external: true }
-      };
-    }
-
-    // 7. Migration / Transfer
-    if (
-      text.includes("migrate") ||
-      text.includes("migration") ||
-      text.includes("transfer") ||
-      text.includes("নিয়ে আস") ||
-      text.includes("ট্রান্সফার") ||
-      text.includes("মাইগ্রেশন") ||
-      text.includes("মুভ")
-    ) {
-      return {
-        text: "আমরা সম্পূর্ণ ফ্রিতে আপনার বর্তমান হোস্টিং (cPanel/Webuzo/Plesk) থেকে সাইট CarrotHost-এ মাইগ্রেশন বা ট্রান্সফার করে দেব। আপনার ওয়েবসাইটের কোনো ডাউনটাইম (Downtime) ছাড়াই আমাদের ইঞ্জিনিয়াররা পুরো কাজ নিরাপদে সম্পন্ন করবেন।",
-        actionLink: { label: "হোয়াটসঅ্যাপে আমাদের জানান", url: "https://wa.me/8801787882277", external: true }
-      };
-    }
-
-    // 8. Contact & Hotline (Bangla support)
-    if (
-      text.includes("support") ||
-      text.includes("phone") ||
-      text.includes("contact") ||
-      text.includes("whatsapp") ||
-      text.includes("number") ||
-      text.includes("call") ||
-      text.includes("hotline") ||
-      text.includes("helpline") ||
-      text.includes("যোগাযোগ") ||
-      text.includes("হেল্পলাইন") ||
-      text.includes("নাম্বার") ||
-      text.includes("ফোন") ||
-      text.includes("কল") ||
-      text.includes("হেল্প")
-    ) {
-      return {
-        text: "আমাদের ২৪/৭ বাংলা ও ইংরেজি কাস্টমার সাপোর্ট টিম সর্বদা প্রস্তুত! যেকোনো প্রয়োজনে কল করুন অথবা হোয়াটসঅ্যাপ মেসেজ করুন:\n\n• হেল্পলাইন নম্বর: 01787-882277\n• ইমেইল: support@carrothost.com",
-        actionLink: { label: "সরাসরি কল করুন", url: "tel:01787882277", external: true }
-      };
-    }
-
-    // 9. VPS Comparison
-    if (text.includes("vps") || text.includes("ভিপিএস")) {
-      return {
-        text: "আমাদের ভিপিএস সার্ভার দুটি ক্যাটাগরির:\n১. BDIX VPS: বাংলাদেশ (ঢাকা) ডেটাসেন্টার, লোকাল স্পিডের জন্য বেস্ট।\n২. Xeon Cloud VPS: গ্লোবাল হাই-পারফরম্যান্স সার্ভার (Intel Xeon Platinum প্রসেসর), ডেভেলপমেন্ট ও টেস্ট সার্ভারের জন্য সেরা।",
-        actionLink: { label: "BDIX VPS কম্পেয়ার করুন", url: "/bdix-cloud-vps" }
+        text: "Our support is available 24/7/365. Reach us at:\n• Phone/WhatsApp: 01787-882277\n• Email: support@carrothost.com",
+        actionLink: { label: "Submit Ticket", url: "https://portal.carrothost.com/submitticket.php", external: true }
       };
     }
 
     return {
-      text: "আমি আপনাকে CarrotHost-এর হোস্টিং প্যাক, ডোমেন প্রাইস, GTM ট্র্যাকিং প্রক্সি, অথবা BDIX/Xeon VPS সার্ভার কম্পেয়ার করতে সাহায্য করতে পারি। আপনি কি জানতে চান তা একটু বিস্তারিত বলুন, অথবা আমাদের সাপোর্টে সরাসরি যোগাযোগ করুন।",
-      actionLink: { label: "হোয়াটসঅ্যাপে কথা বলুন 💬", url: "https://wa.me/8801787882277", external: true }
+      text: "I can help you select a hosting plan, set up GTM tracking, or explain BDIX/Xeon VPS nodes. How can I help you today?",
+      actionLink: { label: "Contact Support", url: "https://wa.me/8801787882277", external: true }
     };
+  };
+
+  const respondToUser = async (currentMessages: Message[], lastMessageText: string) => {
+    setIsThinking(true);
+
+    // 1. Check frontend interception for domain queries (Real-time Domain Price Law)
+    if (isDomainQuery(lastMessageText)) {
+      setTimeout(() => {
+        const botResponse: Message = {
+          sender: "bot",
+          text: "For real-time domain pricing and instant registration, please use our official portal: [Check Domain Pricing](https://portal.carrothost.com/cart.php?a=add&domain=register)",
+          timestamp: new Date(),
+          actionLink: {
+            label: "Check Domain Pricing",
+            url: "https://portal.carrothost.com/cart.php?a=add&domain=register",
+            external: true,
+          },
+        };
+        setMessages((prev) => [...prev, botResponse]);
+        setIsThinking(false);
+      }, 400);
+      return;
+    }
+
+    // 2. Fetch response from OpenAI backend Server Function (Conversational Memory)
+    try {
+      const history = currentMessages.slice(-10).map((msg) => ({
+        role: msg.sender === "user" ? ("user" as const) : ("assistant" as const),
+        content: msg.text,
+      }));
+
+      const data = await chatResponseFn({ data: { messages: history } });
+
+      const botResponse: Message = {
+        sender: "bot",
+        text: data.response,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, botResponse]);
+    } catch (err) {
+      console.error("AI Chatbot API failed, falling back to heuristics:", err);
+      // Fallback
+      const fallback = getAIResponseFallback(lastMessageText);
+      const botResponse: Message = {
+        sender: "bot",
+        text: fallback.text,
+        timestamp: new Date(),
+        actionLink: fallback.actionLink,
+      };
+      setMessages((prev) => [...prev, botResponse]);
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   const handleSendMessage = (textToSend: string) => {
@@ -207,22 +246,18 @@ export function AIChatbot() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, newUserMessage]);
-    setInputText("");
-    setIsTyping(true);
+    setMessages((prev) => {
+      const updated = [...prev, newUserMessage];
+      
+      // Schedule response processing
+      setTimeout(() => {
+        respondToUser(updated, textToSend);
+      }, 50);
 
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const response = getAIResponse(textToSend);
-      const botResponse: Message = {
-        sender: "bot",
-        text: response.text,
-        timestamp: new Date(),
-        actionLink: response.actionLink,
-      };
-      setMessages((prev) => [...prev, botResponse]);
-      setIsTyping(false);
-    }, 900);
+      return updated;
+    });
+
+    setInputText("");
   };
 
   return (
@@ -244,9 +279,9 @@ export function AIChatbot() {
 
       {/* Chat Window Panel */}
       {isOpen && (
-        <div className="w-[350px] sm:w-[380px] h-[500px] rounded-3xl border border-border bg-card/95 backdrop-blur-md shadow-elegant flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
-          {/* Top Bar Header */}
-          <div className="bg-gradient-brand px-5 py-4 flex items-center justify-between text-primary-foreground">
+        <div className="w-[350px] sm:w-[380px] h-[520px] rounded-3xl border border-border bg-card/95 backdrop-blur-md shadow-elegant flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+          {/* Top Bar Header (Solid corporate accent background) */}
+          <div className="bg-brand-orange px-5 py-4 flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white relative">
                 <Carrot className="h-6 w-6 -rotate-45" />
@@ -262,7 +297,7 @@ export function AIChatbot() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 p-1.5 rounded-lg transition"
+              className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition"
               aria-label="Close Chat"
             >
               <X className="h-5 w-5" />
@@ -283,13 +318,13 @@ export function AIChatbot() {
                 )}
                 <div className="max-w-[75%] space-y-2">
                   <div
-                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-soft whitespace-pre-line ${
+                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-soft whitespace-pre-line border border-border/40 ${
                       msg.sender === "user"
-                        ? "bg-gradient-brand text-primary-foreground rounded-tr-none"
-                        : "bg-card border border-border text-foreground rounded-tl-none"
+                        ? "bg-brand-orange text-white rounded-tr-none border-none"
+                        : "bg-card text-foreground rounded-tl-none"
                     }`}
                   >
-                    {msg.text}
+                    {msg.sender === "bot" ? renderMessageText(msg.text) : msg.text}
                   </div>
                   {msg.actionLink && (
                     <div className="flex">
@@ -298,14 +333,14 @@ export function AIChatbot() {
                           href={msg.actionLink.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-orange/10 border border-brand-orange/20 text-brand-orange hover:bg-brand-orange hover:text-primary-foreground text-xs font-bold px-3.5 py-2 transition"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-orange/10 border border-brand-orange/20 text-brand-orange hover:bg-brand-orange hover:text-white text-xs font-bold px-3.5 py-2 transition"
                         >
                           {msg.actionLink.label} <ArrowUpRight className="h-3.5 w-3.5" />
                         </a>
                       ) : (
                         <a
                           href={msg.actionLink.url}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-orange/10 border border-brand-orange/20 text-brand-orange hover:bg-brand-orange hover:text-primary-foreground text-xs font-bold px-3.5 py-2 transition"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-orange/10 border border-brand-orange/20 text-brand-orange hover:bg-brand-orange hover:text-white text-xs font-bold px-3.5 py-2 transition"
                         >
                           {msg.actionLink.label} <ArrowUpRight className="h-3.5 w-3.5" />
                         </a>
@@ -316,8 +351,8 @@ export function AIChatbot() {
               </div>
             ))}
 
-            {/* Typing Indicator */}
-            {isTyping && (
+            {/* Typing/Thinking Indicator */}
+            {isThinking && (
               <div className="flex justify-start items-center gap-2.5">
                 <div className="h-8 w-8 rounded-full bg-brand-orange/10 text-brand-orange flex items-center justify-center shrink-0 border border-brand-orange/20">
                   <Carrot className="h-4.5 w-4.5 -rotate-45" />
@@ -339,7 +374,7 @@ export function AIChatbot() {
                 <button
                   key={qr.label}
                   onClick={() => handleSendMessage(qr.query)}
-                  className="rounded-full border border-border bg-card hover:border-brand-orange hover:text-brand-orange transition text-[11px] font-semibold px-2.5 py-1"
+                  className="rounded-full border border-border bg-card hover:border-brand-orange hover:text-brand-orange transition text-[11px] font-semibold px-2.5 py-1 cursor-pointer"
                 >
                   {qr.label}
                 </button>
@@ -365,7 +400,7 @@ export function AIChatbot() {
             <button
               type="submit"
               disabled={!inputText.trim()}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-brand text-primary-foreground shadow-soft hover:opacity-90 active:scale-95 transition disabled:opacity-50 disabled:pointer-events-none shrink-0"
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-brand-orange text-white shadow-soft hover:opacity-90 active:scale-95 transition disabled:opacity-50 disabled:pointer-events-none shrink-0 cursor-pointer"
               aria-label="Send Message"
             >
               <Send className="h-4 w-4" />

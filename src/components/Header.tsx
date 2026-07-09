@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Menu, X, Home, Globe, Server, Cpu, Database } from "lucide-react";
+import { ArrowRight, Menu, X, Home, Globe, Server, Cpu, Database, User } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -51,13 +51,16 @@ export function Header() {
         </nav>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link
-            to="/"
-            hash="login"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-brand px-4 py-2 text-sm font-semibold text-primary-foreground shadow-elegant hover:opacity-95 transition"
+          <a
+            href="https://portal.carrothost.com/login"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95 transition hover:scale-105 active:scale-95"
+            title="Client Login"
+            aria-label="Client Login"
           >
-            Client Login <ArrowRight className="h-4 w-4" />
-          </Link>
+            <User className="h-4.5 w-4.5" />
+          </a>
           {/* Mobile hamburger menu */}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -119,14 +122,17 @@ export function Header() {
             </Link>
           </div>
           <div className="pt-3 border-t border-border/40">
-            <Link
-              to="/"
-              hash="login"
+            <a
+              href="https://portal.carrothost.com/login"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-brand w-full py-3 text-sm font-semibold text-primary-foreground shadow-elegant hover:brightness-105 active:brightness-95 transition-all duration-200"
+              className="flex items-center justify-center rounded-xl bg-gradient-brand w-full py-3 text-primary-foreground shadow-elegant hover:brightness-105 active:brightness-95 transition-all duration-200"
+              title="Client Login"
+              aria-label="Client Login"
             >
-              Client Login <ArrowRight className="h-4 w-4" />
-            </Link>
+              <User className="h-5 w-5" />
+            </a>
           </div>
         </div>
       )}
