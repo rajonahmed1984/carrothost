@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as XeonCloudVpsRouteImport } from './routes/xeon-cloud-vps'
+import { Route as WordpressPluginRouteImport } from './routes/wordpress-plugin'
 import { Route as WhoisRouteImport } from './routes/whois'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as SystemStatusRouteImport } from './routes/system-status'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as MigrateToUsRouteImport } from './routes/migrate-to-us'
 import { Route as HostingRouteImport } from './routes/hosting'
 import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
 import { Route as AboutUsRouteImport } from './routes/about-us'
@@ -22,6 +25,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const XeonCloudVpsRoute = XeonCloudVpsRouteImport.update({
   id: '/xeon-cloud-vps',
   path: '/xeon-cloud-vps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WordpressPluginRoute = WordpressPluginRouteImport.update({
+  id: '/wordpress-plugin',
+  path: '/wordpress-plugin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WhoisRoute = WhoisRouteImport.update({
@@ -34,9 +42,19 @@ const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SystemStatusRoute = SystemStatusRouteImport.update({
+  id: '/system-status',
+  path: '/system-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MigrateToUsRoute = MigrateToUsRouteImport.update({
+  id: '/migrate-to-us',
+  path: '/migrate-to-us',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostingRoute = HostingRouteImport.update({
@@ -71,9 +89,12 @@ export interface FileRoutesByFullPath {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/system-status': typeof SystemStatusRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/whois': typeof WhoisRoute
+  '/wordpress-plugin': typeof WordpressPluginRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesByTo {
@@ -82,9 +103,12 @@ export interface FileRoutesByTo {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/system-status': typeof SystemStatusRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/whois': typeof WhoisRoute
+  '/wordpress-plugin': typeof WordpressPluginRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRoutesById {
@@ -94,9 +118,12 @@ export interface FileRoutesById {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/hosting': typeof HostingRoute
+  '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/system-status': typeof SystemStatusRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/whois': typeof WhoisRoute
+  '/wordpress-plugin': typeof WordpressPluginRoute
   '/xeon-cloud-vps': typeof XeonCloudVpsRoute
 }
 export interface FileRouteTypes {
@@ -107,9 +134,12 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
+    | '/migrate-to-us'
     | '/privacy-policy'
+    | '/system-status'
     | '/terms-of-service'
     | '/whois'
+    | '/wordpress-plugin'
     | '/xeon-cloud-vps'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -118,9 +148,12 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
+    | '/migrate-to-us'
     | '/privacy-policy'
+    | '/system-status'
     | '/terms-of-service'
     | '/whois'
+    | '/wordpress-plugin'
     | '/xeon-cloud-vps'
   id:
     | '__root__'
@@ -129,9 +162,12 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/hosting'
+    | '/migrate-to-us'
     | '/privacy-policy'
+    | '/system-status'
     | '/terms-of-service'
     | '/whois'
+    | '/wordpress-plugin'
     | '/xeon-cloud-vps'
   fileRoutesById: FileRoutesById
 }
@@ -141,9 +177,12 @@ export interface RootRouteChildren {
   AboutUsRoute: typeof AboutUsRoute
   BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   HostingRoute: typeof HostingRoute
+  MigrateToUsRoute: typeof MigrateToUsRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  SystemStatusRoute: typeof SystemStatusRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   WhoisRoute: typeof WhoisRoute
+  WordpressPluginRoute: typeof WordpressPluginRoute
   XeonCloudVpsRoute: typeof XeonCloudVpsRoute
 }
 
@@ -154,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/xeon-cloud-vps'
       fullPath: '/xeon-cloud-vps'
       preLoaderRoute: typeof XeonCloudVpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wordpress-plugin': {
+      id: '/wordpress-plugin'
+      path: '/wordpress-plugin'
+      fullPath: '/wordpress-plugin'
+      preLoaderRoute: typeof WordpressPluginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/whois': {
@@ -170,11 +216,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/system-status': {
+      id: '/system-status'
+      path: '/system-status'
+      fullPath: '/system-status'
+      preLoaderRoute: typeof SystemStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy-policy': {
       id: '/privacy-policy'
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/migrate-to-us': {
+      id: '/migrate-to-us'
+      path: '/migrate-to-us'
+      fullPath: '/migrate-to-us'
+      preLoaderRoute: typeof MigrateToUsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hosting': {
@@ -221,9 +281,12 @@ const rootRouteChildren: RootRouteChildren = {
   AboutUsRoute: AboutUsRoute,
   BdixCloudVpsRoute: BdixCloudVpsRoute,
   HostingRoute: HostingRoute,
+  MigrateToUsRoute: MigrateToUsRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  SystemStatusRoute: SystemStatusRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   WhoisRoute: WhoisRoute,
+  WordpressPluginRoute: WordpressPluginRoute,
   XeonCloudVpsRoute: XeonCloudVpsRoute,
 }
 export const routeTree = rootRouteImport

@@ -6,37 +6,52 @@
     <priority>1.00</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/hosting</loc>
+    <loc>https://carrothost.com/hosting/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/bdix-cloud-vps</loc>
+    <loc>https://carrothost.com/bdix-cloud-vps/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/xeon-cloud-vps</loc>
+    <loc>https://carrothost.com/xeon-cloud-vps/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/about-us</loc>
+    <loc>https://carrothost.com/about-us/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/whois</loc>
+    <loc>https://carrothost.com/whois/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/privacy-policy</loc>
+    <loc>https://carrothost.com/system-status/</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.70</priority>
+  </url>
+  <url>
+    <loc>https://carrothost.com/migrate-to-us/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://carrothost.com/wordpress-plugin/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://carrothost.com/privacy-policy/</loc>
     <changefreq>yearly</changefreq>
     <priority>0.40</priority>
   </url>
   <url>
-    <loc>https://carrothost.com/terms-of-service</loc>
+    <loc>https://carrothost.com/terms-of-service/</loc>
     <changefreq>yearly</changefreq>
     <priority>0.40</priority>
   </url>

@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
   Globe,
@@ -146,7 +146,7 @@ function Services() {
     {
       icon: Globe,
       title: "Shared Webuzo Hosting",
-      desc: "LiteSpeed & NVMe storage optimized for high traffic e-commerce. Features 100% Node-Free GTM server-side tracking proxies and Hourly Auto-Unlock Guard.",
+      desc: "Speedy Cache & NVMe storage optimized for high traffic e-commerce. Features 100% Node-Free GTM server-side tracking proxies and Hourly Auto-Unlock Guard.",
       to: "/hosting",
       price: "From ৳4,200.00 / year",
     },

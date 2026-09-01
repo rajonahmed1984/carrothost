@@ -34,3 +34,8 @@ dist-ssr
 # Environment Variables
 .env
 .env.*
+
+# Build Outputs
+upload-ready/
+*.zip
+!public/carrothost-server-side-tracker.zip

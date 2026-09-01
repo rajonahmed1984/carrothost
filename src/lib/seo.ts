@@ -25,7 +25,8 @@ export type FaqItem = {
 
 const normalizePath = (path: string) => {
   if (!path || path === "/") return "/";
-  return path.startsWith("/") ? path : `/${path}`;
+  const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
+  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}/`;
 };
 
 export const absoluteUrl = (path: string) => {

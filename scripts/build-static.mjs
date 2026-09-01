@@ -28,6 +28,9 @@ const ROUTES = [
   { path: "/terms-of-service", file: "terms-of-service/index.html" },
   { path: "/whois", file: "whois/index.html" },
   { path: "/xeon-cloud-vps", file: "xeon-cloud-vps/index.html" },
+  { path: "/system-status", file: "system-status/index.html" },
+  { path: "/migrate-to-us", file: "migrate-to-us/index.html" },
+  { path: "/wordpress-plugin", file: "wordpress-plugin/index.html" },
   { path: "/404", file: "404.html" }
 ];
 
@@ -108,7 +111,15 @@ async function main() {
 
     // Copy all .output/public contents
     console.log("📂 Copying assets and public files...");
-    copyDirSync(OUTPUT_PUBLIC, UPLOAD_DIR);
+    if (fs.existsSync(OUTPUT_PUBLIC)) {
+      copyDirSync(OUTPUT_PUBLIC, UPLOAD_DIR);
+    }
+
+    // Ensure all public/ assets (like status-probe.php, tracker zip, sitemap.xml) are present
+    const publicSrc = path.join(ROOT, "public");
+    if (fs.existsSync(publicSrc)) {
+      copyDirSync(publicSrc, UPLOAD_DIR);
+    }
 
     // Write pre-rendered HTML files
     console.log("✍️ Writing pre-rendered pages...");
@@ -131,17 +142,43 @@ async function main() {
       fs.copyFileSync(robotsSrc, robotsDst);
     }
 
+    // Auto-generate upload-ready.zip
+    console.log("🗜️ Creating upload-ready.zip...");
+    const zipPath = path.join(ROOT, "upload-ready.zip");
+    if (fs.existsSync(zipPath)) {
+      fs.unlinkSync(zipPath);
+    }
+
+    try {
+      if (process.platform === "win32") {
+        execSync(
+          `powershell -Command "Get-ChildItem -Path 'upload-ready' -Force | Compress-Archive -DestinationPath 'upload-ready.zip' -Force"`,
+          { cwd: ROOT, stdio: "ignore" }
+        );
+      } else {
+        execSync(`cd upload-ready && zip -r ../upload-ready.zip . -i '*'`, { cwd: ROOT, stdio: "ignore" });
+      }
+      if (fs.existsSync(zipPath)) {
+        const zipSize = (fs.statSync(zipPath).size / (1024 * 1024)).toFixed(2);
+        console.log(`📦 upload-ready.zip created successfully (${zipSize} MB)`);
+      }
+    } catch (zipErr) {
+      console.warn("⚠️ Automatic ZIP creation skipped:", zipErr.message);
+    }
+
     console.log("");
     console.log("✅ Static site successfully generated and optimized:");
-    console.log(`   📁 ${UPLOAD_DIR}`);
+    console.log(`   📁 Folder: ${UPLOAD_DIR}`);
+    if (fs.existsSync(zipPath)) {
+      console.log(`   📦 Archive: ${zipPath}`);
+    }
     console.log("");
     listDir(UPLOAD_DIR, "   ");
     console.log("");
-    console.log("🚀 cPanel-এ আপলোড করতে:");
-    console.log("   1. upload-ready/ ফোল্ডারের ভেতরের সব কিছু ZIP করো");
-    console.log("   2. cPanel File Manager-এ public_html/ ফোল্ডারে আপলোড করো");
-    console.log("   3. ZIP extract করো");
-    console.log("   4. Done! 🎉");
+    console.log("🚀 Deployment instructions:");
+    console.log("   1. Upload 'upload-ready.zip' directly to your cPanel / hosting file manager inside public_html/");
+    console.log("   2. Extract 'upload-ready.zip'");
+    console.log("   3. Done! All pages and first-party tracking assets are live! 🎉");
 
   } catch (err) {
     console.error("❌ Static generation failed:", err);

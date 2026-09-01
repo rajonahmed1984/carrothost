@@ -220,7 +220,7 @@ export function NotFound() {
                 {
                   icon: Globe,
                   title: "Shared Hosting",
-                  desc: "LiteSpeed & NVMe Optimized",
+                  desc: "Speedy Cache & NVMe Optimized",
                   to: "/hosting",
                 },
                 {
