@@ -286,6 +286,17 @@ function WhyUs() {
 }
 
 function Testimonials() {
+  // Client names only. We do not publish a quote for these unless the client
+  // has approved the wording in writing.
+  const clients = [
+    "eikahne",
+    "Newcastle Law Academy",
+    "Dhaka Stream",
+    "ACNABIN Chartered Accountants",
+    "Amrai Kingbadanti Foundation",
+    "Insight Dhaka",
+  ];
+
   const quotes = [
     {
       name: "Rafiq Ahmed",
@@ -315,6 +326,23 @@ function Testimonials() {
             Loved by local developers & agencies
           </h2>
         </div>
+
+        <div className="mb-16">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Trusted by
+          </p>
+          <ul className="mt-6 flex flex-wrap items-center justify-center gap-3 md:gap-4">
+            {clients.map((c) => (
+              <li
+                key={c}
+                className="rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground/75 shadow-soft transition duration-300 hover:text-foreground hover:shadow-elegant"
+              >
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-8">
           {quotes.map((q) => (
             <figure
