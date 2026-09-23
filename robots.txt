@@ -1,16 +1,12 @@
+# Every crawler gets the same rules. Per-agent groups are intentionally avoided:
+# a named group overrides the * group entirely, so the Disallow lines below
+# would not apply to Googlebot or Bingbot if they had their own group.
 User-agent: *
 Allow: /
 
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Cloudflare's internal endpoints and the server's directory-listing theme are
+# not pages. They are not linked deliberately and return 404.
+Disallow: /cdn-cgi/
+Disallow: /_autoindex/
 
 Sitemap: https://carrothost.com/sitemap.xml

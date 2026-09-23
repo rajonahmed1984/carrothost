@@ -3,6 +3,11 @@
 
 # Fallback: Route Apache 404 errors directly to the main 404 page
 ErrorDocument 404 /404.html
+ErrorDocument 403 /404.html
+
+# Never expose an auto-generated directory listing. Without this, /assets/ was
+# served as a browsable index that Google crawled and indexed.
+Options -Indexes
 
 # Enable rewrite engine
 RewriteEngine On
@@ -15,6 +20,18 @@ RewriteRule ^ https://carrothost.com%{REQUEST_URI} [R=301,L,NE]
 # Prevent explicit index.html URLs from competing with clean directory URLs.
 RewriteCond %{THE_REQUEST} \s/+(.*/)?index\.html(?:[\s?]) [NC]
 RewriteRule ^(.*/)?index\.html$ /$1 [R=301,L,NE]
+
+# Hidden files (.htaccess, .env, .git/...) answer 404 rather than 403, so a
+# crawler that stumbles on one drops the URL instead of reporting it as blocked.
+# /.well-known/ stays reachable for TLS and verification files.
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule (^|/)\. - [R=404,L]
+
+# A directory with no index.html (e.g. /assets/) is not a page. Answer 404
+# instead of letting the server return a listing or a 403.
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.html !-f
+RewriteRule ^ - [R=404,L]
 
 # If the requested file or directory exists, serve it directly
 RewriteCond %{REQUEST_FILENAME} !-f
