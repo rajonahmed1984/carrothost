@@ -289,7 +289,7 @@ function Testimonials() {
   // Client names only. We do not publish a quote for these unless the client
   // has approved the wording in writing.
   const clients = [
-    "eikahne",
+    "Foring",
     "Newcastle Law Academy",
     "Dhaka Stream",
     "ACNABIN Chartered Accountants",
@@ -297,37 +297,23 @@ function Testimonials() {
     "Insight Dhaka",
   ];
 
-  const quotes = [
-    {
-      name: "Rafiq Ahmed",
-      role: "Founder, Dhaka Threads",
-      body: "Migrating our WooCommerce store to CarrotHost cut our check-out delay by half. GTM server-side tracking proxy captured 100% of our Facebook ad campaigns data.",
-    },
-    {
-      name: "Nusrat Jahan",
-      role: "CTO, EduLift BD",
-      body: "The BDIX VPS is rock solid. We've had zero downtime in 14 months and Bangladeshi students experience sub-10ms site loading speed.",
-    },
-    {
-      name: "Tanvir Hasan",
-      role: "Agency Owner",
-      body: "The Intel Xeon Cloud VPS is incredibly fast for dynamic compilation. Webdock dashboard makes rebuilding nodes simple.",
-    },
-  ];
+  // Add an entry only once that person has approved their own wording.
+  // Awaiting approved quotes from:
+  //   Mahabubur Rahaman Masum - Foring
+  //   Barrister M A Muntakim - Newcastle Law Academy
+  //   Md. Reajul Islam FCA - ACNABIN Chartered Accountants
+  const quotes: { name: string; role: string; body: string }[] = [];
 
   return (
     <section className="py-20 md:py-28 bg-gradient-soft">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
-            Reviews
-          </span>
-          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
             Loved by local developers & agencies
           </h2>
         </div>
 
-        <div className="mb-16">
+        <div className={quotes.length > 0 ? "mb-16" : ""}>
           <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Trusted by
           </p>
@@ -343,34 +329,36 @@ function Testimonials() {
           </ul>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {quotes.map((q) => (
-            <figure
-              key={q.name}
-              className="rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft flex flex-col justify-between hover:shadow-elegant transition duration-300"
-            >
-              <div>
-                <div className="flex gap-0.5 text-brand-orange">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="mt-5 text-sm text-foreground/80 leading-relaxed font-medium">
-                  &ldquo;{q.body}&rdquo;
-                </blockquote>
-              </div>
-              <figcaption className="mt-8 pt-6 border-t border-border/50 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-brand-orange/10 text-brand-orange flex items-center justify-center font-bold">
-                  {q.name.charAt(0)}
-                </div>
+        {quotes.length > 0 && (
+          <div className="grid md:grid-cols-3 gap-8">
+            {quotes.map((q) => (
+              <figure
+                key={q.name}
+                className="rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft flex flex-col justify-between hover:shadow-elegant transition duration-300"
+              >
                 <div>
-                  <div className="font-bold text-sm text-foreground">{q.name}</div>
-                  <div className="text-xs text-muted-foreground font-semibold">{q.role}</div>
+                  <div className="flex gap-0.5 text-brand-orange">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-current" />
+                    ))}
+                  </div>
+                  <blockquote className="mt-5 text-sm text-foreground/80 leading-relaxed font-medium">
+                    &ldquo;{q.body}&rdquo;
+                  </blockquote>
                 </div>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
+                <figcaption className="mt-8 pt-6 border-t border-border/50 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-brand-orange/10 text-brand-orange flex items-center justify-center font-bold">
+                    {q.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-foreground">{q.name}</div>
+                    <div className="text-xs text-muted-foreground font-semibold">{q.role}</div>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
