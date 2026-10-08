@@ -17,6 +17,9 @@ RewriteCond %{HTTPS} !=on [OR]
 RewriteCond %{HTTP_HOST} !^carrothost\.com$ [NC]
 RewriteRule ^ https://carrothost.com%{REQUEST_URI} [R=301,L,NE]
 
+# Renamed page: Xeon Cloud VPS is now Cloud VPS. Permanently redirect the old URL.
+RewriteRule ^xeon-cloud-vps/?$ https://carrothost.com/cloud-vps/ [R=301,L]
+
 # Prevent explicit index.html URLs from competing with clean directory URLs.
 RewriteCond %{THE_REQUEST} \s/+(.*/)?index\.html(?:[\s?]) [NC]
 RewriteRule ^(.*/)?index\.html$ /$1 [R=301,L,NE]

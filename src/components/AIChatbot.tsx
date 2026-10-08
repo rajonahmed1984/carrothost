@@ -29,14 +29,14 @@ CarrotHost offers the following high-performance services and exclusive solution
    - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
-4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.3.5):
-   - Download file: carrothost-server-side-tracker.zip (available directly on site or at /wordpress-plugin).
+4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.0):
+   - Download file: carrothost-server-side-tracker-1.5.0.zip (available directly on site or at /wordpress-plugin).
    - How to Install & Configure:
-     Step 1: Download 'carrothost-server-side-tracker.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
+     Step 1: Download 'carrothost-server-side-tracker-1.5.0.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
      Step 2: Go to 'Carrothost SST' in WP Admin sidebar > Configuration tab.
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
-     Step 5: Go to 'Connection Health & Logs' tab and click '⚡ Run Test Ping Now' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
+     Step 5: Open the Dashboard tab and click '⚡ Run Test Ping' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
      Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) for 9.5+ Event Match Quality (EMQ).
    - Full setup guide: [WordPress Plugin Documentation](/wordpress-plugin).
 
@@ -46,7 +46,7 @@ CarrotHost offers the following high-performance services and exclusive solution
    - Request migration at: [Migrate to Us](/migrate-to-us).
 
 6. Live System Status & Uptime Monitoring:
-   - Real-time TCP socket probes across all server nodes: BDIX Dhaka Node (8ms), Email & Webmail Cluster (58ms), Xeon Cloud VPS (231ms), and Webuzo Shared Cloud (256ms).
+   - Real-time TCP socket probes across all server nodes: BDIX Dhaka Node (8ms), Email & Webmail Cluster (58ms), Cloud VPS (231ms), and Webuzo Shared Cloud (256ms).
    - 99.98% 90-day uptime track record.
    - Check live status at: [System Status](/system-status).
 
@@ -54,8 +54,8 @@ CarrotHost offers the following high-performance services and exclusive solution
    - KVM-based virtual servers connected directly to BDIX. Hosted in a Tier-III facility in Dhanmondi, Dhaka.
    - Sub-10ms local network latency in Bangladesh. Ideal for local e-commerce, ERP, and news portals: [BDIX VPS](/bdix-cloud-vps).
 
-8. Xeon Cloud VPS:
-   - High-compute virtual servers powered by Intel Xeon Platinum processors on global cloud networks, managed via the Webdock dashboard: [Xeon Cloud VPS](/xeon-cloud-vps).
+8. Cloud VPS:
+   - High-compute virtual servers powered by Intel Xeon Gold and AMD EPYC processors on global cloud networks, managed via the Webdock dashboard: [Cloud VPS](/cloud-vps).
 
 9. Support:
    - 24/7 technical team reachable via Phone/WhatsApp (01787-882277) and Email (support@carrothost.com).
@@ -69,7 +69,7 @@ Conversation Rules:
   - Home: /
   - Shared Hosting: /hosting
   - BDIX VPS: /bdix-cloud-vps
-  - Xeon VPS: /xeon-cloud-vps
+  - Cloud VPS: /cloud-vps
   - WordPress Plugin Setup: /wordpress-plugin
   - Migrate to Us: /migrate-to-us
   - System Status: /system-status
@@ -109,7 +109,7 @@ export function AIChatbot() {
       setMessages([
         {
           sender: "bot",
-          text: "Hi there! 🥕 I am your CarrotHost AI Assistant. I can help you with Webuzo shared hosting, 100% Node-Free Server-Side Tracking, WordPress tracking plugin setup, free site migration, or BDIX/Xeon VPS nodes. What are you looking to host today?",
+          text: "Hi there! 🥕 I am your CarrotHost AI Assistant. I can help you with Webuzo shared hosting, 100% Node-Free Server-Side Tracking, WordPress tracking plugin setup, free site migration, or BDIX/Cloud VPS nodes. What are you looking to host today?",
           timestamp: new Date(),
         },
       ]);
@@ -127,7 +127,7 @@ export function AIChatbot() {
     { label: "🔄 Free Migration", query: "How does the free website migration with zero downtime work?" },
     { label: "📊 Live Server Status", query: "Where can I check real-time server status and latency?" },
     { label: "🇧🇩 BDIX VPS Plans", query: "Tell me about your BDIX VPS plans." },
-    { label: "🚀 Xeon VPS Plans", query: "What are the Xeon VPS plans?" },
+    { label: "🚀 Cloud VPS Plans", query: "What are the Cloud VPS plans?" },
   ];
 
   // Helper to parse markdown links: [label](url)
@@ -221,7 +221,7 @@ export function AIChatbot() {
     // 1. Greetings
     if (text === "hi" || text === "hello" || text === "hey" || text === "হ্যাল" || text === "হাই" || text === "হ্যালো") {
       return {
-        text: "Hello! Welcome to CarrotHost. I am your Carrot AI Assistant. How can I help you today?\n\nYou can ask me about our hosting packages, BDIX VPS, Xeon Cloud VPS, domain registration, GTM tracking, or how to contact our support.",
+        text: "Hello! Welcome to CarrotHost. I am your Carrot AI Assistant. How can I help you today?\n\nYou can ask me about our hosting packages, BDIX VPS, Cloud VPS, domain registration, GTM tracking, or how to contact our support.",
         actionLink: { label: "Contact Support", url: "https://wa.me/8801787882277", external: true }
       };
     }
@@ -284,7 +284,7 @@ export function AIChatbot() {
       text.includes("পেমেন্ট")
     ) {
       return {
-        text: "We support **bKash, Nagad, Rocket, local cards, and international payment methods**.\n\nOur starter prices:\n• **Shared Hosting**: from ৳4,200/year\n• **Xeon Cloud VPS**: from ৳607/month\n• **BDIX VPS (Dhaka)**: from ৳1,550/month\n\nFor real-time domain registration prices, please visit our domain checker.",
+        text: "We support **bKash, Nagad, Rocket, local cards, and international payment methods**.\n\nOur starter prices:\n• **Shared Hosting**: from ৳4,200/year\n• **Cloud VPS**: from ৳750/month\n• **BDIX VPS (Dhaka)**: from ৳1,550/month\n\nFor real-time domain registration prices, please visit our domain checker.",
         actionLink: { label: "View Hosting Plans", url: "/hosting" }
       };
     }
@@ -301,7 +301,7 @@ export function AIChatbot() {
       text.includes("সেটআপ")
     ) {
       return {
-        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping Now' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with 9.5+ EMQ score.",
+        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker-1.5.0.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with 9.5+ EMQ score.",
         actionLink: { label: "WordPress Plugin Guide", url: "/wordpress-plugin" }
       };
     }
@@ -350,7 +350,7 @@ export function AIChatbot() {
       text.includes("আপটাইম")
     ) {
       return {
-        text: "Check real-time live TCP socket ping and uptime across all CarrotHost clusters:\n\n• **BDIX Dhaka Node**: 8 ms (Operational)\n• **Email & Webmail Cluster**: 58 ms (Operational)\n• **Xeon Cloud VPS Node**: 231 ms (Operational)\n• **Webuzo Shared Cloud (Earth)**: 256 ms (Operational)\n• **90-Day Average Uptime**: 99.98%",
+        text: "Check real-time live TCP socket ping and uptime across all CarrotHost clusters:\n\n• **BDIX Dhaka Node**: 8 ms (Operational)\n• **Email & Webmail Cluster**: 58 ms (Operational)\n• **Cloud VPS Node**: 231 ms (Operational)\n• **Webuzo Shared Cloud (Earth)**: 256 ms (Operational)\n• **90-Day Average Uptime**: 99.98%",
         actionLink: { label: "Live System Status", url: "/system-status" }
       };
     }
@@ -363,11 +363,11 @@ export function AIChatbot() {
       };
     }
 
-    // 13. Xeon VPS
-    if (text.includes("xeon") || text.includes("intel") || text.includes("webdock") || text.includes("জিয়ন")) {
+    // 13. Cloud VPS
+    if (text.includes("xeon") || text.includes("cloud vps") || text.includes("intel") || text.includes("webdock") || text.includes("জিয়ন")) {
       return {
-        text: "Xeon Cloud VPS plans leverage Intel Xeon Platinum processors and integrate the Webdock control panel. You get dedicated resources, root access, and automated snapshots.",
-        actionLink: { label: "Xeon VPS Plans", url: "/xeon-cloud-vps" }
+        text: "Cloud VPS plans leverage Intel Xeon Gold and AMD EPYC processors and integrate the Webdock control panel. You get dedicated resources, root access, and automated snapshots.",
+        actionLink: { label: "Cloud VPS Plans", url: "/cloud-vps" }
       };
     }
 
@@ -381,7 +381,7 @@ export function AIChatbot() {
 
     // Default Fallback
     return {
-      text: "I can help you select a hosting plan, set up GTM tracking, or explain BDIX/Xeon VPS nodes. How can I help you today?",
+      text: "I can help you select a hosting plan, set up GTM tracking, or explain BDIX/Cloud VPS nodes. How can I help you today?",
       actionLink: { label: "Contact Support", url: "https://wa.me/8801787882277", external: true }
     };
   };

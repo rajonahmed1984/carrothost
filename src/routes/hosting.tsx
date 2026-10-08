@@ -59,8 +59,8 @@ const HOSTING_FAQS = [
     a: "Standard server-side GTM containers run heavy Node.js or Docker processes that consume 1 GB to 2 GB of RAM and frequently cause memory leaks or server crashes during traffic spikes. Our 100% Node-Free tracking handles tracking proxies directly inside the Nginx C-level core, requiring 0 MB of Node.js memory overhead with ultra-low latency (<10ms) and zero server crashes.",
   },
   {
-    q: "How do I install and configure the carrothost-server-side-tracker.zip plugin on WordPress?",
-    a: "It takes under 2 minutes: 1) Download 'carrothost-server-side-tracker.zip' from this page, 2) Upload and activate it in your WordPress dashboard under Plugins > Add New, 3) Open 'Carrothost SST' settings, enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. The plugin automatically tracks WooCommerce purchases, add-to-carts, and checkouts with 9+ Event Match Quality (EMQ).",
+    q: "How do I install and configure the carrothost-server-side-tracker-1.5.0.zip plugin on WordPress?",
+    a: "It takes under 2 minutes: 1) Download 'carrothost-server-side-tracker-1.5.0.zip' from this page, 2) Upload and activate it in your WordPress dashboard under Plugins > Add New, 3) Open 'Carrothost SST' settings, enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. The plugin automatically tracks WooCommerce purchases, add-to-carts, and checkouts with 9+ Event Match Quality (EMQ).",
   },
   {
     q: "Will this bypass Ad Blockers and iOS 14.5+ tracking restrictions?",
@@ -103,8 +103,8 @@ export const Route = createFileRoute("/hosting")({
       },
       description:
         "High-speed, 100% Node-Free Server-Side Tracking plugin for WordPress, Google Tag Manager & Meta Conversions API (CAPI) powered by CarrotHost Nginx Core.",
-      downloadUrl: `${SITE_URL}/carrothost-server-side-tracker.zip`,
-      softwareVersion: "1.3.5",
+      downloadUrl: `${SITE_URL}/carrothost-server-side-tracker-1.5.0.zip`,
+      softwareVersion: "1.5.0",
       publisher: {
         "@type": "Organization",
         name: "CarrotHost",
@@ -546,7 +546,7 @@ function WordPressPluginShowcase() {
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Upload the Plugin</h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Download <code>carrothost-server-side-tracker.zip</code> and upload it via{" "}
+                    Download <code>carrothost-server-side-tracker-1.5.0.zip</code> and upload it via{" "}
                     <strong>Plugins &gt; Add New &gt; Upload</strong>.
                   </p>
                 </div>
@@ -572,7 +572,7 @@ function WordPressPluginShowcase() {
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Verify Connection (200 OK)</h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Click <strong>"Run Test Ping Now"</strong> to verify your live 200 OK Nginx
+                    Click <strong>"Run Test Ping"</strong> to verify your live 200 OK Nginx
                     proxy and Meta CAPI connection.
                   </p>
                 </div>
@@ -596,17 +596,17 @@ function WordPressPluginShowcase() {
               </span>
             </div>
             <h4 className="text-xl font-extrabold text-foreground">
-              carrothost-server-side-tracker.zip
+              carrothost-server-side-tracker-1.5.0.zip
             </h4>
             <p className="text-xs text-muted-foreground">
-              Version 1.3.5 • WordPress 5.8 to 6.5+ • WooCommerce Compatible • Included 100% Free
+              Version 1.5.0 • WordPress 5.8 to 6.5+ • WooCommerce Compatible • Included 100% Free
               with all Hosting Plans
             </p>
           </div>
 
           <a
-            href="/carrothost-server-side-tracker.zip"
-            download="carrothost-server-side-tracker.zip"
+            href="/carrothost-server-side-tracker-1.5.0.zip"
+            download="carrothost-server-side-tracker-1.5.0.zip"
             className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-brand px-7 py-4 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:scale-105 shrink-0 text-sm"
           >
             <Download className="h-5 w-5 animate-bounce" />
@@ -718,7 +718,7 @@ function ExclusiveFeatures() {
       icon: FileCode2,
       badge: "Included Free",
       title: "Dedicated WordPress & WooCommerce SST Plugin",
-      desc: "No need to pay monthly subscription fees to third-party tools or hire expensive tracking developers. Our official WordPress plugin (carrothost-server-side-tracker.zip) configures Meta CAPI, first-party GTM proxy, and WooCommerce e-commerce events with 1 click.",
+      desc: "No need to pay monthly subscription fees to third-party tools or hire expensive tracking developers. Our official WordPress plugin (carrothost-server-side-tracker-1.5.0.zip) configures Meta CAPI, first-party GTM proxy, and WooCommerce e-commerce events with 1 click.",
       benefit:
         "Boost your Meta Event Match Quality (EMQ) to 9.5+ out of 10, reduce ad acquisition cost (CPA), and maximize return on ad spend (ROAS).",
     },

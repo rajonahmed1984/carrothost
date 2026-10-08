@@ -9,7 +9,7 @@ export const Route = createFileRoute("/terms-of-service")({
     const seo = createSeoMeta({
       title: "Terms of Service — CarrotHost",
       description:
-        "Terms of Service and legal agreements for CarrotHost shared hosting, BDIX VPS, and Xeon Cloud VPS services.",
+        "Terms of Service and legal agreements for CarrotHost shared hosting, BDIX VPS, and Cloud VPS services.",
       path: "/terms-of-service",
     });
 
@@ -58,7 +58,7 @@ function TermsOfServicePage() {
               </h2>
               <p>
                 By creating an account, registering a domain, or deploying Webuzo shared hosting,
-                BDIX VPS, or Xeon Cloud VPS instances through CarrotHost, you agree to comply with
+                BDIX VPS, or Cloud VPS instances through CarrotHost, you agree to comply with
                 and be bound by these Terms of Service. If you do not agree, you must not use our
                 services.
               </p>
@@ -77,7 +77,7 @@ function TermsOfServicePage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li>Shared hosting accounts are billed annually.</li>
                 <li>
-                  BDIX and Xeon VPS services are billed monthly or annually depending on selection.
+                  BDIX and Cloud VPS services are billed monthly or annually depending on selection.
                 </li>
                 <li>
                   Invoices are generated 7 days before the renewal date. Suspended accounts may be
@@ -114,7 +114,7 @@ function TermsOfServicePage() {
               </h2>
               <p>
                 We pledge a **99.9% network and hardware uptime SLA** across our Webuzo shared
-                nodes, BDIX local infrastructure in Dhaka, and global Xeon Platinum KVM hypervisors.
+                nodes, BDIX local infrastructure in Dhaka, and global Xeon and EPYC KVM hypervisors.
                 In the event of unscheduled downtime exceeding the SLA threshold, clients may
                 request billing credits.
               </p>
@@ -128,7 +128,7 @@ function TermsOfServicePage() {
               </h2>
               <p>
                 While CarrotHost implements automated weekly backups for shared hosting and daily
-                snapshot logs for Xeon Cloud VPS, these are provided as a courtesy. Clients are
+                snapshot logs for Cloud VPS, these are provided as a courtesy. Clients are
                 solely responsible for maintaining local copies of their web databases and files.
                 CarrotHost is not liable for data loss.
               </p>

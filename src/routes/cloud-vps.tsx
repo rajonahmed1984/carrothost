@@ -39,13 +39,13 @@ import {
   webHostingServiceSchema,
 } from "@/lib/seo";
 
-const XEON_FAQS = [
+const CLOUD_VPS_FAQS = [
   {
-    q: "What processors power the Xeon VPS?",
-    a: "Our virtual servers are powered 100% by high-end Intel Xeon Platinum series processors, which are optimized for dynamic server workloads and concurrent tasks.",
+    q: "What processors power the Cloud VPS?",
+    a: "Our virtual servers are powered by Intel Xeon Gold and AMD EPYC Milan (or better) processors, which are optimized for dynamic server workloads and concurrent tasks.",
   },
   {
-    q: "Can I upgrade my Xeon resources later?",
+    q: "Can I upgrade my Cloud VPS resources later?",
     a: "Yes. Scaling up cores, memory, or storage is instant and can be requested directly from our portal with no data migration required.",
   },
   {
@@ -54,48 +54,48 @@ const XEON_FAQS = [
   },
   {
     q: "Do you offer transactional email integrations?",
-    a: "Yes, our Xeon VPS packages support sending transactional emails directly through secure ports, letting you execute transactional mail services without third-party tools.",
+    a: "Yes, our Cloud VPS packages support sending transactional emails directly through secure ports, letting you execute transactional mail services without third-party tools.",
   },
 ];
 
-export const Route = createFileRoute("/xeon-cloud-vps")({
+export const Route = createFileRoute("/cloud-vps")({
   head: () => {
     const seo = createSeoMeta({
-      title: "Intel Xeon VPS Hosting — CarrotHost",
+      title: "Cloud VPS Hosting — CarrotHost",
       description:
-        "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, and NVMe SSD storage. Deploy in under 60 seconds with 99.9% uptime.",
-      path: "/xeon-cloud-vps",
+        "High-performance Cloud VPS with full root access, unmetered port, and NVMe SSD storage. Deploy in under 60 seconds with 99.9% uptime.",
+      path: "/cloud-vps",
     });
 
     return {
       ...seo,
       scripts: [
         jsonLdScript(
-          "ld-xeon-breadcrumbs",
+          "ld-cloud-vps-breadcrumbs",
           breadcrumbSchema([
             { name: "Home", path: "/" },
-            { name: "Xeon Cloud VPS", path: "/xeon-cloud-vps" },
+            { name: "Cloud VPS", path: "/cloud-vps" },
           ]),
         ),
         jsonLdScript(
-          "ld-xeon-service",
+          "ld-cloud-vps-service",
           webHostingServiceSchema({
-            name: "Intel Xeon VPS Hosting",
+            name: "Cloud VPS Hosting",
             description:
-              "High-performance Intel Xeon Cloud VPS with full root access, unmetered port, NVMe SSD storage, and scalable cloud resources.",
-            path: "/xeon-cloud-vps",
-            serviceType: "Xeon Cloud VPS Hosting",
-            priceFrom: "607",
+              "High-performance Cloud VPS with full root access, unmetered port, NVMe SSD storage, and scalable cloud resources.",
+            path: "/cloud-vps",
+            serviceType: "Cloud VPS Hosting",
+            priceFrom: "750",
           }),
         ),
         jsonLdScript(
-          "ld-xeon-faq",
-          faqSchema(XEON_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
+          "ld-cloud-vps-faq",
+          faqSchema(CLOUD_VPS_FAQS.map((item) => ({ question: item.q, answer: item.a }))),
         ),
       ],
     };
   },
-  component: XeonVpsPage,
+  component: CloudVpsPage,
 });
 
 function Hero() {
@@ -110,14 +110,13 @@ function Hero() {
           <div className="space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-green/10 border border-brand-green/20 px-4 py-1.5 text-xs font-semibold text-brand-green">
               <Cpu className="h-4.5 w-4.5" />
-              Intel® Xeon® Platinum Infrastructure
+              Intel® Xeon® & AMD EPYC™ Infrastructure
             </span>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.05] text-foreground">
-              High-Performance <span className="text-gradient-brand">Xeon Cloud VPS</span>
+              High-Performance <span className="text-gradient-brand">Cloud VPS</span>
             </h1>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Power your workloads, sites, and applications with enterprise-grade Intel Xeon
-              Platinum virtual servers. Get blazing performance, dedicated NVMe storage, and 100%
+              Power your workloads, sites, and applications with enterprise-grade Intel Xeon and AMD EPYC virtual servers. Get blazing performance, dedicated NVMe storage, and 100%
               cloud scalability.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-4">
@@ -125,7 +124,7 @@ function Hero() {
                 href="#pricing"
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-4 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
               >
-                View Xeon Plans <ArrowRight className="h-4.5 w-4.5" />
+                View Cloud VPS Plans <ArrowRight className="h-4.5 w-4.5" />
               </a>
               <Link
                 to="/bdix-cloud-vps"
@@ -159,20 +158,19 @@ function Hero() {
   );
 }
 
-function XeonFacilities() {
+function CloudVpsFacilities() {
   const [activeTab, setActiveTab] = useState(0);
 
   const facilities = [
     {
       icon: Cpu,
-      title: "Xeon Platinum CPUs",
+      title: "Xeon & EPYC CPUs",
       subtitle: "Enterprise Processing Power",
-      desc: "Run compute-heavy applications, compilation pipelines, or massive databases effortlessly. We use latest-generation Intel Xeon Platinum nodes with dedicated execution threads.",
+      desc: "Run compute-heavy applications, compilation pipelines, or massive databases effortlessly. We use Intel Xeon Gold and AMD EPYC Milan (or better) processors with dedicated execution threads.",
       features: [
         "High single-core CPU clock speeds",
         "Dedicated vCPU allocation per instance",
         "Optimized for database & high-traffic nodes",
-        "AVX-512 vector acceleration support",
       ],
     },
     {
@@ -191,9 +189,9 @@ function XeonFacilities() {
       icon: Wifi,
       title: "1 Gbit/s Network Ports",
       subtitle: "High Bandwidth Transfers",
-      desc: "Connect your applications with a high-capacity network pipeline. All Xeon VPS packages receive dedicated 1 Gbps port allocations with generous monthly outgoing transfer quotas.",
+      desc: "Connect your applications with a high-capacity network pipeline. All Cloud VPS packages receive 1 Gbit/s ports (up to 5 Gbit/s) with monthly outgoing transfer quotas.",
       features: [
-        "1 Gbit/s burstable port capacity",
+        "1 Gbit/s port, burstable up to 5 Gbit/s",
         "Unmetered incoming data transfer",
         "Redundant upstream carrier paths",
         "Sub-ms latency to major global exchanges",
@@ -242,7 +240,7 @@ function XeonFacilities() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
-            Xeon Cloud VPS Facilities
+            Cloud VPS Facilities
           </span>
           <h2 className="mt-3 text-3xl md:text-5xl font-extrabold tracking-tight">
             Built for performance & control
@@ -315,14 +313,14 @@ function XeonFacilities() {
             </div>
 
             <div className="mt-10 pt-6 border-t border-border/50 flex flex-wrap gap-4 items-center justify-between text-xs text-muted-foreground">
-              <span>Standard facilities on all Xeon VPS instances</span>
+              <span>Standard facilities on all Cloud VPS instances</span>
               <a
                 href="https://portal.carrothost.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 font-bold text-brand-orange hover:underline"
               >
-                Deploy Xeon Server <ArrowUpRight className="h-3.5 w-3.5" />
+                Deploy Cloud VPS <ArrowUpRight className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
@@ -336,17 +334,17 @@ function Pricing() {
   const plans = [
     {
       name: "NVMe Nano4",
-      price: "৳607.00",
+      price: "৳750.00",
       period: "/mo",
       tag: "Budget entry",
+      cpuModel: "Xeon Gold CPU",
       cpu: "1 Thread / vCPU",
       ram: "2 GB RAM",
-      storage: "15 GB On-Board NVMe",
-      bandwidth: "1 TB Outgoing Limit",
+      storage: "15 GB NVMe SSD",
+      port: "1 Gbit/s port (up to 5 Gbit/s)",
+      bandwidth: "1 TB Outgoing Transfer Limit /mo",
       link: "https://portal.carrothost.com/store/xeon-vps/nvme-nano4",
       features: [
-        "Xeon Platinum CPUs",
-        "1 Gbit/s Network Port",
         "Free SSL Certificates",
         "Root Access & Dedicated IP",
         "Weekly Backup Snapshots",
@@ -354,18 +352,18 @@ function Pricing() {
     },
     {
       name: "NVMe Bit",
-      price: "৳3,035.00",
+      price: "৳1,500.00",
       period: "/mo",
       tag: "Most popular",
       highlight: true,
-      cpu: "10 Threads / vCPU",
-      ram: "10 GB RAM",
-      storage: "100 GB On-Board NVMe",
-      bandwidth: "5 TB Outgoing Limit",
+      cpuModel: "EPYC Milan or better CPU",
+      cpu: "1 Thread / vCPU",
+      ram: "2 GB RAM",
+      storage: "15 GB NVMe SSD",
+      port: "1 Gbit/s port (up to 5 Gbit/s)",
+      bandwidth: "1 TB Outgoing Transfer Limit /mo",
       link: "https://portal.carrothost.com/store/xeon-vps/nvme-bit",
       features: [
-        "Xeon Platinum CPUs",
-        "1 Gbit/s Network Port",
         "Free SSL Certificates",
         "Transactional Emails",
         "Email Forwarding Control",
@@ -373,36 +371,18 @@ function Pricing() {
       ],
     },
     {
-      name: "Intel Xeon Custom Profile",
-      price: "৳5,800.00",
-      period: "/mo",
-      tag: "Custom allocation",
-      cpu: "5 CPU Threads",
-      ram: "5 GB Memory",
-      storage: "50 GB Storage",
-      bandwidth: "1 Gbit/s-Port",
-      link: "https://portal.carrothost.com/store/xeon-vps/intel-xeon-custom-profile",
-      features: [
-        "Custom CPU allocation",
-        "Custom RAM allocation",
-        "Custom storage limit",
-        "Dedicated network port",
-        "Configured on demand",
-      ],
-    },
-    {
       name: "NVMe Premium",
-      price: "৳12,140.00",
+      price: "৳5,000.00",
       period: "/mo",
       tag: "Enterprise power",
-      cpu: "30 Threads / vCPU",
-      ram: "64 GB RAM",
-      storage: "500 GB On-Board NVMe",
-      bandwidth: "23 TB Outgoing Limit",
+      cpuModel: "EPYC Milan or better CPU",
+      cpu: "6 Threads / vCPU",
+      ram: "10 GB RAM",
+      storage: "40 GB NVMe SSD",
+      port: "1 Gbit/s port (up to 5 Gbit/s)",
+      bandwidth: "7 TB Outgoing Transfer Limit /mo",
       link: "https://portal.carrothost.com/store/xeon-vps/nvme-premium",
       features: [
-        "Xeon Platinum CPUs",
-        "1 Gbit/s Network Port",
         "Free SSL Certificates",
         "Transactional Emails",
         "Email Forwarding Control",
@@ -419,14 +399,13 @@ function Pricing() {
             Pricing
           </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
-            Xeon VPS hosting plans built to scale
+            Cloud VPS hosting plans built to scale
           </h2>
           <p className="mt-3 text-muted-foreground">
-            All plans include dedicated Intel Xeon Platinum cores, full root access, and unmetered
-            ports.
+            All plans include full root access, NVMe SSD storage, and a 1 Gbit/s port (up to 5 Gbit/s).
           </p>
         </div>
-        <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-14 mx-auto max-w-6xl grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((p) => (
             <div
               key={p.name}
@@ -449,22 +428,19 @@ function Pricing() {
               {!p.highlight && <p className="mt-1 text-sm text-muted-foreground">{p.tag}</p>}
 
               <div className="mt-6 space-y-3.5 text-sm border-y border-border/60 py-5 my-5">
-                <div className="flex items-center gap-3">
-                  <Cpu className="h-4.5 w-4.5 text-brand-orange shrink-0" />
-                  <span className="text-foreground/90 font-medium">{p.cpu}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Activity className="h-4.5 w-4.5 text-brand-orange shrink-0" />
-                  <span className="text-foreground/90 font-medium">{p.ram}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <HardDrive className="h-4.5 w-4.5 text-brand-orange shrink-0" />
-                  <span className="text-foreground/90 font-medium">{p.storage}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Wifi className="h-4.5 w-4.5 text-brand-orange shrink-0" />
-                  <span className="text-foreground/90 font-medium">{p.bandwidth}</span>
-                </div>
+                {[
+                  { icon: Cpu, text: p.cpuModel },
+                  { icon: Layers, text: p.cpu },
+                  { icon: Activity, text: p.ram },
+                  { icon: HardDrive, text: p.storage },
+                  { icon: Wifi, text: p.port },
+                  { icon: Gauge, text: p.bandwidth },
+                ].map((row) => (
+                  <div key={row.text} className="flex items-center gap-3">
+                    <row.icon className="h-4.5 w-4.5 text-brand-orange shrink-0" />
+                    <span className="text-foreground/90 font-medium">{row.text}</span>
+                  </div>
+                ))}
               </div>
 
               <ul className="space-y-3 text-sm flex-1">
@@ -500,7 +476,7 @@ function Infrastructure() {
     {
       icon: Server,
       title: "Enterprise Hardware",
-      desc: "Latest Intel Xeon Platinum processors with ECC memory and enterprise NVMe SSD arrays for consistent performance.",
+      desc: "Intel Xeon Gold and AMD EPYC Milan (or better) processors with ECC memory and enterprise NVMe SSD arrays for consistent performance.",
     },
     {
       icon: Shield,
@@ -531,12 +507,12 @@ function Infrastructure() {
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
             Our cloud stack is engineered from the ground up to prevent single points of failure.
-            With enterprise Xeon processors, redundant network paths, and automatic backup systems,
+            With enterprise Xeon and EPYC processors, redundant network paths, and automatic backup systems,
             your virtual servers stay secure and online.
           </p>
           <ul className="mt-8 space-y-4">
             {[
-              "Burstable 1 Gbps ports on all Xeon virtual servers",
+              "Burstable 1 Gbps ports on all Cloud VPS servers",
               "Hot-swappable enterprise NVMe SSD disk arrays",
               "Biometric access control and 24/7 video monitoring",
               "Dual active-active fiber lines to global internet gateways",
@@ -671,7 +647,7 @@ function Included() {
 }
 
 function FAQ() {
-  const faqs = XEON_FAQS;
+  const faqs = CLOUD_VPS_FAQS;
 
   return (
     <section className="py-20 md:py-28 bg-gradient-soft border-y border-border">
@@ -679,7 +655,7 @@ function FAQ() {
         <div className="text-center">
           <span className="text-sm font-semibold text-brand-green">FAQ</span>
           <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
-            Common questions about Xeon VPS
+            Common questions about Cloud VPS
           </h2>
         </div>
         <div className="mt-14 space-y-4">
@@ -713,10 +689,10 @@ function CTA() {
           />
           <div className="relative">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
-              Ready for high-performance Xeon hosting?
+              Ready for high-performance Cloud VPS hosting?
             </h2>
             <p className="mt-4 max-w-xl mx-auto opacity-95 text-base md:text-lg">
-              Deploy your Intel Xeon VPS server instance in under 60 seconds and gain full control
+              Deploy your Cloud VPS server instance in under 60 seconds and gain full control
               over your cloud resources.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -724,7 +700,7 @@ function CTA() {
                 href="#pricing"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-bold text-brand-orange hover:bg-white/95 transition shadow-soft animate-bounce"
               >
-                View Xeon VPS Plans <ArrowRight className="h-4 w-4" />
+                View Cloud VPS Plans <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="tel:01787882277"
@@ -751,12 +727,12 @@ function CTA() {
   );
 }
 
-function XeonVpsPage() {
+function CloudVpsPage() {
   return (
     <div>
       <Header />
       <Hero />
-      <XeonFacilities />
+      <CloudVpsFacilities />
       <Pricing />
       <Infrastructure />
       <NetworkPerformance />

@@ -43,7 +43,7 @@ function PrivacyPolicyPage() {
               Privacy Policy
             </h1>
             <p className="mt-3 text-muted-foreground text-sm md:text-base">
-              Last updated: July 2026. Learn how we collect, process, and protect your information
+              Last updated: October 2026. Learn how we collect, process, and protect your information
               at CarrotHost.
             </p>
           </div>
@@ -98,25 +98,67 @@ function PrivacyPolicyPage() {
               </ul>
             </section>
 
-            {/* 3. Data Storage & Hosting Locations */}
+            {/* 3. Website Analytics */}
             <section className="space-y-3">
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-brand-green" />
-                3. Hosting Locations & Data Center Physical Security
+                3. Website Analytics (Google Analytics)
+              </h2>
+              <p>
+                The carrothost.com website uses <strong>Google Analytics 4</strong>, a web analytics
+                service provided by Google LLC, to understand how visitors use our pages and to
+                improve our content and services. This applies only to visitors of carrothost.com,
+                not to websites hosted by our customers.
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  Google Analytics collects usage information such as pages viewed, referring site,
+                  approximate location (country and city), device type, browser, and screen size.
+                </li>
+                <li>
+                  It sets first-party cookies (named <code>_ga</code> and <code>_ga_*</code>) to
+                  distinguish returning visitors. Google Analytics 4 does not log or store
+                  individual IP addresses.
+                </li>
+                <li>
+                  The information is processed by Google under its own privacy policy and may be
+                  transferred to servers outside Bangladesh.
+                </li>
+                <li>
+                  You can opt out at any time by blocking cookies in your browser settings, using
+                  a content blocker, or installing the{" "}
+                  <a
+                    href="https://tools.google.com/dlpage/gaoptout"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-orange font-semibold hover:underline"
+                  >
+                    Google Analytics Opt-out Browser Add-on
+                  </a>
+                  .
+                </li>
+              </ul>
+            </section>
+
+            {/* 4. Data Storage & Hosting Locations */}
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-brand-green" />
+                4. Hosting Locations & Data Center Physical Security
               </h2>
               <p>
                 BDIX VPS data and associated local hosting backups are located in our Tier-III
                 colocation data facility in Dhaka, Bangladesh, featuring biometric checks, CCTV
-                surveillance, and 24/7 security staff. Global Xeon VPS instances are located in
+                surveillance, and 24/7 security staff. Global Cloud VPS instances are located in
                 secure virtual clouds in Singapore, APAC, and USA.
               </p>
             </section>
 
-            {/* 4. Information Sharing */}
+            {/* 5. Information Sharing */}
             <section className="space-y-3">
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-brand-green" />
-                4. Third-Party Sharing & Compliance
+                5. Third-Party Sharing & Compliance
               </h2>
               <p>
                 CarrotHost does not lease, sell, or trade client registration profiles to external
@@ -133,7 +175,7 @@ function PrivacyPolicyPage() {
               </ul>
             </section>
 
-            {/* 5. Contact Information */}
+            {/* Contact Information */}
             <div className="rounded-2xl bg-secondary/50 border border-border p-5 flex items-start gap-4">
               <Lock className="h-6 w-6 text-brand-green shrink-0 mt-0.5" />
               <div>

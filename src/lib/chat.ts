@@ -18,14 +18,14 @@ CarrotHost offers the following high-performance services and exclusive solution
    - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
-4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.3.5):
-   - Download file: carrothost-server-side-tracker.zip (available directly on site or at /wordpress-plugin).
+4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.0):
+   - Download file: carrothost-server-side-tracker-1.5.0.zip (available directly on site or at /wordpress-plugin).
    - How to Install & Configure:
-     Step 1: Download 'carrothost-server-side-tracker.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
+     Step 1: Download 'carrothost-server-side-tracker-1.5.0.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
      Step 2: Go to 'Carrothost SST' in WP Admin sidebar > Configuration tab.
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
-     Step 5: Go to 'Connection Health & Logs' tab and click '⚡ Run Test Ping Now' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
+     Step 5: Open the Dashboard tab and click '⚡ Run Test Ping' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
      Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) for 9.5+ Event Match Quality (EMQ).
    - Full setup guide: [WordPress Plugin Documentation](/wordpress-plugin).
 
@@ -35,7 +35,7 @@ CarrotHost offers the following high-performance services and exclusive solution
    - Request migration at: [Migrate to Us](/migrate-to-us).
 
 6. Live System Status & Uptime Monitoring:
-   - Real-time TCP socket probes across all server nodes: BDIX Dhaka Node (8ms), Email & Webmail Cluster (58ms), Xeon Cloud VPS (231ms), and Webuzo Shared Cloud (256ms).
+   - Real-time TCP socket probes across all server nodes: BDIX Dhaka Node (8ms), Email & Webmail Cluster (58ms), Cloud VPS (231ms), and Webuzo Shared Cloud (256ms).
    - 99.98% 90-day uptime track record.
    - Check live status at: [System Status](/system-status).
 
@@ -43,8 +43,8 @@ CarrotHost offers the following high-performance services and exclusive solution
    - KVM-based virtual servers connected directly to BDIX. Hosted in a Tier-III facility in Dhanmondi, Dhaka.
    - Sub-10ms local network latency in Bangladesh. Ideal for local e-commerce, ERP, and news portals: [BDIX VPS](/bdix-cloud-vps).
 
-8. Xeon Cloud VPS:
-   - High-compute virtual servers powered by Intel Xeon Platinum processors on global cloud networks, managed via the Webdock dashboard: [Xeon Cloud VPS](/xeon-cloud-vps).
+8. Cloud VPS:
+   - High-compute virtual servers powered by Intel Xeon Gold and AMD EPYC processors on global cloud networks, managed via the Webdock dashboard: [Cloud VPS](/cloud-vps).
 
 9. Support:
    - 24/7 technical team reachable via Phone/WhatsApp (01787-882277) and Email (support@carrothost.com).
@@ -58,7 +58,7 @@ Conversation Rules:
   - Home: /
   - Shared Hosting: /hosting
   - BDIX VPS: /bdix-cloud-vps
-  - Xeon VPS: /xeon-cloud-vps
+  - Cloud VPS: /cloud-vps
   - WordPress Plugin Setup: /wordpress-plugin
   - Migrate to Us: /migrate-to-us
   - System Status: /system-status
@@ -82,7 +82,7 @@ function getLocalFallbackResponse(query: string): string {
     text.includes("ইন্সটল") ||
     text.includes("সেটআপ")
   ) {
-    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Connection Health' ট্যাবে গিয়ে **⚡ Run Test Ping Now** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ৯.৫+ EMQ স্কোর সহ ট্র্যাক হবে!\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
+    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker-1.5.0.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Dashboard' ট্যাবে গিয়ে **⚡ Run Test Ping** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ৯.৫+ EMQ স্কোর সহ ট্র্যাক হবে!\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
   }
 
   // Node-Free Tracking vs Stape / GCP / Pixel / CAPI
@@ -121,7 +121,7 @@ function getLocalFallbackResponse(query: string): string {
     text.includes("স্ট্যাটাস") ||
     text.includes("আপটাইম")
   ) {
-    return "আমাদের সকল সার্ভার ক্লাস্টারের রিয়েল-টাইম লাইভ আপটাইম ও TCP পিং দেখতে পারবেন:\n\n• **BDIX Cloud Node (Dhaka)**: 8 ms (Operational)\n• **Email & Webmail Cluster**: 58 ms (Operational)\n• **Xeon Cloud VPS Node**: 231 ms (Operational)\n• **Webuzo Shared Cloud (Earth)**: 256 ms (Operational)\n• **Overall 90-Day Uptime**: 99.98%\n\nলাইভ পিং ও হেলথ চেক করুন: [System Status](/system-status)";
+    return "আমাদের সকল সার্ভার ক্লাস্টারের রিয়েল-টাইম লাইভ আপটাইম ও TCP পিং দেখতে পারবেন:\n\n• **BDIX Cloud Node (Dhaka)**: 8 ms (Operational)\n• **Email & Webmail Cluster**: 58 ms (Operational)\n• **Cloud VPS Node**: 231 ms (Operational)\n• **Webuzo Shared Cloud (Earth)**: 256 ms (Operational)\n• **Overall 90-Day Uptime**: 99.98%\n\nলাইভ পিং ও হেলথ চেক করুন: [System Status](/system-status)";
   }
 
   // BDIX VPS
@@ -129,9 +129,9 @@ function getLocalFallbackResponse(query: string): string {
     return "CarrotHost [BDIX VPS](/bdix-cloud-vps) ধানমন্ডি, ঢাকা Tier-III ডাটা সেন্টারে হোস্ট করা, যার লোকাল পিং <10ms। বাংলাদেশি ভিজিটরদের ই-কমার্স ও নিউজ পোর্টালের জন্য সেরা।";
   }
 
-  // Xeon VPS
-  if (text.includes("xeon") || text.includes("intel") || text.includes("webdock") || text.includes("জিয়ন")) {
-    return "আমাদের [Xeon Cloud VPS](/xeon-cloud-vps) হাই-কম্পিউট Intel Xeon Platinum প্রসেসর এবং Webdock ড্যাশবোর্ড দ্বারা চালিত। ডেডিকেটেড রিসোর্স ও স্ন্যাপশট ব্যাকআপ সহ সেরা পারফরম্যান্স পাবেন।";
+  // Cloud VPS
+  if (text.includes("xeon") || text.includes("cloud vps") || text.includes("intel") || text.includes("webdock") || text.includes("জিয়ন")) {
+    return "আমাদের [Cloud VPS](/cloud-vps) হাই-কম্পিউট Intel Xeon Gold ও AMD EPYC প্রসেসর এবং Webdock ড্যাশবোর্ড দ্বারা চালিত। ডেডিকেটেড রিসোর্স ও স্ন্যাপশট ব্যাকআপ সহ সেরা পারফরম্যান্স পাবেন।";
   }
 
   // Webuzo Hosting / Speedy Cache
@@ -144,7 +144,7 @@ function getLocalFallbackResponse(query: string): string {
     return "CarrotHost সাপোর্ট টিম ২৪/৭ প্রস্তুত:\n• ফোন / WhatsApp: 01787-882277\n• ইমেইল: support@carrothost.com\n• [Submit a Ticket](https://portal.carrothost.com/submitticket.php)\n• [Chat on WhatsApp](https://wa.me/8801787882277)";
   }
 
-  return "Hello! I am your CarrotHost AI Assistant 🥕। আমি আপনাকে Webuzo হোস্টিং, 100% Node-Free ট্র্যাকিং প্লাগইন সেটআপ, ফ্রি সাইট মাইগ্রেশন, BDIX বা Xeon VPS সিলেকশনে সাহায্য করতে পারি। আপনি কি জানতে চান?";
+  return "Hello! I am your CarrotHost AI Assistant 🥕। আমি আপনাকে Webuzo হোস্টিং, 100% Node-Free ট্র্যাকিং প্লাগইন সেটআপ, ফ্রি সাইট মাইগ্রেশন, BDIX বা Cloud VPS সিলেকশনে সাহায্য করতে পারি। আপনি কি জানতে চান?";
 }
 
 export const chatResponseFn = createServerFn({ method: "POST" })

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/system-status")({
     const seo = createSeoMeta({
       title: "Real-Time System Status & Server Health — CarrotHost",
       description:
-        "Live system uptime, server health, and real-time operational status of CarrotHost cloud nodes: Webuzo (earth), Xeon VPS, BDIX, and Mail servers.",
+        "Live system uptime, server health, and real-time operational status of CarrotHost cloud nodes: Webuzo (earth), Cloud VPS, BDIX, and Mail servers.",
       path: "/system-status",
     });
 
@@ -81,7 +81,7 @@ const INITIAL_SERVICES: ServiceItem[] = [
   },
   {
     id: "xeon",
-    name: "Xeon Cloud VPS",
+    name: "Cloud VPS",
     type: "High-Performance KVM Compute Node",
     status: "Operational",
     uptime: "99.99%",
@@ -190,7 +190,7 @@ function SystemStatusPage() {
           </h1>
 
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Real-time live TCP socket ping and health metrics across CarrotHost Webuzo, Xeon VPS,
+            Real-time live TCP socket ping and health metrics across CarrotHost Webuzo, Cloud VPS,
             BDIX Dhaka nodes, and mail clusters.
           </p>
 
@@ -336,7 +336,7 @@ function SystemStatusPage() {
               <span>All 4 production servers are fully operational.</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              No unscheduled service interruptions recorded across Earth Webuzo cluster, Xeon KVM, BDIX Dhaka node,
+              No unscheduled service interruptions recorded across Earth Webuzo cluster, Cloud VPS KVM, BDIX Dhaka node,
               or cPanel email infrastructure.
             </p>
           </div>

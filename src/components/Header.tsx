@@ -42,11 +42,11 @@ export function Header() {
             BDIX VPS
           </Link>
           <Link
-            to="/xeon-cloud-vps"
+            to="/cloud-vps"
             activeProps={{ className: "text-foreground font-semibold" }}
             inactiveProps={{ className: "text-muted-foreground hover:text-foreground transition" }}
           >
-            Xeon VPS
+            Cloud VPS
           </Link>
         </nav>
         <div className="flex items-center gap-3">
@@ -113,12 +113,12 @@ export function Header() {
               <span>BDIX VPS</span>
             </Link>
             <Link
-              to="/xeon-cloud-vps"
+              to="/cloud-vps"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-accent/50 active:bg-accent/70 hover:text-brand-orange transition-all duration-200"
             >
               <Database className="h-4.5 w-4.5 text-muted-foreground" />
-              <span>Xeon VPS</span>
+              <span>Cloud VPS</span>
             </Link>
           </div>
           <div className="pt-3 border-t border-border/40">

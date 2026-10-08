@@ -59,6 +59,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+// GA4 data stream for carrothost.com
+const GA_MEASUREMENT_ID = "G-7XG87P2EWR";
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -78,6 +81,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     scripts: [
+      { src: `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`, async: true },
+      {
+        id: "ga4-init",
+        children: [
+          "window.dataLayer = window.dataLayer || [];",
+          "function gtag(){dataLayer.push(arguments);}",
+          "gtag('js', new Date());",
+          // Official opt-out switch: keeps local development out of the live GA4 stream.
+          `window['ga-disable-${GA_MEASUREMENT_ID}'] = ['localhost', '127.0.0.1'].includes(location.hostname);`,
+          `gtag('config', '${GA_MEASUREMENT_ID}');`,
+        ].join("\n"),
+      },
       jsonLdScript("ld-organization", organizationSchema),
       jsonLdScript("ld-website", websiteSchema),
     ],

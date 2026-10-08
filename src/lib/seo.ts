@@ -96,7 +96,7 @@ export const organizationSchema = {
   logo: absoluteAssetUrl("/logo.png"),
   image: absoluteAssetUrl(DEFAULT_OG_IMAGE),
   description:
-    "CarrotHost provides domain registration, Webuzo hosting, BDIX VPS, and Xeon Cloud VPS services for Bangladesh.",
+    "CarrotHost provides domain registration, Webuzo hosting, BDIX VPS, and Cloud VPS services for Bangladesh.",
   foundingDate: "2014",
   parentOrganization: {
     "@type": "Organization",

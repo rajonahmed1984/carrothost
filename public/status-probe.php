@@ -30,7 +30,7 @@ $targets = [
     ],
     [
         'id' => 'xeon',
-        'name' => 'Xeon Cloud VPS',
+        'name' => 'Cloud VPS',
         'type' => 'High-Performance KVM Compute Node',
         'host' => '92.113.149.230',
         'port' => 80,

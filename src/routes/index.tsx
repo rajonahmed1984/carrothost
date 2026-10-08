@@ -42,7 +42,7 @@ export const Route = createFileRoute("/")({
     const seo = createSeoMeta({
       title: "CarrotHost — Reliable Domain & Web Hosting in Bangladesh",
       description:
-        "Fast, secure, and affordable domain registration, Webuzo hosting, BDIX VPS, and Xeon VPS for Bangladesh with local support.",
+        "Fast, secure, and affordable domain registration, Webuzo hosting, BDIX VPS, and Cloud VPS for Bangladesh with local support.",
       path: "/",
     });
 
@@ -79,7 +79,7 @@ function Hero() {
             </h1>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
               Blazing fast GTM tracking shared hosting, local sub-10ms BDIX VPS, and enterprise
-              Intel Xeon Cloud servers. Backed by 24/7 expert support and local payment methods.
+              Cloud VPS servers. Backed by 24/7 expert support and local payment methods.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <Link
@@ -159,10 +159,10 @@ function Services() {
     },
     {
       icon: Cpu,
-      title: "Xeon Cloud VPS",
-      desc: "Enterprise Intel Xeon Platinum hypervisors powered by Webdock remote dashboard panel. Ideal for compute-heavy workloads and compilation pipelines.",
-      to: "/xeon-cloud-vps",
-      price: "From ৳607.00 / month",
+      title: "Cloud VPS",
+      desc: "Enterprise Intel Xeon and AMD EPYC hypervisors powered by Webdock remote dashboard panel. Ideal for compute-heavy workloads and compilation pipelines.",
+      to: "/cloud-vps",
+      price: "From ৳750.00 / month",
     },
   ];
 

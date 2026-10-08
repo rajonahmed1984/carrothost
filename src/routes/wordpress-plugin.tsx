@@ -29,15 +29,136 @@ import {
   Cloud,
   ShieldAlert,
   AlertTriangle,
+  Gauge,
+  BarChart3,
+  Rss,
+  Sparkles,
+  Fingerprint,
+  CreditCard,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ServerSideTrackerMockup, SST_PLUGIN_VERSION } from "@/components/ServerSideTrackerMockup";
+
+const PLUGIN_ZIP = `carrothost-server-side-tracker-${SST_PLUGIN_VERSION}.zip`;
+const GA4_EVENT_REGEX = "view_item|add_to_cart|begin_checkout|purchase";
+
+const WHATS_NEW = [
+  {
+    icon: Gauge,
+    bn: {
+      t: "লাইভ ড্যাশবোর্ড",
+      d: "Facebook ও Google ঠিকমতো ডেটা পাচ্ছে কিনা এক নজরে — সবুজ/হলুদ/লাল হেলথ ব্যানার, Event Match Quality স্কোর (১০-এর মধ্যে), ডেলিভারি সাকসেস % এবং কত % অর্ডার ট্র্যাক হয়েছে।",
+    },
+    en: {
+      t: "Live Dashboard",
+      d: "See at a glance whether Facebook and Google are getting proper data — a green/amber/red health banner, Event Match Quality out of 10, delivery success %, and the % of orders tracked.",
+    },
+  },
+  {
+    icon: Fingerprint,
+    bn: {
+      t: "উন্নত Match Quality",
+      d: "হ্যাশ করা ইমেইল, ফোন (8801…), নাম ও শহর, সাথে fbp, fbc, external_id এবং Cloudflare-এর পেছনেও কাস্টমারের আসল IP পাঠানো হয়।",
+    },
+    en: {
+      t: "Higher Match Quality",
+      d: "SHA-256 hashed email, phone (8801…), name and city, plus fbp, fbc, external_id and the real visitor IP even behind Cloudflare.",
+    },
+  },
+  {
+    icon: RefreshCw,
+    bn: {
+      t: "ডুপ্লিকেট ছাড়া ট্র্যাকিং",
+      d: "ব্রাউজার Pixel ও সার্ভার CAPI একই event_id ব্যবহার করে, তাই Meta একটি ইভেন্ট একবারই গোনে। প্রতিটি অর্ডারের Purchase মাত্র একবার যায়।",
+    },
+    en: {
+      t: "Deduplicated Events",
+      d: "Browser Pixel and server CAPI share one event_id so Meta counts each action once. Each order Purchase is sent exactly once.",
+    },
+  },
+  {
+    icon: CreditCard,
+    bn: {
+      t: "bKash / SSLCommerz-এও Purchase",
+      d: "কাস্টমার পেমেন্টের পর thank-you পেজে না ফিরলেও অর্ডার processing/completed হলে Purchase ইভেন্ট Facebook-এ চলে যায়।",
+    },
+    en: {
+      t: "Gateway-Safe Purchases",
+      d: "Even if the customer never returns to the thank-you page after paying (bKash, SSLCommerz), the Purchase is sent once the order becomes processing/completed.",
+    },
+  },
+  {
+    icon: BarChart3,
+    bn: {
+      t: "GA4 ইকমার্স ইভেন্ট",
+      d: "view_item, add_to_cart, begin_checkout ও purchase স্ট্যান্ডার্ড GA4 ফরম্যাটে dataLayer-এ পুশ হয় — GTM-এ শুধু একটি Custom Event trigger দিলেই হবে।",
+    },
+    en: {
+      t: "GA4 Ecommerce Events",
+      d: "view_item, add_to_cart, begin_checkout and purchase are pushed to the dataLayer in standard GA4 format — just add one Custom Event trigger in GTM.",
+    },
+  },
+  {
+    icon: Rss,
+    bn: {
+      t: "Facebook Catalog Feed",
+      d: "WooCommerce প্রোডাক্ট থেকে অটো-জেনারেটেড ফিড URL। প্রোডাক্ট ID, ইভেন্টের content_ids-এর সাথে মেলে, তাই ডায়নামিক অ্যাড সঠিকভাবে কাজ করে।",
+    },
+    en: {
+      t: "Facebook Catalog Feed",
+      d: "Auto-generated feed URL from your WooCommerce products. Product IDs match the content_ids sent in events, so dynamic product ads work correctly.",
+    },
+  },
+  {
+    icon: ShieldCheck,
+    bn: {
+      t: "Expired fbclid ফিক্স",
+      d: "৯০ দিনের বেশি পুরনো fbc আর Meta-তে পাঠানো হয় না, ফলে Events Manager-এর “expired fbclid value in fbc parameter” ওয়ার্নিং বন্ধ হয়।",
+    },
+    en: {
+      t: "Expired fbclid Fix",
+      d: "fbc values older than 90 days are no longer sent, which clears the “expired fbclid value in fbc parameter” warning in Events Manager.",
+    },
+  },
+  {
+    icon: Zap,
+    bn: {
+      t: "সাইট স্লো হয় না",
+      d: "সার্ভার ইভেন্ট পেজ লোড শেষ হওয়ার পরে পাঠানো হয়। ক্যাশড পেজেও PageView ও ViewContent আসল ভিজিটরের ডেটা সহ যায়।",
+    },
+    en: {
+      t: "No Page Slowdown",
+      d: "Server events are sent after the page has loaded. PageView and ViewContent work on cached pages too, with the real visitor data.",
+    },
+  },
+];
+
+const DASHBOARD_GUIDE = [
+  {
+    bn: { t: "Event Match Quality", d: "১০-এর মধ্যে স্কোর। ৮+ Great, ৬+ Good, ৪+ OK, ৪-এর নিচে Poor। Meta থেকে লাইভ স্কোর পাওয়া গেলে সেটা, নইলে পাঠানো ডেটা থেকে আনুমানিক (est.) স্কোর দেখায়।" },
+    en: { t: "Event Match Quality", d: "Score out of 10: 8+ Great, 6+ Good, 4+ OK, below 4 Poor. Shows Meta live score when available, otherwise an estimate (est.) from the data sent." },
+  },
+  {
+    bn: { t: "Server delivery to Meta", d: "Facebook কত % সার্ভার ইভেন্ট গ্রহণ করেছে (200 OK)। ৯৮%-এর নিচে নামলে হলুদ/লাল হয়ে যায়।" },
+    en: { t: "Server delivery to Meta", d: "Share of server events Facebook accepted (200 OK). Turns amber/red below 98%." },
+  },
+  {
+    bn: { t: "Orders tracked", d: "WooCommerce-এর কত % অর্ডার Facebook ও Google-এ Purchase হিসেবে গেছে। Google সংখ্যা কম হওয়া স্বাভাবিক — কাস্টমার thank-you পেজে না ফিরলে ব্রাউজার ইভেন্ট যায় না।" },
+    en: { t: "Orders tracked", d: "Share of WooCommerce orders reported as Purchase to Facebook and Google. Google is naturally lower — browser events do not fire if the customer never returns to the thank-you page." },
+  },
+  {
+    bn: { t: "Customer data sent", d: "প্রতিটি ইভেন্টে Email, Phone, fbp, fbc, IP ইত্যাদি কত % গেছে। fbc শুধু বিজ্ঞাপনে ক্লিক করা ভিজিটরের থাকে, তাই কম হওয়া স্বাভাবিক (নীল রঙ)।" },
+    en: { t: "Customer data sent", d: "Share of events that included Email, Phone, fbp, fbc, IP and more. fbc only exists for visitors who clicked an ad, so a low value is normal (blue)." },
+  },
+];
 
 export const Route = createFileRoute("/wordpress-plugin")({
   head: () => {
     const seo = createSeoMeta({
       title: "Server-Side Tracking (GTM & Facebook CAPI) Setup Guide — CarrotHost",
       description:
-        "Comprehensive setup guide for CarrotHost Node-Free Server-Side Tracking, WordPress plugin, Google Tag Manager (GTM), Facebook Conversions API (CAPI), and Cloudflare WAF Bypass in Bangla and English.",
+        "Download Carrothost Server-Side Tracker v1.5.0 for WordPress: Facebook Conversions API with deduplicated Pixel events, GA4 ecommerce via first-party GTM, live match-quality dashboard, catalog feed, and Cloudflare WAF setup — in Bangla and English.",
       path: "/wordpress-plugin",
     });
 
@@ -59,12 +180,14 @@ export const Route = createFileRoute("/wordpress-plugin")({
 
 const sectionIds = [
   "overview",
+  "whats-new",
   "gtm-setup",
   "capi-setup",
   "method-a",
   "method-b",
   "diagnostics",
   "woocommerce-events",
+  "catalog-feed",
   "cloudflare-waf",
   "troubleshooting",
 ];
@@ -130,25 +253,29 @@ function WordPressPluginDocPage() {
   const navItems = {
     bn: [
       { id: "overview", label: "কেন এই ফিচারটি ব্যবহার করবেন?" },
-      { id: "gtm-setup", label: "১. Google Tag Manager (GTM) সেটআপ" },
+      { id: "whats-new", label: `নতুন কী আছে (v${SST_PLUGIN_VERSION})` },
+      { id: "gtm-setup", label: "১. Google Tag Manager ও GA4 সেটআপ" },
       { id: "capi-setup", label: "২. Facebook Conversions API (CAPI) সেটআপ" },
       { id: "method-a", label: "• পদ্ধতি A: Server GTM এর মাধ্যমে" },
-      { id: "method-b", label: "• পদ্ধতি B: প্লাগইন দিয়ে ১-ক্লিক সেটআপ" },
-      { id: "diagnostics", label: "৩. টেস্ট ও ভেরিফিকেশন (Live Health)" },
-      { id: "woocommerce-events", label: "৪. WooCommerce অটো-ইভেন্ট ম্যাপিং" },
-      { id: "cloudflare-waf", label: "৫. Cloudflare WAF ও Bot Mode বাইপাস (জরুরি)" },
-      { id: "troubleshooting", label: "৬. সাধারণ প্রশ্নোত্তর (FAQ)" },
+      { id: "method-b", label: "• পদ্ধতি B: প্লাগইন দিয়ে ১-ক্লিক সেটআপ" },
+      { id: "diagnostics", label: "৩. ড্যাশবোর্ড ও ভেরিফিকেশন" },
+      { id: "woocommerce-events", label: "৪. WooCommerce অটো-ইভেন্ট (Meta + GA4)" },
+      { id: "catalog-feed", label: "৫. Facebook Catalog Feed" },
+      { id: "cloudflare-waf", label: "৬. Cloudflare WAF ও Bot Mode বাইপাস (জরুরি)" },
+      { id: "troubleshooting", label: "৭. সাধারণ প্রশ্নোত্তর (FAQ)" },
     ],
     en: [
       { id: "overview", label: "Why Use This Feature?" },
-      { id: "gtm-setup", label: "1. Google Tag Manager (GTM) Setup" },
+      { id: "whats-new", label: `What's New in v${SST_PLUGIN_VERSION}` },
+      { id: "gtm-setup", label: "1. Google Tag Manager & GA4 Setup" },
       { id: "capi-setup", label: "2. Facebook Conversions API (CAPI) Setup" },
       { id: "method-a", label: "• Method A: Via Server GTM (Advanced)" },
       { id: "method-b", label: "• Method B: Via Plugin (1-Click Setup)" },
-      { id: "diagnostics", label: "3. Testing & Verification" },
-      { id: "woocommerce-events", label: "4. WooCommerce Automated Events" },
-      { id: "cloudflare-waf", label: "5. Cloudflare WAF & Bot Mode Bypass (Important)" },
-      { id: "troubleshooting", label: "6. Frequently Asked Questions (FAQ)" },
+      { id: "diagnostics", label: "3. Dashboard & Verification" },
+      { id: "woocommerce-events", label: "4. WooCommerce Events (Meta + GA4)" },
+      { id: "catalog-feed", label: "5. Facebook Catalog Feed" },
+      { id: "cloudflare-waf", label: "6. Cloudflare WAF & Bot Mode Bypass (Important)" },
+      { id: "troubleshooting", label: "7. Frequently Asked Questions (FAQ)" },
     ],
   };
 
@@ -224,7 +351,7 @@ function WordPressPluginDocPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
-                <span>{lang === "bn" ? "প্লাগইন ভার্সন:" : "Plugin Version:"} <strong className="text-foreground">1.3.5 (Official)</strong></span>
+                <span>{lang === "bn" ? "প্লাগইন ভার্সন:" : "Plugin Version:"} <strong className="text-foreground">{SST_PLUGIN_VERSION} (Official)</strong></span>
                 <span>•</span>
                 <span>WordPress: <strong className="text-foreground">5.8+</strong></span>
                 <span>•</span>
@@ -242,15 +369,15 @@ function WordPressPluginDocPage() {
                   {lang === "bn" ? "প্লাগইন ডাউনলোড" : "Plugin Download"}
                 </span>
               </div>
-              <h2 className="text-sm font-bold text-foreground">carrothost-server-side-tracker.zip</h2>
+              <h2 className="text-sm font-bold text-foreground break-all">{PLUGIN_ZIP}</h2>
               <p className="text-xs text-muted-foreground">
                 {lang === "bn"
-                  ? "অফিসিয়াল প্লাগইন রিলিজ — ফার্স্ট-পার্টি Nginx প্রক্সি ও WooCommerce CAPI অটো-ম্যাপিং সহ।"
-                  : "Official release containing first-party Nginx tracking proxies & WooCommerce automated CAPI hooks."}
+                  ? `অফিসিয়াল রিলিজ v${SST_PLUGIN_VERSION} — নতুন ড্যাশবোর্ড, GA4 ইকমার্স ইভেন্ট, Pixel + CAPI ডিডুপ্লিকেশন ও Catalog Feed সহ।`
+                  : `Official release v${SST_PLUGIN_VERSION} — new dashboard, GA4 ecommerce events, Pixel + CAPI deduplication and catalog feed.`}
               </p>
               <a
-                href="/carrothost-server-side-tracker.zip"
-                download="carrothost-server-side-tracker.zip"
+                href={`/${PLUGIN_ZIP}`}
+                download={PLUGIN_ZIP}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-brand px-4 py-3 font-bold text-primary-foreground shadow-soft hover:opacity-95 transition text-xs"
               >
                 <Download className="h-4 w-4 animate-bounce" />
@@ -428,12 +555,90 @@ function WordPressPluginDocPage() {
               </div>
             </section>
 
+            {/* Section: What's New */}
+            <section id="whats-new" className="space-y-6 scroll-mt-28">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Sparkles className="h-5 w-5 text-brand-orange" />
+                <h2 className="text-2xl font-extrabold text-foreground">
+                  {lang === "bn" ? `নতুন কী আছে (v${SST_PLUGIN_VERSION})` : `What's New in v${SST_PLUGIN_VERSION}`}
+                </h2>
+              </div>
+
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {lang === "bn"
+                  ? "প্লাগইনের নতুন ড্যাশবোর্ড থেকে আপনি সরাসরি দেখতে পারবেন Facebook ও Google-এ প্রপার ডেটা যাচ্ছে কিনা এবং কত শতাংশ ডেটা সঠিকভাবে পৌঁছাচ্ছে। নিচের ছবিটি প্লাগইনের আসল ড্যাশবোর্ডের নমুনা:"
+                  : "The new plugin dashboard tells you straight away whether Facebook and Google are receiving proper data, and what percentage is arriving correctly. The preview below mirrors the real dashboard:"}
+              </p>
+
+              <div className="py-2">
+                <ServerSideTrackerMockup />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                {WHATS_NEW.map((f) => (
+                  <div key={f.en.t} className="rounded-2xl border border-border bg-card p-5 shadow-soft space-y-2">
+                    <div className="h-9 w-9 rounded-xl bg-brand-orange/10 text-brand-orange flex items-center justify-center">
+                      <f.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-bold text-sm text-foreground">{f[lang].t}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{f[lang].d}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border-2 border-brand-green/30 bg-card p-6 shadow-soft space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <FileCode2 className="h-4 w-4 text-brand-green" />
+                    Changelog
+                  </h3>
+                  <a
+                    href={`/${PLUGIN_ZIP}`}
+                    download={PLUGIN_ZIP}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-4 py-2.5 font-bold text-primary-foreground shadow-soft hover:opacity-95 transition text-xs"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>{lang === "bn" ? `v${SST_PLUGIN_VERSION} ডাউনলোড করুন` : `Download v${SST_PLUGIN_VERSION}`}</span>
+                  </a>
+                </div>
+
+                <div className="space-y-3 text-xs text-muted-foreground">
+                  <div>
+                    <span className="font-mono font-bold text-brand-orange">v1.5.0</span>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>{lang === "bn" ? "নতুন ড্যাশবোর্ড: হেলথ ব্যানার, Event Match Quality, ডেলিভারি %, অর্ডার কভারেজ, ইভেন্ট ভিত্তিক ডেটা কভারেজ ও রিকমেন্ডেশন।" : "New dashboard: health banner, Event Match Quality, delivery %, order coverage, per-event data coverage and recommendations."}</li>
+                      <li>{lang === "bn" ? "GA4 ইকমার্স ইভেন্ট (view_item, add_to_cart, begin_checkout, purchase) dataLayer-এ।" : "GA4 ecommerce events (view_item, add_to_cart, begin_checkout, purchase) in the dataLayer."}</li>
+                      <li>{lang === "bn" ? "AJAX ও সাধারণ Add to Cart-এ ব্রাউজার Pixel ও সার্ভার ইভেন্ট ডিডুপ্লিকেট।" : "Deduplicated browser Pixel and server events for both AJAX and standard Add to Cart."}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <span className="font-mono font-bold text-brand-green">v1.4.0</span>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>{lang === "bn" ? "মেয়াদোত্তীর্ণ fbclid (fbc) ফিক্স, Cloudflare-এর পেছনে আসল ভিজিটর IP।" : "Expired fbclid (fbc) fix and real visitor IP behind Cloudflare."}</li>
+                      <li>{lang === "bn" ? "হ্যাশড কাস্টমার ডেটা (ইমেইল, ফোন, নাম, শহর), fbp/fbc/external_id।" : "Hashed customer data (email, phone, name, city), fbp / fbc / external_id."}</li>
+                      <li>{lang === "bn" ? "Pixel + CAPI ডিডুপ্লিকেশন; প্রতি অর্ডারে একবার Purchase; পেমেন্ট গেটওয়ে কলব্যাকেও কাজ করে।" : "Pixel + CAPI deduplication; one Purchase per order, also on payment-gateway callbacks."}</li>
+                      <li>{lang === "bn" ? "ক্যাশ-সেফ PageView/ViewContent, পেজ লোডের পরে সার্ভার ইভেন্ট, Facebook Catalog Feed।" : "Cache-safe PageView/ViewContent, server events after page load, Facebook Catalog Feed."}</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-secondary/40 p-3.5 text-xs text-muted-foreground flex items-start gap-2.5">
+                  <Info className="h-4 w-4 text-brand-orange shrink-0 mt-0.5" />
+                  <span>
+                    {lang === "bn"
+                      ? "পুরনো ভার্সন থেকে আপগ্রেড: Plugins > Add New > Upload Plugin-এ নতুন .zip আপলোড করে “Replace current with uploaded” সিলেক্ট করুন। আপনার Pixel ID, Access Token ও GTM সেটিংস আগের মতোই থাকবে। ড্যাশবোর্ডের পরিসংখ্যান আপডেটের পর থেকে জমা হতে শুরু করে।"
+                      : "Upgrading from an older version: upload the new .zip via Plugins > Add New > Upload Plugin and choose “Replace current with uploaded”. Your Pixel ID, access token and GTM settings are kept. Dashboard statistics start collecting from the moment you update."}
+                  </span>
+                </div>
+              </div>
+            </section>
+
             {/* Section 2: GTM Server-Side Setup */}
             <section id="gtm-setup" className="space-y-6 scroll-mt-28">
               <div className="flex items-center gap-2 border-b border-border pb-3">
                 <Layers className="h-5 w-5 text-brand-orange" />
                 <h2 className="text-2xl font-extrabold text-foreground">
-                  {lang === "bn" ? "১. Google Tag Manager (GTM) Server-Side ট্র্যাকিং সেটআপ" : "1. Google Tag Manager (GTM) Server-Side Tracking Setup"}
+                  {lang === "bn" ? "১. Google Tag Manager (GTM) ও GA4 ট্র্যাকিং সেটআপ" : "1. Google Tag Manager (GTM) & GA4 Tracking Setup"}
                 </h2>
               </div>
 
@@ -562,6 +767,95 @@ function WordPressPluginDocPage() {
                     ) : (
                       <>Click <strong>Save Changes</strong> to store your configuration.</>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: GA4 ecommerce events */}
+              <div className="rounded-2xl border-2 border-brand-green/30 bg-card p-6 shadow-soft space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-7 w-7 rounded-full bg-brand-orange/15 text-brand-orange font-bold text-xs flex items-center justify-center">
+                    3
+                  </span>
+                  <h3 className="text-base font-bold text-foreground">
+                    {lang === "bn" ? "ধাপ ৩: GA4 ইকমার্স ইভেন্ট ট্যাগ (GTM-এ)" : "Step 3: GA4 Ecommerce Event Tag (in GTM)"}
+                  </h3>
+                </div>
+
+                <div className="pl-10 space-y-3 text-xs md:text-sm text-muted-foreground">
+                  <p>
+                    {lang === "bn"
+                      ? "WooCommerce সক্রিয় থাকলে প্লাগইন নিজে থেকেই নিচের ইভেন্টগুলো GA4 ফরম্যাটে dataLayer-এ পুশ করে। GTM-এ একবার ট্যাগ বানালেই GA4-এ ইকমার্স রিপোর্ট চালু হয়ে যাবে:"
+                      : "With WooCommerce active, the plugin pushes the events below to the dataLayer in GA4 format. Create the tag once in GTM and your GA4 ecommerce reports come alive:"}
+                  </p>
+
+                  <ol className="list-decimal pl-4 space-y-2">
+                    <li>
+                      {lang === "bn" ? (
+                        <><strong>Triggers</strong> &gt; <strong>New</strong> &gt; <strong>Custom Event</strong> সিলেক্ট করুন।</>
+                      ) : (
+                        <>Go to <strong>Triggers</strong> &gt; <strong>New</strong> &gt; <strong>Custom Event</strong>.</>
+                      )}
+                    </li>
+                    <li>
+                      {lang === "bn" ? (
+                        <><strong>Event name</strong>-এ নিচের টেক্সটটি বসিয়ে <strong>Use regex matching</strong> চেকবক্সে টিক দিন।</>
+                      ) : (
+                        <>Paste the text below into <strong>Event name</strong> and tick <strong>Use regex matching</strong>.</>
+                      )}
+                    </li>
+                  </ol>
+
+                  <div className="rounded-2xl border border-border bg-slate-950 text-slate-100 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Event name (regex):</span>
+                      <button
+                        onClick={() => handleCopy(GA4_EVENT_REGEX, "ga4-regex")}
+                        className="inline-flex items-center gap-1 text-brand-orange hover:text-brand-orange/80 transition font-medium cursor-pointer"
+                      >
+                        {copiedKey === "ga4-regex" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span>{copiedKey === "ga4-regex" ? "Copied!" : "Copy"}</span>
+                      </button>
+                    </div>
+                    <div className="font-mono text-xs sm:text-sm text-brand-green select-all break-all">{GA4_EVENT_REGEX}</div>
+                  </div>
+
+                  <ol className="list-decimal pl-4 space-y-2" start={3}>
+                    <li>
+                      {lang === "bn" ? (
+                        <><strong>Tags</strong> &gt; <strong>New</strong> &gt; <strong>Google Analytics: GA4 Event</strong> বানান। Measurement ID দিন এবং Event Name-এ <code className="text-foreground font-mono bg-secondary px-1.5 py-0.5 rounded text-xs">{"{{Event}}"}</code> ভেরিয়েবল বসান।</>
+                      ) : (
+                        <>Create <strong>Tags</strong> &gt; <strong>New</strong> &gt; <strong>Google Analytics: GA4 Event</strong>. Enter your Measurement ID and set Event Name to the built-in <code className="text-foreground font-mono bg-secondary px-1.5 py-0.5 rounded text-xs">{"{{Event}}"}</code> variable.</>
+                      )}
+                    </li>
+                    <li>
+                      {lang === "bn" ? (
+                        <><strong>More Settings</strong> &gt; <strong>Ecommerce</strong> থেকে <strong>Send Ecommerce data</strong> চালু করে সোর্স হিসেবে <strong>Data Layer</strong> সিলেক্ট করুন।</>
+                      ) : (
+                        <>Under <strong>More Settings</strong> &gt; <strong>Ecommerce</strong>, enable <strong>Send Ecommerce data</strong> and choose <strong>Data Layer</strong> as the source.</>
+                      )}
+                    </li>
+                    <li>
+                      {lang === "bn" ? (
+                        <>উপরের Trigger সংযুক্ত করে <strong>Submit / Publish</strong> করুন।</>
+                      ) : (
+                        <>Attach the trigger above, then <strong>Submit / Publish</strong>.</>
+                      )}
+                    </li>
+                  </ol>
+
+                  <div className="grid sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                    {[
+                      ["view_item", lang === "bn" ? "প্রোডাক্ট পেজ" : "Product page"],
+                      ["add_to_cart", lang === "bn" ? "কার্টে যোগ" : "Add to cart"],
+                      ["begin_checkout", lang === "bn" ? "চেকআউট শুরু" : "Checkout started"],
+                      ["purchase", lang === "bn" ? "অর্ডার সম্পন্ন (transaction_id, tax, shipping সহ)" : "Order complete (with transaction_id, tax, shipping)"],
+                    ].map(([ev, desc]) => (
+                      <div key={ev} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                        <span className="font-bold text-brand-green">{ev}</span>
+                        <span className="font-sans text-muted-foreground text-right">{desc}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -704,7 +998,7 @@ function WordPressPluginDocPage() {
               <div className="flex items-center gap-2 border-b border-border pb-3">
                 <Activity className="h-5 w-5 text-brand-orange" />
                 <h2 className="text-2xl font-extrabold text-foreground">
-                  {lang === "bn" ? "৩. টেস্ট ও ভেরিফিকেশন (Live Health)" : "3. Testing & Verification"}
+                  {lang === "bn" ? "৩. ড্যাশবোর্ড ও ভেরিফিকেশন" : "3. Dashboard & Verification"}
                 </h2>
               </div>
 
@@ -740,6 +1034,27 @@ function WordPressPluginDocPage() {
                 </div>
               </div>
 
+              {/* Dashboard guide */}
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-soft space-y-4">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Gauge className="h-4 w-4 text-brand-green" />
+                  {lang === "bn" ? "ড্যাশবোর্ডের সংখ্যাগুলো কীভাবে পড়বেন" : "How to read the dashboard"}
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {DASHBOARD_GUIDE.map((g) => (
+                    <div key={g.en.t} className="rounded-xl border border-border bg-secondary/40 p-4 space-y-1">
+                      <span className="text-xs font-bold text-foreground">{g[lang].t}</span>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{g[lang].d}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {lang === "bn"
+                    ? "দ্রষ্টব্য: পরিসংখ্যান প্লাগইন আপডেট করার পর থেকে জমা হয়, তাই প্রথম এক-দুই দিন সংখ্যা কম দেখাতে পারে। উপরে Today / Last 7 days / Last 30 days বেছে নিতে পারবেন।"
+                    : "Note: statistics are collected from the moment you update the plugin, so numbers may look small for the first day or two. Use Today / Last 7 days / Last 30 days at the top to change the period."}
+                </p>
+              </div>
+
               {/* Plugin Test Ping Box */}
               <div className="rounded-2xl border border-border bg-card p-6 shadow-soft space-y-4">
                 <div className="space-y-1">
@@ -749,8 +1064,8 @@ function WordPressPluginDocPage() {
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {lang === "bn"
-                      ? "Carrothost SST প্লাগইনের Connection Health & Logs ট্যাবে গিয়ে ⚡ Run Test Ping Now বাটনে ক্লিক করলেই মুহূর্তেই স্ট্যাটাস পেয়ে যাবেন:"
-                      : "In the Connection Health & Logs tab of Carrothost SST, click '⚡ Run Test Ping Now' to verify live endpoints:"}
+                      ? "Carrothost SST প্লাগইনের Dashboard-এ উপরের ডানদিকের ⚡ Run Test Ping বাটনে ক্লিক করলেই মুহূর্তেই স্ট্যাটাস পেয়ে যাবেন, ফলাফল Activity Log ট্যাবেও দেখা যাবে:"
+                      : "In the Carrothost SST Dashboard, click ⚡ Run Test Ping (top right) to verify live endpoints — results are also listed in the Activity Log tab:"}
                   </p>
                 </div>
 
@@ -781,7 +1096,7 @@ function WordPressPluginDocPage() {
                         <>
                           আপনার সাইটে Cloudflare থাকলে Bot Fight Mode বা Turnstile Challenge-এর কারণে টেস্ট পিং ব্লক (403 Forbidden) হতে পারে। নিচে{" "}
                           <a href="#cloudflare-waf" className="font-bold text-brand-orange hover:underline">
-                            ৫ নম্বর সেকশন দেখে Cloudflare WAF Bypass রুল
+                            ৬ নম্বর সেকশন দেখে Cloudflare WAF Bypass রুল
                           </a>{" "}
                           সেট করে নিলেই সমাধান হয়ে যাবে।
                         </>
@@ -789,7 +1104,7 @@ function WordPressPluginDocPage() {
                         <>
                           If Cloudflare is enabled, Bot Fight Mode or Turnstile Challenge may block test pings with a 403 Forbidden. Follow{" "}
                           <a href="#cloudflare-waf" className="font-bold text-brand-orange hover:underline">
-                            Section 5 below to add a Cloudflare WAF Bypass rule
+                            Section 6 below to add a Cloudflare WAF Bypass rule
                           </a>{" "}
                           to fix this instantly.
                         </>
@@ -805,7 +1120,7 @@ function WordPressPluginDocPage() {
               <div className="flex items-center gap-2 border-b border-border pb-3">
                 <ShoppingBag className="h-5 w-5 text-brand-orange" />
                 <h2 className="text-2xl font-extrabold text-foreground">
-                  {lang === "bn" ? "৪. WooCommerce অটো-ইভেন্ট ম্যাপিং" : "4. WooCommerce Automated Event Mapping"}
+                  {lang === "bn" ? "৪. WooCommerce অটো-ইভেন্ট ম্যাপিং (Meta + GA4)" : "4. WooCommerce Automated Event Mapping (Meta + GA4)"}
                 </h2>
               </div>
 
@@ -815,38 +1130,118 @@ function WordPressPluginDocPage() {
                   : "If WooCommerce is active on your site, our plugin automatically hooks into standard e-commerce actions and securely hashes customer data for Meta CAPI:"}
               </p>
 
-              <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-soft">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="rounded-2xl border border-border bg-card overflow-x-auto shadow-soft">
+                <table className="w-full min-w-[640px] text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-border bg-secondary/60">
-                      <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "ইভেন্টের নাম" : "Event Name"}</th>
+                      <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "ইভেন্ট (Meta / GA4)" : "Event (Meta / GA4)"}</th>
                       <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "ট্রিগার লোকেশন" : "Trigger Location"}</th>
-                      <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "হ্যাশড প্যারামিটার ও ডেটা" : "Hashed Payload & Parameters"}</th>
+                      <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "পাঠানো ডেটা" : "Payload"}</th>
+                      <th className="p-3.5 font-bold text-foreground">{lang === "bn" ? "কোথায় যায়" : "Sent via"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-muted-foreground">
                     <tr>
-                      <td className="p-3.5 font-mono font-bold text-brand-green">ViewContent</td>
+                      <td className="p-3.5 font-mono font-bold text-brand-green">ViewContent<br /><span className="text-muted-foreground font-normal">view_item</span></td>
                       <td className="p-3.5">{lang === "bn" ? "সিঙ্গেল প্রোডাক্ট পেজ" : "Single Product Page"}</td>
-                      <td className="p-3.5">content_name, content_type, content_ids, value, currency</td>
+                      <td className="p-3.5">content_ids, content_name, content_type, value, currency</td>
+                      <td className="p-3.5">{lang === "bn" ? "Pixel + CAPI (ডিডুপ্লিকেটেড), GA4 dataLayer" : "Pixel + CAPI (deduplicated), GA4 dataLayer"}</td>
                     </tr>
                     <tr>
-                      <td className="p-3.5 font-mono font-bold text-brand-orange">AddToCart</td>
-                      <td className="p-3.5">{lang === "bn" ? "AJAX / কার্ট বাটন ক্লিক" : "AJAX / Single Cart Add"}</td>
-                      <td className="p-3.5">content_ids, content_name, value, currency</td>
+                      <td className="p-3.5 font-mono font-bold text-brand-orange">AddToCart<br /><span className="text-muted-foreground font-normal">add_to_cart</span></td>
+                      <td className="p-3.5">{lang === "bn" ? "AJAX ও সাধারণ Add to Cart" : "AJAX & standard Add to Cart"}</td>
+                      <td className="p-3.5">content_ids, contents (id, quantity, price), value, currency</td>
+                      <td className="p-3.5">{lang === "bn" ? "Pixel + CAPI (ডিডুপ্লিকেটেড), GA4 dataLayer" : "Pixel + CAPI (deduplicated), GA4 dataLayer"}</td>
                     </tr>
                     <tr>
-                      <td className="p-3.5 font-mono font-bold text-foreground">InitiateCheckout</td>
+                      <td className="p-3.5 font-mono font-bold text-foreground">InitiateCheckout<br /><span className="text-muted-foreground font-normal">begin_checkout</span></td>
                       <td className="p-3.5">{lang === "bn" ? "চেকআউট পেজ" : "Checkout Page"}</td>
-                      <td className="p-3.5">num_items, value, currency, content_ids</td>
+                      <td className="p-3.5">content_ids, contents, num_items, value, currency</td>
+                      <td className="p-3.5">{lang === "bn" ? "Pixel + CAPI (ডিডুপ্লিকেটেড), GA4 dataLayer" : "Pixel + CAPI (deduplicated), GA4 dataLayer"}</td>
                     </tr>
                     <tr>
-                      <td className="p-3.5 font-mono font-bold text-primary">Purchase</td>
-                      <td className="p-3.5">{lang === "bn" ? "থ্যাংক ইউ / অর্ডার রিসিভড" : "Thank You / Order Received Page"}</td>
-                      <td className="p-3.5">order_id, value, currency, SHA-256 (email, phone, IP, User-Agent)</td>
+                      <td className="p-3.5 font-mono font-bold text-primary">Purchase<br /><span className="text-muted-foreground font-normal">purchase</span></td>
+                      <td className="p-3.5">{lang === "bn" ? "থ্যাংক ইউ পেজ + পেমেন্ট সম্পন্ন (processing/completed)" : "Thank-you page + payment complete (processing/completed)"}</td>
+                      <td className="p-3.5">{lang === "bn" ? "order_id, value, currency, contents; হ্যাশড email, phone, নাম, শহর; IP, User-Agent, fbp, fbc" : "order_id, value, currency, contents; hashed email, phone, name, city; IP, User-Agent, fbp, fbc"}</td>
+                      <td className="p-3.5">{lang === "bn" ? "প্রতি অর্ডারে একবার: CAPI সার্ভার থেকে, Pixel ও GA4 ব্রাউজার থেকে" : "Once per order: CAPI from the server, Pixel & GA4 from the browser"}</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3.5 font-mono font-bold text-brand-green">PageView</td>
+                      <td className="p-3.5">{lang === "bn" ? "সব পেজ (ক্যাশড পেজেও)" : "All pages (cache-safe)"}</td>
+                      <td className="p-3.5">{lang === "bn" ? "fbp, fbc, external_id, আসল IP ও User-Agent" : "fbp, fbc, external_id, real IP & User-Agent"}</td>
+                      <td className="p-3.5">{lang === "bn" ? "Pixel + CAPI (ডিডুপ্লিকেটেড)" : "Pixel + CAPI (deduplicated)"}</td>
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </section>
+
+            {/* Section: Facebook Catalog Feed */}
+            <section id="catalog-feed" className="space-y-5 scroll-mt-28">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Rss className="h-5 w-5 text-brand-orange" />
+                <h2 className="text-2xl font-extrabold text-foreground">
+                  {lang === "bn" ? "৫. Facebook Catalog Feed (ডায়নামিক প্রোডাক্ট অ্যাড)" : "5. Facebook Catalog Feed (Dynamic Product Ads)"}
+                </h2>
+              </div>
+
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {lang === "bn"
+                  ? "প্লাগইন আপনার WooCommerce প্রোডাক্ট থেকে স্বয়ংক্রিয়ভাবে একটি Facebook ক্যাটালগ ফিড (XML) তৈরি করে। ফিডের প্রোডাক্ট ID এবং ইভেন্টের content_ids একই, তাই Meta আপনার ইভেন্টের সাথে ক্যাটালগের প্রোডাক্ট মিলিয়ে ডায়নামিক অ্যাড চালাতে পারে।"
+                  : "The plugin automatically builds a Facebook catalog feed (XML) from your WooCommerce products. Product IDs in the feed match the content_ids sent with events, so Meta can match events to catalog items for dynamic ads."}
+              </p>
+
+              <div className="rounded-2xl border border-border bg-slate-950 text-slate-100 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>Scheduled Feed URL:</span>
+                  <button
+                    onClick={() => handleCopy("https://yourdomain.com/?chnf_feed=facebook", "feed-url")}
+                    className="inline-flex items-center gap-1 text-brand-orange hover:text-brand-orange/80 transition font-medium cursor-pointer"
+                  >
+                    {copiedKey === "feed-url" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedKey === "feed-url" ? "Copied!" : "Copy"}</span>
+                  </button>
+                </div>
+                <div className="font-mono text-xs sm:text-sm text-brand-green select-all break-all">
+                  https://yourdomain.com/?chnf_feed=facebook
+                </div>
+              </div>
+
+              <ol className="list-decimal pl-5 space-y-2 text-xs md:text-sm text-muted-foreground">
+                <li>
+                  {lang === "bn" ? (
+                    <>Meta <strong>Commerce Manager</strong> &gt; আপনার Catalog &gt; <strong>Data sources</strong> &gt; <strong>Add items</strong> &gt; <strong>Data feed</strong> সিলেক্ট করুন।</>
+                  ) : (
+                    <>In Meta <strong>Commerce Manager</strong> &gt; your Catalog &gt; <strong>Data sources</strong> &gt; <strong>Add items</strong> &gt; choose <strong>Data feed</strong>.</>
+                  )}
+                </li>
+                <li>
+                  {lang === "bn" ? (
+                    <><strong>Scheduled feed</strong> সিলেক্ট করে উপরের URL-টি (নিজের ডোমেইন সহ) পেস্ট করুন। ফিড URL প্লাগইনের Dashboard-এও কপি বাটন সহ দেওয়া আছে।</>
+                  ) : (
+                    <>Choose <strong>Scheduled feed</strong> and paste the URL above (with your own domain). The same URL, with a copy button, is shown in the plugin Dashboard.</>
+                  )}
+                </li>
+                <li>
+                  {lang === "bn" ? (
+                    <>ফ্রিকোয়েন্সি <strong>Hourly</strong> বা <strong>Daily</strong> সেট করে সেভ করুন।</>
+                  ) : (
+                    <>Set the frequency to <strong>Hourly</strong> or <strong>Daily</strong> and save.</>
+                  )}
+                </li>
+              </ol>
+
+              <div className="rounded-xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground space-y-1.5">
+                <span className="font-bold text-foreground flex items-center gap-1.5">
+                  <Info className="h-4 w-4 text-brand-orange" />
+                  {lang === "bn" ? "ফিড সম্পর্কে জেনে রাখুন" : "Good to know"}
+                </span>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>{lang === "bn" ? "ভ্যারিয়েবল প্রোডাক্টের প্রতিটি ভ্যারিয়েশন আলাদা আইটেম হিসেবে যায়, একই item_group_id সহ।" : "Each variation of a variable product is listed as its own item with a shared item_group_id."}</li>
+                  <li>{lang === "bn" ? "ছবি বা দাম নেই এমন প্রোডাক্ট এবং catalog visibility “hidden” প্রোডাক্ট ফিডে আসে না।" : "Products without an image or price, and products hidden from the catalog, are left out."}</li>
+                  <li>{lang === "bn" ? "ফিড ১ ঘণ্টা ক্যাশ হয় এবং প্রোডাক্ট আপডেট করলে নিজে থেকেই রিফ্রেশ হয়।" : "The feed is cached for 1 hour and refreshes automatically when a product is updated."}</li>
+                  <li>{lang === "bn" ? "ফিডের ব্র্যান্ড হিসেবে আপনার সাইটের নাম ব্যবহৃত হয়।" : "Your site name is used as the brand."}</li>
+                </ul>
               </div>
             </section>
 
@@ -856,8 +1251,8 @@ function WordPressPluginDocPage() {
                 <Cloud className="h-5 w-5 text-brand-orange" />
                 <h2 className="text-2xl font-extrabold text-foreground">
                   {lang === "bn"
-                    ? "৫. Cloudflare WAF ও Bot Fight Mode বাইপাস সেটআপ"
-                    : "5. Cloudflare WAF & Bot Fight Mode Bypass Setup"}
+                    ? "৬. Cloudflare WAF ও Bot Fight Mode বাইপাস সেটআপ"
+                    : "6. Cloudflare WAF & Bot Fight Mode Bypass Setup"}
                 </h2>
               </div>
 
@@ -1120,9 +1515,9 @@ function WordPressPluginDocPage() {
                     </li>
                     <li>
                       {lang === "bn" ? (
-                        <><strong>Connection Health & Logs</strong> ট্যাবে গিয়ে <strong>⚡ Run Test Ping Now</strong> বাটনে ক্লিক করুন।</>
+                        <><strong>Dashboard</strong> ট্যাবে গিয়ে <strong>⚡ Run Test Ping</strong> বাটনে ক্লিক করুন।</>
                       ) : (
-                        <>Navigate to the <strong>Connection Health & Logs</strong> tab and click <strong>⚡ Run Test Ping Now</strong>.</>
+                        <>Navigate to the <strong>Dashboard</strong> tab and click <strong>⚡ Run Test Ping</strong>.</>
                       )}
                     </li>
                   </ol>
@@ -1144,7 +1539,7 @@ function WordPressPluginDocPage() {
               <div className="flex items-center gap-2 border-b border-border pb-3">
                 <HelpCircle className="h-5 w-5 text-brand-orange" />
                 <h2 className="text-2xl font-extrabold text-foreground">
-                  {lang === "bn" ? "৬. সাধারণ প্রশ্নোত্তর (FAQ)" : "6. Frequently Asked Questions (FAQ)"}
+                  {lang === "bn" ? "৭. সাধারণ প্রশ্নোত্তর (FAQ)" : "7. Frequently Asked Questions (FAQ)"}
                 </h2>
               </div>
 
@@ -1157,7 +1552,7 @@ function WordPressPluginDocPage() {
                       },
                       {
                         q: "আমার সাইট Cloudflare-এ থাকলে কি ট্র্যাকিং বা টেস্ট পিং ব্লক হতে পারে?",
-                        a: "হ্যাঁ, Cloudflare-এর Bot Fight Mode বা WAF অনেক সময় প্লাগইনের টেস্ট পিং বা সার্ভার ট্র্যাকিং রিকোয়েস্টকে বট মনে করে 403 Forbidden বা Turnstile Challenge দিয়ে আটকে দেয়। সমাধান হলো: Cloudflare Security > WAF > Custom Rules-এ গিয়ে URI Path 'starts with /metrics/' দিয়ে একটি Skip/Bypass রুল তৈরি করে Super Bot Fight Mode এবং WAF Managed Rules স্কিপ করা (বিস্তারিত উপরের ৫ নম্বর সেকশনে দেওয়া আছে)।",
+                        a: "হ্যাঁ, Cloudflare-এর Bot Fight Mode বা WAF অনেক সময় প্লাগইনের টেস্ট পিং বা সার্ভার ট্র্যাকিং রিকোয়েস্টকে বট মনে করে 403 Forbidden বা Turnstile Challenge দিয়ে আটকে দেয়। সমাধান হলো: Cloudflare Security > WAF > Custom Rules-এ গিয়ে URI Path 'starts with /metrics/' দিয়ে একটি Skip/Bypass রুল তৈরি করে Super Bot Fight Mode এবং WAF Managed Rules স্কিপ করা (বিস্তারিত উপরের ৬ নম্বর সেকশনে দেওয়া আছে)।",
                       },
                       {
                         q: "আমার সাইটে কি Stape বা Google Cloud Container প্রয়োজন আছে?",
@@ -1171,6 +1566,22 @@ function WordPressPluginDocPage() {
                         q: "সেটআপ করতে কোনো সমস্যা হলে কি সাপোর্ট পাওয়া যাবে?",
                         a: "হ্যাঁ, আমাদের সিনিয়র ট্র্যাকিং ইঞ্জিনিয়াররা সম্পূর্ণ ফ্রিতে WhatsApp বা AnyDesk-এর মাধ্যমে আপনার ড্যাশবোর্ডে কানেক্ট হয়ে পুরো সেটআপ সম্পন্ন করে দেবে।",
                       },
+                      {
+                        q: "Meta Events Manager-এ “expired fbclid value in fbc parameter” ওয়ার্নিং আসছে কেন?",
+                        a: "কোনো কাস্টমার ৯০ দিনের বেশি আগে বিজ্ঞাপনে ক্লিক করেছিলেন এবং তার ব্রাউজারে পুরনো fbc কুকি থেকে গেছে — ফিরে এসে অর্ডার করলে সেই পুরনো মান সার্ভার থেকে Meta-তে চলে যেত। v1.4.0 থেকে প্লাগইন ৯০ দিনের পুরনো fbc পাঠায় না। ওয়ার্নিংটি Meta-র ডায়াগনস্টিকসে সর্বশেষ ৩ দিনের ডেটা দেখায়, তাই আপডেটের ৩ দিন পর নিজে থেকেই মুছে যাবে।",
+                      },
+                      {
+                        q: "Meta ডায়াগনস্টিকসে invalid.invalid বা fb.com ডোমেইন allowlist করতে বলছে — করব?",
+                        a: "না। এগুলো আপনার সার্ভার থেকে আসে না — Facebook-এর নিজস্ব crawler/প্রিভিউ আপনার পেজ লোড করার সময় Pixel ফায়ার হয়। Events Manager > Settings > Traffic permissions-এ শুধু আপনার নিজের ডোমেইন allowlist করুন।",
+                      },
+                      {
+                        q: "ড্যাশবোর্ডে Google-এর অর্ডার % Facebook-এর চেয়ে কম কেন?",
+                        a: "Facebook Purchase সার্ভার থেকে যায় (পেমেন্ট সম্পন্ন হলেই), আর Google Purchase যায় ব্রাউজার থেকে thank-you পেজ লোড হলে। কাস্টমার পেমেন্টের পর পেজে না ফিরলে (যেমন bKash/SSLCommerz-এ ট্যাব বন্ধ করলে) Google-এ সেই অর্ডার যায় না। তাই Google-এর % কিছুটা কম হওয়া স্বাভাবিক।",
+                      },
+                      {
+                        q: "ড্যাশবোর্ডে Email-এর % কম দেখাচ্ছে, সমস্যা কি?",
+                        a: "অনেক বাংলাদেশি শপে চেকআউটে ইমেইল ঐচ্ছিক বা লুকানো থাকে। ফোন নম্বর (৮৮০ কান্ট্রি কোড সহ) থাকলেও Match Quality ভালো থাকে। তবে ইমেইল ফিল্ড দৃশ্যমান রাখলে স্কোর আরও বাড়ে — ড্যাশবোর্ডের Recommendations সেকশনেও এই পরামর্শ দেখাবে।",
+                      },
                     ]
                   : [
                       {
@@ -1179,7 +1590,7 @@ function WordPressPluginDocPage() {
                       },
                       {
                         q: "Will Cloudflare Bot Fight Mode or WAF block tracking or test pings?",
-                        a: "Yes, Cloudflare's Bot Fight Mode or Managed WAF might classify tracking test pings or proxy requests as bots (triggering Turnstile Challenge or HTTP 403). To fix this, create a WAF Bypass rule under Cloudflare Security > WAF > Custom Rules: set URI Path 'starts with /metrics/' and Action to Skip/Bypass Super Bot Fight Mode and WAF Managed Rules (detailed in Section 5 above).",
+                        a: "Yes, Cloudflare's Bot Fight Mode or Managed WAF might classify tracking test pings or proxy requests as bots (triggering Turnstile Challenge or HTTP 403). To fix this, create a WAF Bypass rule under Cloudflare Security > WAF > Custom Rules: set URI Path 'starts with /metrics/' and Action to Skip/Bypass Super Bot Fight Mode and WAF Managed Rules (detailed in Section 6 above).",
                       },
                       {
                         q: "Do I need a paid Stape.io or Google Cloud Platform (GCP) container?",
@@ -1192,6 +1603,22 @@ function WordPressPluginDocPage() {
                       {
                         q: "Can CarrotHost support help me configure the setup?",
                         a: "Yes! Our senior engineers provide free white-glove setup over WhatsApp or AnyDesk for all CarrotHost clients.",
+                      },
+                      {
+                        q: "Why does Meta Events Manager show “expired fbclid value in fbc parameter”?",
+                        a: "A customer clicked an ad more than 90 days ago and still has the old fbc cookie in their browser — when they returned to order, that stale value was sent from the server to Meta. Since v1.4.0 the plugin no longer sends fbc values older than 90 days. Meta diagnostics cover the last 3 days, so the warning disappears on its own about 3 days after updating.",
+                      },
+                      {
+                        q: "Meta diagnostics asks me to allowlist invalid.invalid or fb.com domains — should I?",
+                        a: "No. These do not come from your server — they appear when Facebook's own crawler or link preview loads your page and the Pixel fires. In Events Manager > Settings > Traffic permissions, allowlist only your own domain.",
+                      },
+                      {
+                        q: "Why is Google's order % lower than Facebook's on the dashboard?",
+                        a: "The Facebook Purchase is sent from the server as soon as payment completes, while the Google Purchase fires in the browser when the thank-you page loads. If a customer never returns after paying (for example closes the tab on bKash/SSLCommerz), Google misses that order. A somewhat lower Google percentage is normal.",
+                      },
+                      {
+                        q: "The dashboard shows a low Email percentage — is that a problem?",
+                        a: "Many Bangladeshi stores make the email field optional or hidden at checkout. Match Quality can still be good if the phone number (with the 880 country code) is present, but keeping the email field visible raises the score further — the dashboard Recommendations box will suggest it too.",
                       },
                     ]
                 ).map((item) => (

@@ -393,7 +393,7 @@ function MigrateToUsPage() {
                     >
                       <option value="Webuzo Hosting">Webuzo Cloud Hosting (Starter / Standard / Adv)</option>
                       <option value="BDIX Cloud VPS">BDIX Cloud VPS</option>
-                      <option value="Xeon Cloud VPS">Xeon Cloud VPS</option>
+                      <option value="Cloud VPS">Cloud VPS</option>
                       <option value="Need Recommendation">Need Advice from Team</option>
                     </select>
                   </div>

@@ -231,9 +231,9 @@ export function NotFound() {
                 },
                 {
                   icon: Cpu,
-                  title: "Xeon Cloud VPS",
+                  title: "Cloud VPS",
                   desc: "High Compute Nodes",
-                  to: "/xeon-cloud-vps",
+                  to: "/cloud-vps",
                 },
                 {
                   icon: Database,

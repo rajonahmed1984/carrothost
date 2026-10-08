@@ -10,7 +10,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li><Link to="/hosting" className="hover:text-brand-orange transition">Shared Hosting</Link></li>
               <li><Link to="/bdix-cloud-vps" className="hover:text-brand-orange transition">BDIX VPS</Link></li>
-              <li><Link to="/xeon-cloud-vps" className="hover:text-brand-orange transition">Xeon VPS</Link></li>
+              <li><Link to="/cloud-vps" className="hover:text-brand-orange transition">Cloud VPS</Link></li>
             </ul>
           </div>
           <div>
