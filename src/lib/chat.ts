@@ -18,10 +18,10 @@ CarrotHost offers the following high-performance services and exclusive solution
    - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
-4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.0):
-   - Download file: carrothost-server-side-tracker-1.5.0.zip (available directly on site or at /wordpress-plugin).
+4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.1):
+   - Download file: carrothost-server-side-tracker-1.5.1.zip (available directly on site or at /wordpress-plugin).
    - How to Install & Configure:
-     Step 1: Download 'carrothost-server-side-tracker-1.5.0.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
+     Step 1: Download 'carrothost-server-side-tracker-1.5.1.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
      Step 2: Go to 'Carrothost SST' in WP Admin sidebar > Configuration tab.
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
@@ -82,7 +82,7 @@ function getLocalFallbackResponse(query: string): string {
     text.includes("ইন্সটল") ||
     text.includes("সেটআপ")
   ) {
-    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker-1.5.0.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Dashboard' ট্যাবে গিয়ে **⚡ Run Test Ping** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ৯.৫+ EMQ স্কোর সহ ট্র্যাক হবে!\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
+    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker-1.5.1.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Dashboard' ট্যাবে গিয়ে **⚡ Run Test Ping** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ৯.৫+ EMQ স্কোর সহ ট্র্যাক হবে!\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
   }
 
   // Node-Free Tracking vs Stape / GCP / Pixel / CAPI

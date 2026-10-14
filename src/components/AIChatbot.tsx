@@ -29,10 +29,10 @@ CarrotHost offers the following high-performance services and exclusive solution
    - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
-4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.0):
-   - Download file: carrothost-server-side-tracker-1.5.0.zip (available directly on site or at /wordpress-plugin).
+4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.1):
+   - Download file: carrothost-server-side-tracker-1.5.1.zip (available directly on site or at /wordpress-plugin).
    - How to Install & Configure:
-     Step 1: Download 'carrothost-server-side-tracker-1.5.0.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
+     Step 1: Download 'carrothost-server-side-tracker-1.5.1.zip'. In WP Admin, go to Plugins > Add New > Upload Plugin > Activate.
      Step 2: Go to 'Carrothost SST' in WP Admin sidebar > Configuration tab.
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
@@ -301,7 +301,7 @@ export function AIChatbot() {
       text.includes("সেটআপ")
     ) {
       return {
-        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker-1.5.0.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with 9.5+ EMQ score.",
+        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker-1.5.1.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with 9.5+ EMQ score.",
         actionLink: { label: "WordPress Plugin Guide", url: "/wordpress-plugin" }
       };
     }

@@ -1,6 +1,6 @@
 import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 
-export const SST_PLUGIN_VERSION = "1.5.0";
+export const SST_PLUGIN_VERSION = "1.5.1";
 
 const MATCH_KEYS = [
   { label: "Phone", pct: 100, tone: "good" },
