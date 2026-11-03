@@ -1,0 +1,106 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { api, money } from '../api';
+import { Button, ErrorNote, Field, Input, Modal, PagedTable, QueryState, Status } from '../ui';
+
+type Invoice = { id: number; number: string; status: string; currency: string; total: string; due_date: string; client: { id: number; name: string; email?: string } };
+type Detail = Invoice & {
+    items: { id: number; description: string; amount: string }[];
+    payments: { id: number; gateway: string; transaction_id: string; amount: string; created_at: string }[];
+};
+
+function InvoiceModal({ id, onClose }: { id: number; onClose: () => void }) {
+    const qc = useQueryClient();
+    const query = useQuery({ queryKey: ['invoice', id], queryFn: async () => (await api.get<Detail>(`/invoices/${id}`)).data });
+    const [transactionId, setTransactionId] = useState('');
+    const [amount, setAmount] = useState('');
+    const inv = query.data;
+
+    const refresh = () => {
+        qc.invalidateQueries({ queryKey: ['invoice', id] });
+        qc.invalidateQueries({ queryKey: ['/invoices'] });
+        qc.invalidateQueries({ queryKey: ['dashboard'] });
+    };
+
+    const pay = useMutation({
+        mutationFn: () => api.post(`/invoices/${id}/payments`, { transaction_id: transactionId, amount: amount || balance }),
+        onSuccess: () => { setTransactionId(''); setAmount(''); refresh(); },
+    });
+    const cancel = useMutation({ mutationFn: () => api.post(`/invoices/${id}/cancel`), onSuccess: refresh });
+
+    const paid = inv?.payments.reduce((sum, p) => sum + Number(p.amount), 0) ?? 0;
+    const balance = inv ? Math.max(Number(inv.total) - paid, 0).toFixed(2) : '0.00';
+
+    return (
+        <Modal title={inv?.number ?? 'Invoice'} onClose={onClose}>
+            <QueryState query={query}>
+                {inv && (
+                    <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                            <div><Link className="table-action-link font-semibold" to={`/clients/${inv.client.id}`}>{inv.client.name}</Link><div className="text-xs text-slate-500">{inv.client.email} - Due {inv.due_date}</div></div>
+                            <Status value={inv.status} />
+                        </div>
+                        <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200">
+                            {inv.items.map((item) => (
+                                <li key={item.id} className="flex justify-between gap-3 px-3 py-2"><span>{item.description}</span><span className="tabular-nums whitespace-nowrap">{money(item.amount, inv.currency)}</span></li>
+                            ))}
+                            <li className="flex justify-between gap-3 px-3 py-2 font-semibold"><span>Total</span><span className="tabular-nums">{money(inv.total, inv.currency)}</span></li>
+                        </ul>
+
+                        {inv.payments.length > 0 && (
+                            <div>
+                                <h3 className="mb-1 text-xs font-medium text-slate-500">Payments</h3>
+                                <ul className="space-y-1">
+                                    {inv.payments.map((p) => <li key={p.id} className="flex justify-between gap-3"><span>{p.gateway}: {p.transaction_id}</span><span className="tabular-nums">{money(p.amount, inv.currency)}</span></li>)}
+                                </ul>
+                            </div>
+                        )}
+
+                        {inv.status === 'unpaid' && (
+                            <form onSubmit={(e) => { e.preventDefault(); pay.mutate(); }} className="space-y-3 rounded-xl border border-slate-200 p-3">
+                                <h3 className="font-medium">Record a manual payment</h3>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <Field label="Transaction ID"><Input required value={transactionId} onChange={(e) => setTransactionId(e.target.value)} /></Field>
+                                    <Field label="Amount"><Input type="number" min="0.01" step="0.01" placeholder={balance} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+                                </div>
+                                <p className="text-xs text-slate-500">Paying in full activates the order and starts provisioning.</p>
+                                <ErrorNote error={pay.error ?? cancel.error} />
+                                <div className="flex flex-wrap justify-between gap-2">
+                                    {inv.payments.length === 0 && <Button type="button" variant="danger" disabled={cancel.isPending} onClick={() => { if (window.confirm(`Cancel ${inv.number}?`)) cancel.mutate(); }}>Cancel invoice</Button>}
+                                    <Button className="ml-auto" disabled={pay.isPending}>{pay.isPending ? 'Recording...' : 'Record payment'}</Button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                )}
+            </QueryState>
+        </Modal>
+    );
+}
+
+export function InvoicesPage() {
+    const [status, setStatus] = useState('');
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    return (
+        <>
+            <PagedTable<Invoice>
+                url="/invoices"
+                noun="invoices"
+                tabs={{ value: status, onChange: setStatus, options: [{ key: '', label: 'All' }, { key: 'unpaid', label: 'Unpaid' }, { key: 'paid', label: 'Paid' }, { key: 'cancelled', label: 'Cancelled' }] }}
+                params={status ? { status } : undefined}
+                empty="No invoices here."
+                columns={[
+                    { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/invoices/${i.id}`}>{i.number}</Link> },
+                    { header: 'Client', cell: (i) => <Link className="hover:text-accent" to={`/clients/${i.client.id}`}>{i.client.name}</Link> },
+                    { header: 'Due', cell: (i) => i.due_date },
+                    { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
+                    { header: 'Status', cell: (i) => <Status value={i.status} /> },
+                ]}
+            />
+            {id && <InvoiceModal id={Number(id)} onClose={() => navigate('/invoices')} />}
+        </>
+    );
+}

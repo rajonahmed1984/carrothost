@@ -1,0 +1,7 @@
+{
+    "code": "paid-log",
+    "name": "Paid Invoice Log",
+    "version": "1.0.0",
+    "description": "Sample addon: writes an activity entry whenever an invoice is fully paid.",
+    "class": "Addons\\PaidLog\\Addon"
+}
