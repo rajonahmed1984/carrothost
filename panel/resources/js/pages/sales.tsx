@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, MinusCircle, Plus, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, money, type Page } from '../api';
-import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status } from '../ui';
+import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, type Tab } from '../ui';
 
-export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; services_count: number; domains_count: number };
+export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
 
 export function ClientForm({ client, onClose }: { client: Client | null; onClose: () => void }) {
     const qc = useQueryClient();
@@ -47,25 +47,34 @@ export function ClientForm({ client, onClose }: { client: Client | null; onClose
 
 export function ClientsPage() {
     const [search, setSearch] = useState('');
+    const [hideInactive, setHideInactive] = useState(true);
     const [editing, setEditing] = useState<Client | 'new' | null>(null);
+    const params: Record<string, string> = { ...(search ? { q: search } : {}), ...(hideInactive ? { hide_inactive: '1' } : {}) };
 
     return (
         <>
             <PagedTable<Client>
                 url="/clients"
                 noun="clients"
-                search={{ value: search, onChange: setSearch, placeholder: 'Search clients...' }}
-                action={<Button onClick={() => setEditing('new')}><Plus size={14} /> Add client</Button>}
-                params={search ? { q: search } : undefined}
+                search={{ value: search, onChange: setSearch, placeholder: 'Name, company, email or phone' }}
+                action={
+                    <div className="flex flex-wrap items-center gap-3">
+                        <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={hideInactive} onChange={(e) => setHideInactive(e.target.checked)} /> Hide inactive clients</label>
+                        <Button onClick={() => setEditing('new')}><Plus size={14} /> Add client</Button>
+                    </div>
+                }
+                params={params}
                 empty="No clients yet. Add your first client to create an order."
                 columns={[
-                    { header: 'Name', cell: (c) => <Link className="table-action-link font-semibold" to={`/clients/${c.id}`}>{c.name}</Link> },
-                    { header: 'Email', cell: (c) => c.email },
-                    { header: 'Company', cell: (c) => c.company ?? '-' },
-                    { header: 'Services', cell: (c) => c.services_count, align: 'right' },
-                    { header: 'Domains', cell: (c) => c.domains_count, align: 'right' },
+                    { header: 'ID', cell: (c) => <Link className="table-action-link font-semibold tabular-nums" to={`/admin/clients/${c.id}`}>#{c.id}</Link> },
+                    { header: 'Name', cell: (c) => <Link className="table-action-link font-semibold" to={`/admin/clients/${c.id}`}>{c.name}</Link> },
+                    { header: 'Company Name', cell: (c) => c.company ?? '-' },
+                    { header: 'Email Address', cell: (c) => c.email },
+                    { header: 'Services', cell: (c) => <span title="Active (total)">{c.active_services_count ?? 0} ({c.services_count})</span>, align: 'right' },
+                    { header: 'Domains', cell: (c) => <span title="Active (total)">{c.active_domains_count ?? 0} ({c.domains_count})</span>, align: 'right' },
+                    { header: 'Created', cell: (c) => new Date(c.created_at).toLocaleDateString('en-GB') },
                     { header: 'Status', cell: (c) => <Status value={c.status} /> },
-                    { header: '', cell: (c) => <Button variant="link" onClick={() => setEditing(c)}>Edit</Button>, align: 'right' },
+                    { header: 'Action', cell: (c) => <Button variant="link" onClick={() => setEditing(c)}>Edit</Button>, align: 'right' },
                 ]}
             />
             {editing && <ClientForm client={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
@@ -81,7 +90,7 @@ function NewOrder({ initialClient, onClose }: { initialClient: string; onClose: 
     const products = useQuery({ queryKey: ['order-products'], queryFn: async () => (await api.get<Product[]>('/products')).data.filter((p) => p.is_active) });
     const [clientId, setClientId] = useState(initialClient);
     const [services, setServices] = useState<{ product_id: string; cycle: string; domain: string }[]>([]);
-    const [domains, setDomains] = useState<{ name: string; action: string; years: number }[]>([]);
+    const [domains, setDomains] = useState<{ name: string; action: string; years: number; epp_code?: string }[]>([]);
 
     const save = useMutation({
         mutationFn: () => api.post('/orders', {
@@ -146,6 +155,7 @@ function NewOrder({ initialClient, onClose }: { initialClient: string; onClose: 
                             </Field>
                             <Field label="Years"><Input type="number" min={1} max={10} required value={d.years} onChange={(e) => patchDomain(i, { years: Number(e.target.value) })} /></Field>
                         </div>
+                        {d.action === 'transfer' && <Field label="EPP code" hint="Optional here; you can collect it later."><Input autoComplete="off" value={d.epp_code ?? ''} onChange={(e) => patchDomain(i, { epp_code: e.target.value })} /></Field>}
                         <Button type="button" variant="ghost" onClick={() => setDomains(domains.filter((_, n) => n !== i))}><Trash2 size={14} /> Remove</Button>
                     </fieldset>
                 ))}
@@ -161,27 +171,207 @@ function NewOrder({ initialClient, onClose }: { initialClient: string; onClose: 
     );
 }
 
-type Order = { id: number; status: string; created_at: string; services_count: number; domains_count: number; client: { name: string }; invoices: { id: number; number: string; status: string; total: string }[] };
+type Order = {
+    id: number;
+    order_number?: string | null;
+    status: string;
+    amount?: string;
+    payment_method?: string | null;
+    created_at: string;
+    services_count: number;
+    domains_count: number;
+    client: { id: number; name: string };
+    invoices: { id: number; number: string; status: string; total: string }[];
+};
 
-export function OrdersPage() {
+function formatOrderDate(iso: string) {
+    const d = new Date(iso);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${mins}`;
+}
+
+function formatPaymentMethod(method?: string | null) {
+    if (!method) return 'bKash Payment';
+    const m = method.toLowerCase();
+    if (m.includes('bkash')) return 'bKash Payment';
+    if (m.includes('paypal')) return 'PayPal';
+    if (m.includes('sslcommerz')) return 'SSLCommerz';
+    if (m.includes('bank')) return 'Bank Transfer';
+    return method;
+}
+
+function formatOrderTotal(order: Order) {
+    const raw = order.amount !== undefined && order.amount !== null && order.amount !== ''
+        ? order.amount
+        : (order.invoices[0]?.total ?? '0');
+    const num = Number(raw) || 0;
+    return `৳${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}BDT`;
+}
+
+export function OrdersPage({ mode = 'active' }: { mode?: 'active' | 'cancelled' | 'pending' } = {}) {
+    const navigate = useNavigate();
     const [params] = useSearchParams();
     const initialClient = params.get('client') ?? '';
     const [adding, setAdding] = useState(initialClient !== '');
+    const [search, setSearch] = useState('');
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const qc = useQueryClient();
+
+    const batchMutation = useMutation({
+        mutationFn: async (action: 'accept' | 'cancel' | 'delete') => {
+            if (selectedIds.length === 0) return;
+            return (await api.post('/orders/batch-action', { order_ids: selectedIds, action })).data;
+        },
+        onSuccess: () => {
+            setSelectedIds([]);
+            qc.invalidateQueries({ queryKey: ['/orders'] });
+        },
+    });
+
+    const handleBatch = (action: 'accept' | 'cancel' | 'delete') => {
+        if (selectedIds.length === 0) return;
+        if (action === 'delete' && !window.confirm(`Are you sure you want to delete ${selectedIds.length} selected order(s)?`)) return;
+        if (action === 'cancel' && !window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected order(s)?`)) return;
+        batchMutation.mutate(action);
+    };
+
+    const toggleSelect = (id: number) => {
+        setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    };
+
+    const queryParams: Record<string, string> = {
+        ...(search ? { q: search } : {}),
+        status: mode,
+    };
+
+    const tabs: Tab[] = [
+        { key: 'pending', label: 'Pending Orders' },
+        { key: 'active', label: 'Active Orders' },
+        { key: 'cancelled', label: 'Cancelled Orders' },
+    ];
 
     return (
         <>
             <PagedTable<Order>
                 url="/orders"
-                noun="orders"
-                action={<Button onClick={() => setAdding(true)}><Plus size={14} /> New order</Button>}
-                empty="No orders yet."
+                noun={`${mode} orders`}
+                search={{ value: search, onChange: setSearch, placeholder: 'Order #, client name, email or amount' }}
+                tabs={{
+                    options: tabs,
+                    value: mode,
+                    onChange: (key) => {
+                        setSelectedIds([]);
+                        navigate(`/admin/${key}-orders`);
+                    },
+                }}
+                action={
+                    <div className="flex flex-wrap items-center gap-2">
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    variant="primary"
+                                    disabled={batchMutation.isPending}
+                                    onClick={() => handleBatch('accept')}
+                                    className="text-xs py-1.5 px-3"
+                                >
+                                    <Check size={13} className="mr-1" /> Accept ({selectedIds.length})
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    disabled={batchMutation.isPending}
+                                    onClick={() => handleBatch('cancel')}
+                                    className="text-xs py-1.5 px-3"
+                                >
+                                    Cancel ({selectedIds.length})
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    disabled={batchMutation.isPending}
+                                    onClick={() => handleBatch('delete')}
+                                    className="text-xs py-1.5 px-3"
+                                >
+                                    <Trash2 size={13} className="mr-1" /> Delete ({selectedIds.length})
+                                </Button>
+                            </div>
+                        )}
+                        <Button onClick={() => setAdding(true)}>
+                            <Plus size={14} /> New order
+                        </Button>
+                    </div>
+                }
+                params={queryParams}
+                empty={`No ${mode} orders found.`}
                 columns={[
-                    { header: 'Order', cell: (o) => <Link className="table-action-link font-semibold" to={`/orders/${o.id}`}>#{o.id}</Link> },
-                    { header: 'Client', cell: (o) => o.client.name },
-                    { header: 'Items', cell: (o) => `${o.services_count} service, ${o.domains_count} domain` },
-                    { header: 'Invoice', cell: (o) => o.invoices[0] ? <Link className="hover:text-accent" to={`/invoices/${o.invoices[0].id}`}>{o.invoices[0].number}</Link> : '-' },
-                    { header: 'Total', cell: (o) => o.invoices[0] ? money(o.invoices[0].total) : '-', align: 'right' },
-                    { header: 'Status', cell: (o) => <Status value={o.status} /> },
+                    {
+                        header: '',
+                        cell: (o) => (
+                            <input
+                                type="checkbox"
+                                aria-label={`Select order ${o.id}`}
+                                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                checked={selectedIds.includes(o.id)}
+                                onChange={() => toggleSelect(o.id)}
+                            />
+                        ),
+                    },
+                    {
+                        header: 'ID',
+                        cell: (o) => (
+                            <Link className="table-action-link font-semibold tabular-nums" to={`/admin/orders/${o.id}`}>
+                                #{o.id}
+                            </Link>
+                        ),
+                    },
+                    {
+                        header: 'Order #',
+                        cell: (o) => (
+                            <Link className="table-action-link font-mono font-medium" to={`/admin/orders/${o.id}`}>
+                                {o.order_number || o.id}
+                            </Link>
+                        ),
+                    },
+                    {
+                        header: 'Date',
+                        cell: (o) => new Date(o.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    },
+                    {
+                        header: 'Client',
+                        cell: (o) => (
+                            <Link className="table-action-link font-semibold" to={`/admin/clients/${o.client.id}`}>
+                                {o.client.name}
+                            </Link>
+                        ),
+                    },
+                    {
+                        header: 'Payment Method',
+                        cell: (o) => formatPaymentMethod(o.payment_method),
+                    },
+                    {
+                        header: 'Total',
+                        cell: (o) => money(o.amount !== undefined && o.amount !== null && o.amount !== '' ? o.amount : (o.invoices[0]?.total ?? '0')),
+                        align: 'right',
+                    },
+                    {
+                        header: 'Payment Status',
+                        cell: (o) => <Status value={o.invoices[0]?.status === 'paid' ? 'paid' : 'unpaid'} />,
+                    },
+                    {
+                        header: 'Status',
+                        cell: (o) => <Status value={o.status} />,
+                    },
+                    {
+                        header: 'Action',
+                        cell: (o) => (
+                            <Link to={`/admin/orders/${o.id}`}>
+                                <Button variant="link">Manage</Button>
+                            </Link>
+                        ),
+                        align: 'right',
+                    },
                 ]}
             />
             {adding && <NewOrder initialClient={initialClient} onClose={() => setAdding(false)} />}

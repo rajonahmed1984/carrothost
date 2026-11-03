@@ -156,7 +156,7 @@ class DashboardService
 
     public function pendingModuleActions(): int
     {
-        return Service::whereIn('provision_status', ['failed', 'manual_required'])->count()
+        return Service::whereIn('provision_status', ['failed', 'manual_required', 'awaiting_accept'])->count()
             + Domain::whereIn('provision_status', ['failed', 'manual_required'])->count();
     }
 

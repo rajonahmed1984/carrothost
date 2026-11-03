@@ -30,7 +30,7 @@ export function errorMessage(error: unknown): string {
     return first ?? data?.message ?? 'Something went wrong. Please try again.';
 }
 
-export type Page<T> = { data: T[]; current_page: number; last_page: number; total: number };
+export type Page<T> = { data: T[]; current_page: number; last_page: number; total: number; from?: number | null; to?: number | null };
 
 // The billing currency from Admin > Settings, set once the app has loaded its config.
 let defaultCurrency = 'BDT';

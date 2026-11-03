@@ -21,6 +21,16 @@ class WebuzoModule implements ProvisioningModule
         $this->call('plans');
     }
 
+    public function packages(): array
+    {
+        $plans = $this->call('plans')['plans'] ?? [];
+
+        return collect(is_array($plans) ? $plans : [])
+            ->map(fn ($plan, $key) => ['id' => (string) ($plan['plan'] ?? $key), 'name' => (string) ($plan['plan_name'] ?? $plan['name'] ?? $key)])
+            ->values()
+            ->all();
+    }
+
     public function create(Service $service): array
     {
         $username = $this->usernameFor((string) $service->domain, $service->id);

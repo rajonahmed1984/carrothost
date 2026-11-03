@@ -51,12 +51,16 @@ class TicketService
         ActivityLog::record($staff ? 'ticket.answered' : 'ticket.customer_reply', $ticket);
 
         if ($staff) {
-            $this->send($ticket->client->email, new TicketNotification(
-                "[Ticket #{$ticket->number}] {$ticket->subject}",
-                "{$staff->name} replied to your ticket",
-                $message,
-                url("tickets/{$ticket->id}"),
-            ));
+            $recipients = [$ticket->client->email, ...$ticket->client->contacts()->where('receives_support', true)->pluck('email')];
+
+            foreach (array_unique($recipients) as $email) {
+                $this->send($email, new TicketNotification(
+                    "[Ticket #{$ticket->number}] {$ticket->subject}",
+                    "{$staff->name} replied to your ticket",
+                    $message,
+                    url("tickets/{$ticket->id}"),
+                ));
+            }
         } else {
             $this->notifyStaff($ticket, "Customer reply on #{$ticket->number}: {$ticket->subject}", "{$ticket->client->name} replied.", $message);
         }

@@ -20,6 +20,14 @@ class CpanelModule implements ProvisioningModule
         $this->call('version');
     }
 
+    public function packages(): array
+    {
+        return collect(data_get($this->call('listpkgs'), 'data.pkg', []))
+            ->map(fn (array $pkg) => ['id' => (string) $pkg['name'], 'name' => (string) $pkg['name']])
+            ->values()
+            ->all();
+    }
+
     public function create(Service $service): array
     {
         $username = $this->usernameFor((string) $service->domain, $service->id);

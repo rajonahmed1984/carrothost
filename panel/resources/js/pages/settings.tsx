@@ -6,15 +6,16 @@ import { Button, ErrorNote, Field, Input, QueryState, Select, type Branding } fr
 
 /** Integration pages listed under System in the sidebar. */
 export const settings = [
-    { to: '/settings/gateways', label: 'Payment Gateways' },
-    { to: '/settings/servers', label: 'Servers' },
-    { to: '/settings/registrars', label: 'Domain Registrars' },
-    { to: '/settings/addons', label: 'Addons' },
+    { to: '/admin/settings/gateways', label: 'Payment Gateways' },
+    { to: '/admin/settings/servers', label: 'Servers' },
+    { to: '/admin/settings/registrars', label: 'Domain Registrars' },
+    { to: '/admin/settings/addons', label: 'Addons' },
 ];
 
 const tabs = [
     { key: 'general', label: 'General', hint: 'Brand, contact, locale and sign-in security.' },
     { key: 'invoices', label: 'Invoices', hint: 'Currency and when new invoices fall due.' },
+    { key: 'domains', label: 'Domains', hint: 'What customers can order, and the defaults each new domain starts with.' },
     { key: 'automation', label: 'Automation', hint: 'Renewals, suspensions and support ticket clean-up.' },
     { key: 'email', label: 'Email', hint: 'The SMTP server that sends every email.' },
 ];
@@ -22,7 +23,9 @@ const tabs = [
 type Values = {
     company_name: string; company_email: string | null; pay_to_text: string | null; company_country: string | null; time_zone: string;
     currency: string; invoice_due_days: number; renewal_notice_days: number; suspension_enabled: boolean; suspend_after_days: number;
-    unsuspension_enabled: boolean; ticket_auto_close_days: number; recaptcha_enabled: boolean; recaptcha_site_key: string | null;
+    unsuspension_enabled: boolean; ticket_auto_close_days: number; domain_allow_register: boolean; domain_allow_transfer: boolean;
+    domain_allow_own: boolean; domain_auto_renew: boolean; nameserver_1: string | null; nameserver_2: string | null; nameserver_3: string | null;
+    nameserver_4: string | null; nameserver_5: string | null; recaptcha_enabled: boolean; recaptcha_site_key: string | null;
     recaptcha_project_id: string | null; recaptcha_score_threshold: number | string | null; mail_host: string | null; mail_port: number | string | null;
     mail_scheme: string | null; mail_username: string | null; mail_from_address: string | null; mail_from_name: string | null;
 };
@@ -178,8 +181,35 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             </Field>
                         </div>
                         <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                            Bank transfer and other payment instructions are set on the Manual gateway in <Link className="table-action-link" to="/settings/gateways">Payment Gateways</Link>.
+                            Bank transfer and other payment instructions are set on the Manual gateway in <Link className="table-action-link" to="/admin/settings/gateways">Payment Gateways</Link>.
                         </p>
+                    </Section>
+                </div>
+
+                <div className={tab.key === 'domains' ? 'space-y-4' : 'hidden'}>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <Section title="Domain Ordering">
+                            <Check checked={values.domain_allow_register} onChange={set('domain_allow_register')} label="Allow customers to register domains with you" />
+                            <Check checked={values.domain_allow_transfer} onChange={set('domain_allow_transfer')} label="Allow customers to transfer a domain to you" />
+                            <Check checked={values.domain_allow_own} onChange={set('domain_allow_own')} label="Allow customers to use their own domain for hosting" />
+                            <p className="text-xs text-slate-500">
+                                Prices come from <Link className="table-action-link" to="/admin/tlds">Domain Pricing</Link>. Only active extensions can be ordered.
+                            </p>
+                        </Section>
+                        <Section title="Renewals">
+                            <Check checked={values.domain_auto_renew} onChange={set('domain_auto_renew')} label="Raise renewal invoices for new domains by default" />
+                            <p className="text-xs text-slate-500">
+                                Each domain can be changed on its own page. A domain set not to renew gets no renewal invoice and lapses at expiry.
+                            </p>
+                        </Section>
+                    </div>
+                    <Section title="Default Nameservers">
+                        <p className="text-sm text-slate-500">New domains start with these, and customers using their own domain are told to point it here.</p>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {([1, 2, 3, 4, 5] as const).map((n) => (
+                                <Field key={n} label={`Nameserver ${n}`}><Input placeholder={n <= 2 ? `ns${n}.example.com` : 'Optional'} {...text(`nameserver_${n}`)} /></Field>
+                            ))}
+                        </div>
                     </Section>
                 </div>
 

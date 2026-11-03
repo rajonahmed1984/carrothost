@@ -7,10 +7,10 @@ import { api, basePath, setDefaultCurrency } from './api';
 import { ActivityPage, AddonsPage } from './pages/system';
 import { GatewaysPage } from './pages/gateways';
 import { ClientsPage, OrdersPage } from './pages/sales';
-import { DashboardPage, type Dashboard } from './pages/dashboard';
-import { InvoicesPage } from './pages/invoices';
+import { DashboardPage } from './pages/dashboard';
+import { InvoicesPage, TransactionsPage } from './pages/invoices';
 import { DomainsPage, ServicesPage } from './pages/fulfilment';
-import { ProductsPage, ServersPage, TldsPage } from './pages/catalog';
+import { ProductEditPage, ProductsPage, ServersPage, TldsPage } from './pages/catalog';
 import { RegistrarsPage } from './pages/registrars';
 import { SettingsPage, settings } from './pages/settings';
 import { CustomerArea } from './pages/customer';
@@ -25,36 +25,69 @@ type Badges = { awaiting_tickets: number; unread_chat: number };
 type NavItem = { to: string; label: string; badge?: keyof Badges; end?: boolean };
 
 const navSections: { title: string; items: NavItem[] }[] = [
-    { title: 'Sales & Customers', items: [{ to: '/clients', label: 'Clients' }, { to: '/orders', label: 'Orders' }] },
-    { title: 'Billing', items: [{ to: '/invoices', label: 'Invoices' }] },
-    { title: 'Hosting & Domains', items: [{ to: '/services', label: 'Services' }, { to: '/domains', label: 'Domains' }] },
-    { title: 'Support & Chat', items: [{ to: '/tickets', label: 'Support', badge: 'awaiting_tickets' }, { to: '/chats', label: 'Chat', badge: 'unread_chat' }] },
-    { title: 'Products/Services', items: [{ to: '/products', label: 'Products' }, { to: '/tlds', label: 'Domain Pricing' }] },
-    { title: 'System', items: [{ to: '/activity', label: 'Activity Log' }, { to: '/settings', label: 'Settings', end: true }, ...settings] },
+    {
+        title: 'Sales & Customers',
+        items: [
+            { to: '/admin/clients', label: 'Clients' },
+            { to: '/admin/active-orders', label: 'Active Orders' },
+            { to: '/admin/pending-orders', label: 'Pending Orders' },
+            { to: '/admin/cancelled-orders', label: 'Cancelled Orders' },
+            { to: '/admin/products-services', label: 'Products/Services' },
+            { to: '/admin/domain-registrations', label: 'Domain Registrations' },
+        ],
+    },
+    {
+        title: 'Billing',
+        items: [
+            { to: '/admin/paid-invoices', label: 'Paid Invoices' },
+            { to: '/admin/unpaid-invoices', label: 'Unpaid Invoices' },
+            { to: '/admin/overdue-invoices', label: 'Overdue Invoices' },
+            { to: '/admin/cancelled-invoices', label: 'Cancelled Invoices' },
+            { to: '/admin/refunded-invoices', label: 'Refunded Invoices' },
+            { to: '/admin/transactions', label: 'Transactions' },
+        ],
+    },
+    {
+        title: 'Support & Chat',
+        items: [
+            { to: '/admin/tickets', label: 'Support', badge: 'awaiting_tickets' },
+            { to: '/admin/chats', label: 'Chat', badge: 'unread_chat' },
+        ],
+    },
+    {
+        title: 'Products/Services',
+        items: [
+            { to: '/admin/products', label: 'Products' },
+            { to: '/admin/tlds', label: 'Domain Pricing' },
+        ],
+    },
+    {
+        title: 'System',
+        items: [
+            { to: '/admin/activity', label: 'Activity Log' },
+            { to: '/admin/settings', label: 'Settings', end: true },
+            ...settings,
+        ],
+    },
 ];
 
 const pageTitles: Record<string, string> = {
-    '/': 'Dashboard',
-    '/tickets': 'Support Tickets',
-    '/account': 'Change Password',
+    '/admin/dashboard': 'Dashboard',
+    '/admin': 'Dashboard',
+    '/admin/tickets': 'Support Tickets',
+    '/admin/account': 'Change Password',
+    '/admin/orders': 'Active Orders',
+    '/admin/services': 'Products/Services',
+    '/admin/domains': 'Domain Registrations',
     ...Object.fromEntries(navSections.flatMap((s) => s.items).map((i) => [i.to, i.label])),
 };
 
 const bottomNav: [string, string, LucideIcon][] = [
-    ['/', 'Dashboard', LayoutDashboard],
-    ['/clients', 'Clients', Users],
-    ['/invoices', 'Invoices', Receipt],
-    ['/services', 'Services', Boxes],
+    ['/admin/dashboard', 'Dashboard', LayoutDashboard],
+    ['/admin/clients', 'Clients', Users],
+    ['/admin/paid-invoices', 'Billing', Receipt],
+    ['/admin/products-services', 'Services', Boxes],
 ];
-
-function HeaderStat({ to, count, label, tone }: { to: string; count: number; label: string; tone: string }) {
-    return (
-        <Link to={to} className={`flex items-center gap-2 font-medium transition-colors ${count > 0 ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>
-            <span className={`flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 text-[11px] leading-none font-bold tabular-nums ${count > 0 ? tone : 'border-slate-200 bg-slate-100 text-slate-400'}`}>{count}</span>
-            <span>{label}</span>
-        </Link>
-    );
-}
 
 function UserMenu({ name }: { name: string }) {
     const client = useQueryClient();
@@ -87,7 +120,7 @@ function UserMenu({ name }: { name: string }) {
             </button>
             {open && (
                 <div role="menu" className="absolute right-0 z-40 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                    <Link to="/account" role="menuitem" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                    <Link to="/admin/account" role="menuitem" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
                         <KeyRound size={14} /> Change password
                     </Link>
                     <button type="button" role="menuitem" disabled={logout.isPending} onClick={() => logout.mutate()} className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
@@ -111,14 +144,15 @@ function Shell({ name }: { name: string }) {
         }
     });
     const brand = useBranding().name;
-    const stats = useQuery({ queryKey: ['dashboard'], queryFn: async () => (await api.get<Dashboard>('/dashboard')).data });
     const badges = useQuery({ queryKey: ['badges'], queryFn: async () => (await api.get<Badges>('/badges')).data, refetchInterval: 30000 });
     const badge = (item: NavItem) => {
         const count = item.badge ? badges.data?.[item.badge] ?? 0 : 0;
 
         return count > 0 ? <span className="ml-auto rounded-full bg-accent px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">{count}</span> : null;
     };
-    const section = `/${pathname.split('/')[1] ?? ''}`;
+    const section = pathname.startsWith('/admin')
+        ? (pathname.split('/')[2] ? `/admin/${pathname.split('/')[2]}` : '/admin/dashboard')
+        : `/${pathname.split('/')[1] ?? ''}`;
     const title = pageTitles[pathname] ?? pageTitles[section] ?? 'Overview';
 
     useEffect(() => {
@@ -135,14 +169,6 @@ function Shell({ name }: { name: string }) {
             // The preference just won't survive a reload.
         }
     };
-
-    const attention = (stats.data?.attention.services.length ?? 0) + (stats.data?.attention.domains.length ?? 0);
-    const headerStats = [
-        { to: '/orders', count: stats.data?.pending_orders ?? 0, label: 'Pending Orders', tone: 'border-amber-200/80 bg-amber-100 text-amber-700' },
-        { to: '/invoices', count: stats.data?.overdue_invoices ?? 0, label: 'Overdue Invoices', tone: 'border-rose-200/80 bg-rose-100 text-rose-700' },
-        { to: '/tickets', count: badges.data?.awaiting_tickets ?? 0, label: 'Awaiting Reply', tone: 'border-sky-200/80 bg-sky-100 text-sky-700' },
-        { to: '/', count: attention, label: 'Needs Attention', tone: 'border-orange-200/80 bg-orange-100 text-orange-700' },
-    ];
 
     const navClass = ({ isActive }: { isActive: boolean }) => `nav-link ${isActive ? 'nav-link-active' : ''}`;
 
@@ -161,7 +187,7 @@ function Shell({ name }: { name: string }) {
                 <button type="button" aria-label="Close menu" onClick={() => setDrawerOpen(false)} className="absolute top-4 right-4 cursor-pointer rounded-full border border-white/10 bg-white/10 p-2 text-slate-200 md:hidden"><X size={16} /></button>
 
                 <nav className="mt-8 flex-1 space-y-4 text-sm">
-                    <NavLink to="/" end className={navClass}><span className="h-2 w-2 shrink-0 rounded-full bg-current" /> Dashboard</NavLink>
+                    <NavLink to="/admin/dashboard" end className={navClass}><span className="h-2 w-2 shrink-0 rounded-full bg-current" /> Dashboard</NavLink>
                     {navSections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <div className="nav-section">{section.title}</div>
@@ -185,47 +211,95 @@ function Shell({ name }: { name: string }) {
                         <button type="button" aria-label="Toggle sidebar" aria-expanded={!collapsed} className="icon-btn" onClick={toggleSidebar}><PanelLeft size={18} /></button>
                         <h1 className="truncate text-lg font-semibold text-slate-900">{title}</h1>
                     </div>
-                    <div className="hidden flex-1 flex-wrap items-center justify-center gap-4 text-xs lg:flex">
-                        {headerStats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}
-                    </div>
                     <UserMenu name={name} />
                 </header>
 
                 <main key={section} className="fade-in pb-safe-nav w-full px-3 py-4 sm:px-4 md:px-6 md:py-6">
                     <Routes>
-                        <Route path="/" element={<DashboardPage />} />
-                        <Route path="/clients" element={<ClientsPage />} />
-                        <Route path="/clients/:id" element={<ClientDetailPage />} />
-                        <Route path="/orders" element={<OrdersPage />} />
-                        <Route path="/orders/:id" element={<OrderDetailPage />} />
-                        <Route path="/invoices" element={<InvoicesPage />} />
-                        <Route path="/invoices/:id" element={<InvoicesPage />} />
-                        <Route path="/services" element={<ServicesPage />} />
-                        <Route path="/services/:id" element={<ServiceDetailPage />} />
-                        <Route path="/domains" element={<DomainsPage />} />
-                        <Route path="/domains/:id" element={<DomainDetailPage />} />
-                        <Route path="/products" element={<ProductsPage />} />
-                        <Route path="/tlds" element={<TldsPage />} />
-                        <Route path="/tickets" element={<TicketsPage />} />
-                        <Route path="/tickets/:id" element={<TicketDetailPage />} />
-                        <Route path="/chats" element={<ChatsPage />} />
-                        <Route path="/chats/:clientId" element={<ChatsPage />} />
-                        <Route path="/activity" element={<ActivityPage />} />
-                        <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/settings/gateways" element={<GatewaysPage />} />
-                        <Route path="/settings/servers" element={<ServersPage />} />
-                        <Route path="/settings/registrars" element={<RegistrarsPage />} />
-                        <Route path="/settings/addons" element={<AddonsPage />} />
-                        {['gateways', 'servers', 'registrars', 'addons'].map((page) => <Route key={page} path={`/${page}`} element={<Navigate to={`/settings/${page}`} replace />} />)}
-                        <Route path="/account" element={<AdminAccountPage />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                        <Route path="/admin/dashboard" element={<DashboardPage />} />
+                        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                        <Route path="/admin/clients" element={<ClientsPage />} />
+                        <Route path="/admin/clients/:id" element={<ClientDetailPage />} />
+                        <Route path="/admin/active-orders" element={<OrdersPage mode="active" />} />
+                        <Route path="/admin/pending-orders" element={<OrdersPage mode="pending" />} />
+                        <Route path="/admin/cancelled-orders" element={<OrdersPage mode="cancelled" />} />
+                        <Route path="/admin/orders" element={<Navigate to="/admin/active-orders" replace />} />
+                        <Route path="/admin/orders/:id" element={<OrderDetailPage />} />
+                        <Route path="/admin/invoices" element={<Navigate to="/admin/paid-invoices" replace />} />
+                        <Route path="/admin/invoices/:id" element={<InvoicesPage />} />
+                        <Route path="/admin/paid-invoices" element={<InvoicesPage mode="paid" />} />
+                        <Route path="/admin/paid-invoices/:id" element={<InvoicesPage mode="paid" />} />
+                        <Route path="/admin/unpaid-invoices" element={<InvoicesPage mode="unpaid" />} />
+                        <Route path="/admin/unpaid-invoices/:id" element={<InvoicesPage mode="unpaid" />} />
+                        <Route path="/admin/overdue-invoices" element={<InvoicesPage mode="overdue" />} />
+                        <Route path="/admin/overdue-invoices/:id" element={<InvoicesPage mode="overdue" />} />
+                        <Route path="/admin/cancelled-invoices" element={<InvoicesPage mode="cancelled" />} />
+                        <Route path="/admin/cancelled-invoices/:id" element={<InvoicesPage mode="cancelled" />} />
+                        <Route path="/admin/refunded-invoices" element={<InvoicesPage mode="refunded" />} />
+                        <Route path="/admin/refunded-invoices/:id" element={<InvoicesPage mode="refunded" />} />
+                        <Route path="/admin/transactions" element={<TransactionsPage />} />
+                        <Route path="/admin/products-services" element={<ServicesPage />} />
+                        <Route path="/admin/products-services/:id" element={<ServiceDetailPage />} />
+                        <Route path="/admin/services" element={<Navigate to="/admin/products-services" replace />} />
+                        <Route path="/admin/services/:id" element={<ServiceDetailPage />} />
+                        <Route path="/admin/domain-registrations" element={<DomainsPage />} />
+                        <Route path="/admin/domain-registrations/:id" element={<DomainDetailPage />} />
+                        <Route path="/admin/domains" element={<Navigate to="/admin/domain-registrations" replace />} />
+                        <Route path="/admin/domains/:id" element={<DomainDetailPage />} />
+                        <Route path="/admin/products" element={<ProductsPage />} />
+                        <Route path="/admin/products/new" element={<ProductEditPage />} />
+                        <Route path="/admin/products/:id" element={<ProductEditPage />} />
+                        <Route path="/admin/tlds" element={<TldsPage />} />
+                        <Route path="/admin/tickets" element={<TicketsPage />} />
+                        <Route path="/admin/tickets/:id" element={<TicketDetailPage />} />
+                        <Route path="/admin/chats" element={<ChatsPage />} />
+                        <Route path="/admin/chats/:clientId" element={<ChatsPage />} />
+                        <Route path="/admin/activity" element={<ActivityPage />} />
+                        <Route path="/admin/settings" element={<SettingsPage />} />
+                        <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
+                        <Route path="/admin/settings/servers" element={<ServersPage />} />
+                        <Route path="/admin/settings/registrars" element={<RegistrarsPage />} />
+                        <Route path="/admin/settings/addons" element={<AddonsPage />} />
+                        {['gateways', 'servers', 'registrars', 'addons'].map((page) => (
+                            <Route key={page} path={`/admin/${page}`} element={<Navigate to={`/admin/settings/${page}`} replace />} />
+                        ))}
+                        <Route path="/admin/account" element={<AdminAccountPage />} />
+
+                        {/* Backward compatibility redirects */}
+                        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+                        <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
+                        <Route path="/clients/:id" element={<Navigate to="/admin/clients" replace />} />
+                        <Route path="/active-orders" element={<Navigate to="/admin/active-orders" replace />} />
+                        <Route path="/pending-orders" element={<Navigate to="/admin/pending-orders" replace />} />
+                        <Route path="/cancelled-orders" element={<Navigate to="/admin/cancelled-orders" replace />} />
+                        <Route path="/orders" element={<Navigate to="/admin/active-orders" replace />} />
+                        <Route path="/paid-invoices" element={<Navigate to="/admin/paid-invoices" replace />} />
+                        <Route path="/unpaid-invoices" element={<Navigate to="/admin/unpaid-invoices" replace />} />
+                        <Route path="/overdue-invoices" element={<Navigate to="/admin/overdue-invoices" replace />} />
+                        <Route path="/cancelled-invoices" element={<Navigate to="/admin/cancelled-invoices" replace />} />
+                        <Route path="/refunded-invoices" element={<Navigate to="/admin/refunded-invoices" replace />} />
+                        <Route path="/transactions" element={<Navigate to="/admin/transactions" replace />} />
+                        <Route path="/products-services" element={<Navigate to="/admin/products-services" replace />} />
+                        <Route path="/services" element={<Navigate to="/admin/products-services" replace />} />
+                        <Route path="/domain-registrations" element={<Navigate to="/admin/domain-registrations" replace />} />
+                        <Route path="/domains" element={<Navigate to="/admin/domain-registrations" replace />} />
+                        <Route path="/products" element={<Navigate to="/admin/products" replace />} />
+                        <Route path="/products/new" element={<Navigate to="/admin/products/new" replace />} />
+                        <Route path="/tlds" element={<Navigate to="/admin/tlds" replace />} />
+                        <Route path="/tickets" element={<Navigate to="/admin/tickets" replace />} />
+                        <Route path="/chats" element={<Navigate to="/admin/chats" replace />} />
+                        <Route path="/activity" element={<Navigate to="/admin/activity" replace />} />
+                        <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
+                        <Route path="/account" element={<Navigate to="/admin/account" replace />} />
+
+                        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
                     </Routes>
                 </main>
             </div>
 
             <nav aria-label="Main" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
                 {bottomNav.map(([to, label, Icon]) => (
-                    <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold ${isActive ? 'text-accent' : 'text-slate-500'}`}>
+                    <NavLink key={to} to={to} end={to === '/admin/dashboard'} className={({ isActive }) => `flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold ${isActive ? 'text-accent' : 'text-slate-500'}`}>
                         <Icon size={20} /> {label}
                     </NavLink>
                 ))}
@@ -277,13 +351,15 @@ function App() {
     const config = useAppConfig();
     const { pathname, search } = useLocation();
     const guestPage = isGuestPath(pathname);
-    const home = safeRedirect(new URLSearchParams(search).get('redirect')) ?? '/';
+    const home = safeRedirect(new URLSearchParams(search).get('redirect')) ?? (me.data ? '/admin/dashboard' : '/');
 
     if (config.data) setDefaultCurrency(config.data.branding.currency);
     if (me.isLoading || clientMe.isLoading || config.isLoading) return <p className="p-10 text-center text-slate-500">Loading...</p>;
 
     if (me.data) {
-        return guestPage ? <Navigate to={home} replace /> : <Shell name={me.data.name} />;
+        if (guestPage) return <Navigate to={home} replace />;
+        if (pathname === '/' || pathname === '/admin') return <Navigate to="/admin/dashboard" replace />;
+        return <Shell name={me.data.name} />;
     }
 
     // An admin can still sign in from a browser that holds a customer session.

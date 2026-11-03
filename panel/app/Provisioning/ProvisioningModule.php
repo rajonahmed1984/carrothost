@@ -12,6 +12,13 @@ interface ProvisioningModule
     public function testConnection(): void;
 
     /**
+     * Packages (plans) set up on the server, for the product's plan picker.
+     *
+     * @return list<array{id: string, name: string}>
+     */
+    public function packages(): array;
+
+    /**
      * Create the account and return its login details, including remote_id.
      *
      * @return array{remote_id: string, username: string, password: string}

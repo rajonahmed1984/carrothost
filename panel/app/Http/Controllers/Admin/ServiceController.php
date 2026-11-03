@@ -13,8 +13,17 @@ class ServiceController extends Controller
 {
     public function index(Request $request)
     {
-        return Service::with(['client:id,name', 'product:id,name,module', 'server:id,name'])
+        return Service::with(['client:id,name,email', 'product:id,name,module', 'server:id,name'])
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            ->when($request->query('q'), function ($q, $search) {
+                $q->where(function ($w) use ($search) {
+                    $w->where('id', 'like', "%{$search}%")
+                        ->orWhere('domain', 'like', "%{$search}%")
+                        ->orWhere('remote_id', 'like', "%{$search}%")
+                        ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                        ->orWhereHas('product', fn ($p) => $p->where('name', 'like', "%{$search}%"));
+                });
+            })
             ->latest()
             ->paginate(25);
     }

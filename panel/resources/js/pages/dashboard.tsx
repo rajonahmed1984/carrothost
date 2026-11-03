@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Ban, Check, ChevronDown, ChevronUp, FileWarning, RefreshCw, ShoppingCart, Table2, Wrench, X, XCircle, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, errorMessage, money } from '../api';
 import { Button, QueryState, Status } from '../ui';
 
@@ -138,35 +138,21 @@ function SystemOverview({ data }: { data: Dashboard }) {
                     </table>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    <div>
-                        <h3 className="mb-1 text-xs font-semibold text-slate-600">Orders</h3>
-                        <div className="h-44">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={rows} syncId="overview" barGap={2} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                    <CartesianGrid vertical={false} stroke="#e2e8f0" />
-                                    <XAxis dataKey="label" {...axisProps} minTickGap={24} />
-                                    <YAxis {...axisProps} allowDecimals={false} />
-                                    <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} content={<ChartTooltip currency={data.currency} />} />
-                                    <Bar dataKey="new_orders" name="New Orders" fill={SERIES.new_orders} radius={[4, 4, 0, 0]} maxBarSize={12} isAnimationActive={false} />
-                                    <Bar dataKey="activated_orders" name="Activated Orders" fill={SERIES.activated_orders} radius={[4, 4, 0, 0]} maxBarSize={12} isAnimationActive={false} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="mb-1 text-xs font-semibold text-slate-600">Income ({data.currency})</h3>
-                        <div className="h-44">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={rows} syncId="overview" margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
-                                    <CartesianGrid vertical={false} stroke="#e2e8f0" />
-                                    <XAxis dataKey="label" {...axisProps} minTickGap={24} />
-                                    <YAxis {...axisProps} tickFormatter={(v: number) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-                                    <Tooltip content={<ChartTooltip currency={data.currency} />} />
-                                    <Area type="monotone" dataKey="income" name="Income" stroke={SERIES.income} strokeWidth={2} fill={SERIES.income} fillOpacity={0.14} dot={false} activeDot={{ r: 4, stroke: '#fff', strokeWidth: 2 }} isAnimationActive={false} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
+                <div>
+                    <h3 className="mb-2 text-xs font-semibold text-slate-600">Orders & Income ({data.currency})</h3>
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={rows} barGap={3} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
+                                <CartesianGrid vertical={false} stroke="#e2e8f0" />
+                                <XAxis dataKey="label" {...axisProps} minTickGap={24} />
+                                <YAxis yAxisId="orders" {...axisProps} allowDecimals={false} />
+                                <YAxis yAxisId="income" orientation="right" {...axisProps} tickFormatter={(v: number) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
+                                <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} content={<ChartTooltip currency={data.currency} />} />
+                                <Area yAxisId="income" type="monotone" dataKey="income" name="Income" stroke={SERIES.income} strokeWidth={2} fill={SERIES.income} fillOpacity={0.15} dot={false} activeDot={{ r: 4, stroke: '#fff', strokeWidth: 2 }} isAnimationActive={false} />
+                                <Bar yAxisId="orders" dataKey="new_orders" name="New Orders" fill={SERIES.new_orders} radius={[4, 4, 0, 0]} maxBarSize={14} isAnimationActive={false} />
+                                <Bar yAxisId="orders" dataKey="activated_orders" name="Activated Orders" fill={SERIES.activated_orders} radius={[4, 4, 0, 0]} maxBarSize={14} isAnimationActive={false} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             )}
@@ -264,7 +250,7 @@ function ServerTest({ id }: { id: number }) {
 }
 
 function Servers({ data }: { data: Dashboard }) {
-    if (!data.servers.length) return <p className="p-6 text-center text-sm text-slate-500">No servers yet. <Link className="table-action-link" to="/settings/servers">Add a server</Link></p>;
+    if (!data.servers.length) return <p className="p-6 text-center text-sm text-slate-500">No servers yet. <Link className="table-action-link" to="/admin/settings/servers">Add a server</Link></p>;
 
     return (
         <ul className="divide-y divide-slate-100">
@@ -291,13 +277,13 @@ function Attention({ data }: { data: Dashboard }) {
         <ul className="max-h-64 divide-y divide-slate-100 overflow-y-auto">
             {services.map((s) => (
                 <li key={`s${s.id}`} className="flex items-start justify-between gap-2 px-4 py-2.5">
-                    <span className="min-w-0 text-xs"><Link className="table-action-link font-semibold" to={`/services/${s.id}`}>{s.product.name}{s.domain ? ` - ${s.domain}` : ''}</Link><span className="block text-slate-500">{s.client.name}</span>{s.provision_error && <span className="block break-words text-slate-500">{s.provision_error}</span>}</span>
+                    <span className="min-w-0 text-xs"><Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>{s.product.name}{s.domain ? ` - ${s.domain}` : ''}</Link><span className="block text-slate-500">{s.client.name}</span>{s.provision_error && <span className="block break-words text-slate-500">{s.provision_error}</span>}</span>
                     <Status value={s.provision_status} />
                 </li>
             ))}
             {domains.map((d) => (
                 <li key={`d${d.id}`} className="flex items-start justify-between gap-2 px-4 py-2.5">
-                    <span className="min-w-0 text-xs"><Link className="table-action-link font-semibold" to={`/domains/${d.id}`}>{d.name}</Link><span className="block text-slate-500">{d.action}, {d.client.name}</span></span>
+                    <span className="min-w-0 text-xs"><Link className="table-action-link font-semibold" to={`/admin/domain-registrations/${d.id}`}>{d.name}</Link><span className="block text-slate-500">{d.action}, {d.client.name}</span></span>
                     <Status value={d.provision_status} />
                 </li>
             ))}
@@ -318,7 +304,7 @@ function ClientActivity({ data }: { data: Dashboard }) {
                 <ul className="max-h-52 divide-y divide-slate-100 overflow-y-auto border-t border-slate-100">
                     {c.recent.map((r) => (
                         <li key={r.id} className="flex items-start justify-between gap-2 px-4 py-2 text-xs">
-                            <span className="min-w-0"><Link className="block truncate font-medium text-slate-800 hover:text-accent" to={`/clients/${r.id}`}>{r.name}</Link><span className="text-slate-500">{r.ip}</span></span>
+                            <span className="min-w-0"><Link className="block truncate font-medium text-slate-800 hover:text-accent" to={`/admin/clients/${r.id}`}>{r.name}</Link><span className="text-slate-500">{r.ip}</span></span>
                             <span className="shrink-0 text-slate-500">{r.when}</span>
                         </li>
                     ))}
@@ -341,7 +327,7 @@ function ActivityFeed({ data }: { data: Dashboard }) {
                     </li>
                 ))}
             </ul>
-            <div className="border-t border-slate-100 px-4 py-2 text-center"><Link className="table-action-link" to="/activity">View all activity</Link></div>
+            <div className="border-t border-slate-100 px-4 py-2 text-center"><Link className="table-action-link" to="/admin/activity">View all activity</Link></div>
         </>
     );
 }
@@ -369,10 +355,10 @@ export function DashboardPage() {
             {d && (
                 <div className="space-y-4">
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <Tile to="/orders" value={d.pending_orders} label="Pending Orders" Icon={ShoppingCart} color="#17733f" />
-                        <Tile to="/invoices" value={d.overdue_invoices} label="Overdue Invoices" Icon={FileWarning} color="#be123c" />
-                        <Tile to="/services" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
-                        <Tile to="/services" value={d.pending_module_actions} label="Pending Module Actions" Icon={Wrench} color="#0f2233" />
+                        <Tile to="/admin/pending-orders" value={d.pending_orders} label="Pending Orders" Icon={ShoppingCart} color="#17733f" />
+                        <Tile to="/admin/overdue-invoices" value={d.overdue_invoices} label="Overdue Invoices" Icon={FileWarning} color="#be123c" />
+                        <Tile to="/admin/products-services" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
+                        <Tile to="/admin/products-services" value={d.pending_module_actions} label="Pending Module Actions" Icon={Wrench} color="#0f2233" />
                     </div>
 
                     <div className="grid items-start gap-4 xl:grid-cols-3">

@@ -32,6 +32,17 @@ class Settings
         'suspend_after_days' => 'billing.suspend_after_days',
         'unsuspension_enabled' => 'billing.unsuspension_enabled',
         'ticket_auto_close_days' => 'billing.ticket_auto_close_days',
+        'domain_allow_register' => 'billing.domains.allow_register',
+        'domain_allow_transfer' => 'billing.domains.allow_transfer',
+        'domain_allow_own' => 'billing.domains.allow_own',
+        'domain_auto_renew' => 'billing.domains.auto_renew',
+        'domain_lookup_provider' => 'billing.domains.lookup_provider',
+        'domain_premium_enabled' => 'billing.domains.premium_enabled',
+        'nameserver_1' => 'billing.domains.nameservers.0',
+        'nameserver_2' => 'billing.domains.nameservers.1',
+        'nameserver_3' => 'billing.domains.nameservers.2',
+        'nameserver_4' => 'billing.domains.nameservers.3',
+        'nameserver_5' => 'billing.domains.nameservers.4',
         'recaptcha_enabled' => 'recaptcha.enabled',
         'recaptcha_site_key' => 'recaptcha.site_key',
         'recaptcha_secret_key' => 'recaptcha.secret_key',
@@ -50,7 +61,10 @@ class Settings
     /** Stored encrypted and never sent back to the browser. */
     public const SECRETS = ['recaptcha_secret_key', 'recaptcha_api_key', 'mail_password'];
 
-    public const BOOLEANS = ['suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled'];
+    public const BOOLEANS = [
+        'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled',
+        'domain_allow_register', 'domain_allow_transfer', 'domain_allow_own', 'domain_auto_renew', 'domain_premium_enabled',
+    ];
 
     public const INTEGERS = ['invoice_due_days', 'renewal_notice_days', 'suspend_after_days', 'ticket_auto_close_days', 'mail_port'];
 
@@ -61,6 +75,9 @@ class Settings
         foreach ($saved as $key => $value) {
             if (isset(self::MAP[$key]) && $value !== null && $value !== '') {
                 config([self::MAP[$key] => self::cast($key, $value)]);
+            } elseif (str_starts_with($key, 'nameserver_') || $key === 'domain_lookup_provider') {
+                // No .env fallback for these, so a cleared one is simply empty.
+                config([self::MAP[$key] => null]);
             }
         }
 

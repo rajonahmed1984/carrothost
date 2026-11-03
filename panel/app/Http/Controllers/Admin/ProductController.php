@@ -5,17 +5,48 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Product;
+use App\Models\Server;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ProductController extends Controller
 {
     public function index()
     {
         return Product::with('prices')->orderBy('name')->get();
+    }
+
+    public function show(Product $product)
+    {
+        return $product->load('prices');
+    }
+
+    /** Live plan list from the chosen server, or the least used one of the module. */
+    public function packages(Request $request)
+    {
+        $data = $request->validate([
+            'module' => ['required', Rule::in(array_keys(config('billing.provisioning_modules')))],
+            'server_id' => 'nullable|integer',
+        ]);
+
+        $class = config("billing.provisioning_modules.{$data['module']}.class");
+        $server = Server::where('module', $data['module'])
+            ->when($data['server_id'] ?? null, fn ($q, $id) => $q->whereKey($id), fn ($q) => $q->where('is_active', true))
+            ->first();
+
+        if (! $class || ! $server) {
+            return response()->json(['message' => $class ? 'Add a server for this module first.' : 'This module is not connected yet.'], 422);
+        }
+
+        try {
+            return ['server' => $server->name, 'packages' => (new $class($server))->packages()];
+        } catch (Throwable $e) {
+            return response()->json(['message' => "Could not load plans from {$server->name}: {$e->getMessage()}"], 422);
+        }
     }
 
     public function store(Request $request)
@@ -49,6 +80,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'module' => ['nullable', Rule::in(array_keys(config('billing.provisioning_modules')))],
             'module_package' => 'nullable|string|max:255',
+            'server_id' => ['nullable', Rule::exists('servers', 'id')->where('module', $request->input('module'))],
+            'setup_mode' => ['sometimes', Rule::in(Product::SETUP_MODES)],
             'is_active' => 'boolean',
             'prices' => 'required|array|min:1',
             'prices.*.cycle' => ['required', 'distinct', Rule::in(array_keys(config('billing.cycles')))],

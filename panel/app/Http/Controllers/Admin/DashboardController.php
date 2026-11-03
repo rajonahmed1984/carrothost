@@ -33,7 +33,7 @@ class DashboardController extends Controller
             'servers' => $dashboard->servers(),
             'attention' => [
                 'services' => Service::with('client:id,name', 'product:id,name')
-                    ->whereIn('provision_status', ['failed', 'manual_required'])->latest()->limit(10)->get(),
+                    ->whereIn('provision_status', ['failed', 'manual_required', 'awaiting_accept'])->latest()->limit(10)->get(),
                 'domains' => Domain::with('client:id,name')
                     ->whereIn('provision_status', ['failed', 'manual_required'])->latest()->limit(10)->get(),
             ],

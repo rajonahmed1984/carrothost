@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Paperclip, Plus, Send, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, CreditCard, Eye, FileText, MessageSquare, Paperclip, Plus, Reply, Search, Send, Server, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath } from '../api';
@@ -131,8 +131,8 @@ export function TicketsPage() {
             tabs={{ value: status, onChange: setStatus, options: [{ key: 'awaiting', label: 'Awaiting Reply' }, { key: '', label: 'All' }, ...statusOptions.map(([key, label]) => ({ key, label }))] }}
             empty="No tickets here."
             columns={[
-                { header: 'Ticket', cell: (t) => <Link className="table-action-link font-semibold" to={`/tickets/${t.id}`}>#{t.number} - {t.subject}</Link> },
-                { header: 'Client', cell: (t) => t.client && <Link className="table-action-link" to={`/clients/${t.client.id}`}>{t.client.name}</Link> },
+                { header: 'Ticket', cell: (t) => <Link className="table-action-link font-semibold" to={`/admin/tickets/${t.id}`}>#{t.number} - {t.subject}</Link> },
+                { header: 'Client', cell: (t) => t.client && <Link className="table-action-link" to={`/admin/clients/${t.client.id}`}>{t.client.name}</Link> },
                 { header: 'Department', cell: (t) => departments.data?.[t.department] ?? t.department },
                 { header: 'Priority', cell: (t) => <Status value={t.priority} /> },
                 { header: 'Status', cell: (t) => <Status value={t.status} /> },
@@ -166,9 +166,9 @@ export function TicketDetailPage() {
                 <div className="space-y-4">
                     <Card title={`#${t.number} - ${t.subject}`} action={<Status value={t.status} />}>
                         <Facts rows={[
-                            ['Client', <Link key="c" className="table-action-link" to={`/clients/${t.client.id}`}>{t.client.name}</Link>],
+                            ['Client', <Link key="c" className="table-action-link" to={`/admin/clients/${t.client.id}`}>{t.client.name}</Link>],
                             ['Email', t.client.email],
-                            ['Related service', t.service ? <Link key="s" className="table-action-link" to={`/services/${t.service.id}`}>{t.service.product?.name}{t.service.domain ? ` - ${t.service.domain}` : ''}</Link> : 'None'],
+                            ['Related service', t.service ? <Link key="s" className="table-action-link" to={`/admin/products-services/${t.service.id}`}>{t.service.product?.name}{t.service.domain ? ` - ${t.service.domain}` : ''}</Link> : 'None'],
                             ['Opened', when(t.created_at)],
                         ]} />
                         <div className="grid gap-3 border-t border-slate-200 p-4 sm:grid-cols-3">
@@ -216,25 +216,158 @@ type ClientTickets = {
 
 const useClientTickets = () => useQuery({ queryKey: ['client-tickets'], queryFn: async () => (await api.get<ClientTickets>('/client/tickets')).data });
 
+type ClientTicketRow = TicketRow & { created_at: string };
+
+const ticketStatusPill: Record<string, string> = {
+    open: 'border-amber-200 bg-amber-50 text-amber-800',
+    answered: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    customer_reply: 'border-sky-200 bg-sky-50 text-sky-700',
+    on_hold: 'border-violet-200 bg-violet-50 text-violet-700',
+    closed: 'border-slate-200 bg-slate-100 text-slate-700',
+};
+const ticketStatusLabel: Record<string, string> = { open: 'Open', answered: 'Answered', customer_reply: 'In Progress', on_hold: 'On Hold', closed: 'Closed' };
+const priorityPill: Record<string, string> = {
+    high: 'border-rose-200 bg-rose-50 text-rose-700',
+    medium: 'border-amber-200 bg-amber-50 text-amber-800',
+    low: 'border-slate-200 bg-slate-50 text-slate-600',
+};
+const departmentIcon: Record<string, { icon: ReactNode; tone: string }> = {
+    support: { icon: <Server size={16} />, tone: 'bg-indigo-50 text-indigo-600' },
+    billing: { icon: <CreditCard size={16} />, tone: 'bg-emerald-50 text-emerald-600' },
+    sales: { icon: <ShoppingBag size={16} />, tone: 'bg-orange-50 text-orange-600' },
+};
+const fullDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+function TicketStat({ icon, tone, valueTone, label, value, note }: { icon: ReactNode; tone: string; valueTone: string; label: string; value: number; note: string }) {
+    return (
+        <section className="card flex items-center gap-4 p-5">
+            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${tone}`}>{icon}</span>
+            <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-800">{label}</div>
+                <div className={`text-2xl font-bold tabular-nums ${valueTone}`}>{value}</div>
+                <div className="text-xs text-slate-500">{note}</div>
+            </div>
+        </section>
+    );
+}
+
 export function ClientTicketsPage() {
     const query = useClientTickets();
+    const [search, setSearch] = useState('');
+    const [status, setStatus] = useState('');
+    const [department, setDepartment] = useState('');
+    const [sort, setSort] = useState('latest');
+    const [page, setPage] = useState(1);
+    const perPage = 10;
     const departments = Object.fromEntries(query.data?.departments.map((d) => [d.code, d.name]) ?? []);
+    const all = (query.data?.tickets ?? []) as ClientTicketRow[];
+    const updated = (t: ClientTicketRow) => t.last_reply_at ?? t.created_at;
+    const rank = { high: 0, medium: 1, low: 2 } as Record<string, number>;
+    const rows = all
+        .filter((t) => !status || (status === 'active' ? t.status !== 'closed' : t.status === status))
+        .filter((t) => !department || t.department === department)
+        .filter((t) => !search || `${t.number} ${t.subject}`.toLowerCase().includes(search.toLowerCase().replace('#', '').trim()))
+        .sort((a, b) => sort === 'oldest' ? updated(a).localeCompare(updated(b)) : sort === 'priority' ? (rank[a.priority] ?? 3) - (rank[b.priority] ?? 3) || updated(b).localeCompare(updated(a)) : updated(b).localeCompare(updated(a)));
+    const pages = Math.max(1, Math.ceil(rows.length / perPage));
+    const current = Math.min(page, pages);
+    const shown = rows.slice((current - 1) * perPage, current * perPage);
+    const count = (...statuses: string[]) => all.filter((t) => statuses.includes(t.status)).length;
+    const reset = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
 
     return (
-        <Card title="Support Tickets" action={<Link to="/tickets/new" className="ui-btn ui-btn-primary"><Plus size={14} /> Open ticket</Link>}>
+        <div className="space-y-5">
             <QueryState query={query}>
-                <Table<TicketRow>
-                    rows={query.data?.tickets ?? []}
-                    empty="You have no support tickets. Open one if you need help with a service or a bill."
-                    columns={[
-                        { header: 'Ticket', cell: (t) => <Link className="table-action-link font-semibold" to={`/tickets/${t.id}`}>#{t.number} - {t.subject}</Link> },
-                        { header: 'Department', cell: (t) => departments[t.department] ?? t.department },
-                        { header: 'Status', cell: (t) => <Status value={t.status} /> },
-                        { header: 'Last updated', cell: (t) => when(t.last_reply_at) },
-                    ]}
-                />
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <TicketStat icon={<MessageSquare size={22} />} tone="bg-emerald-100 text-emerald-700" valueTone="text-emerald-700" label="Pending Tickets" value={count('open')} note="Open tickets" />
+                    <TicketStat icon={<Clock size={22} />} tone="bg-sky-100 text-sky-700" valueTone="text-sky-700" label="In Progress Tickets" value={count('customer_reply', 'on_hold')} note="Being processed" />
+                    <TicketStat icon={<Reply size={22} />} tone="bg-orange-100 text-orange-600" valueTone="text-orange-600" label="Answered Tickets" value={count('answered')} note="Awaiting your response" />
+                    <TicketStat icon={<FileText size={22} />} tone="bg-violet-100 text-violet-700" valueTone="text-violet-700" label="All Tickets" value={all.length} note="All times" />
+                </div>
+
+                <section className="card overflow-hidden">
+                    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 p-5">
+                        <div className="flex flex-wrap items-end gap-3">
+                            <div className="relative w-60">
+                                <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                                <input type="search" aria-label="Search tickets" className="ui-input pl-9" placeholder="Search tickets..." value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
+                            </div>
+                            <label className="w-40 text-xs font-medium text-slate-600">Status
+                                <Select value={status} onChange={(e) => reset(setStatus)(e.target.value)}>
+                                    <option value="">All Status</option>
+                                    <option value="active">All except closed</option>
+                                    {Object.entries(ticketStatusLabel).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                                </Select>
+                            </label>
+                            <label className="w-44 text-xs font-medium text-slate-600">Department
+                                <Select value={department} onChange={(e) => reset(setDepartment)(e.target.value)}>
+                                    <option value="">All Departments</option>
+                                    {query.data?.departments.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
+                                </Select>
+                            </label>
+                            <label className="w-40 text-xs font-medium text-slate-600">Sort By
+                                <Select value={sort} onChange={(e) => setSort(e.target.value)}>
+                                    <option value="latest">Latest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="priority">Priority</option>
+                                </Select>
+                            </label>
+                        </div>
+                        <Link to="/tickets/new" className="ui-btn ui-btn-primary"><Plus size={14} /> Open Ticket</Link>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[56rem] text-left text-sm">
+                            <thead className="border-b border-slate-200 text-xs text-slate-700">
+                                <tr>{['Ticket ID', 'Subject', 'Department', 'Status', 'Priority', 'Last Updated', 'Actions'].map((h) => <th key={h} className={`px-5 py-3 font-semibold ${h === 'Actions' ? 'text-center' : ''}`}>{h}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                                {shown.length === 0 && (
+                                    <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-500">
+                                        {all.length ? 'No tickets match these filters.' : 'You have no support tickets. Open one if you need help with a service or a bill.'}
+                                    </td></tr>
+                                )}
+                                {shown.map((t) => {
+                                    const dept = departmentIcon[t.department] ?? { icon: <MessageSquare size={16} />, tone: 'bg-slate-100 text-slate-600' };
+
+                                    return (
+                                        <tr key={t.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                                            <td className="px-5 py-3.5">
+                                                <Link to={`/admin/tickets/${t.id}`} className="font-semibold text-slate-900 hover:text-accent">#{t.number}</Link>
+                                                <div className="text-xs text-slate-500">Created: {fullDate(t.created_at)}</div>
+                                            </td>
+                                            <td className="max-w-72 px-5 py-3.5 text-slate-800"><Link to={`/admin/tickets/${t.id}`} className="line-clamp-2 hover:text-accent">{t.subject}</Link></td>
+                                            <td className="px-5 py-3.5">
+                                                <span className="flex items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${dept.tone}`}>{dept.icon}</span>{departments[t.department] ?? t.department}</span>
+                                            </td>
+                                            <td className="px-5 py-3.5"><span className={`inline-block rounded-md border px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${ticketStatusPill[t.status] ?? ticketStatusPill.closed}`}>{ticketStatusLabel[t.status] ?? t.status}</span></td>
+                                            <td className="px-5 py-3.5"><span className={`inline-block rounded-md border px-2.5 py-1 text-xs font-semibold capitalize ${priorityPill[t.priority] ?? priorityPill.low}`}>{t.priority}</span></td>
+                                            <td className="px-5 py-3.5 whitespace-nowrap"><div className="text-slate-800">{fullDate(updated(t))}</div><div className="text-xs text-slate-500">{clock(updated(t))}</div></td>
+                                            <td className="px-5 py-3.5 text-center">
+                                                <Link to={`/admin/tickets/${t.id}`} aria-label={`View ticket #${t.number}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[var(--accent)] hover:text-accent"><Eye size={16} /></Link>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 text-sm text-slate-600">
+                        <span>Showing {rows.length ? (current - 1) * perPage + 1 : 0} to {Math.min(current * perPage, rows.length)} of {rows.length} tickets</span>
+                        {pages > 1 && (
+                            <nav aria-label="Pages" className="flex items-center gap-1.5">
+                                <button type="button" aria-label="Previous page" disabled={current <= 1} onClick={() => setPage(current - 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40"><ChevronLeft size={14} /></button>
+                                {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+                                    <button key={n} type="button" aria-current={n === current ? 'page' : undefined} onClick={() => setPage(n)} className={`h-9 min-w-9 cursor-pointer rounded-lg border px-2 text-sm font-semibold ${n === current ? 'border-[var(--accent)] bg-[var(--accent)] text-white' : 'border-slate-200 text-slate-700 hover:border-[var(--accent)]'}`}>{n}</button>
+                                ))}
+                                <button type="button" aria-label="Next page" disabled={current >= pages} onClick={() => setPage(current + 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40"><ChevronRight size={14} /></button>
+                            </nav>
+                        )}
+                    </div>
+                </section>
             </QueryState>
-        </Card>
+        </div>
     );
 }
 
@@ -242,7 +375,8 @@ export function ClientNewTicketPage() {
     const navigate = useNavigate();
     const qc = useQueryClient();
     const query = useClientTickets();
-    const [fields, setFields] = useState({ department: 'support', service_id: '', subject: '', priority: 'medium', message: '' });
+    const [params] = useSearchParams();
+    const [fields, setFields] = useState({ department: 'support', service_id: params.get('service') ?? '', subject: params.get('subject') ?? '', priority: 'medium', message: '' });
     const [file, setFile] = useState<File | null>(null);
     const set = (key: keyof typeof fields) => (e: { target: { value: string } }) => setFields({ ...fields, [key]: e.target.value });
     const open = useMutation({
@@ -316,7 +450,7 @@ export function ClientTicketPage() {
                         <Facts rows={[
                             ['Department', t.department_name],
                             ['Priority', <span key="p" className="capitalize">{t.priority}</span>],
-                            ['Related service', t.service ? `${t.service.name ?? 'Service'}${t.service.domain ? ` - ${t.service.domain}` : ''}` : 'None'],
+                            ['Related service', t.service ? <Link key="s" className="table-action-link" to={`/admin/products-services/${t.service.id}`}>{t.service.name ?? 'Service'}{t.service.domain ? ` - ${t.service.domain}` : ''}</Link> : 'None'],
                             ['Opened', when(t.created_at)],
                         ]} />
                         <div className="px-4 pb-4"><ErrorNote error={close.error} /></div>
@@ -499,7 +633,7 @@ export function ChatsPage() {
                         {list.data?.length === 0 && <li className="p-6 text-center text-sm text-slate-500">No conversations yet. Start one from a client's page.</li>}
                         {list.data?.map((c) => (
                             <li key={c.id}>
-                                <Link to={`/chats/${c.id}`} className={`flex items-start gap-3 px-3 py-3 hover:bg-slate-50 ${String(c.id) === clientId ? 'bg-[var(--accent-soft)]' : ''}`}>
+                                <Link to={`/admin/chats/${c.id}`} className={`flex items-start gap-3 px-3 py-3 hover:bg-slate-50 ${String(c.id) === clientId ? 'bg-[var(--accent-soft)]' : ''}`}>
                                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">{c.name.charAt(0).toUpperCase()}</span>
                                     <span className="min-w-0 flex-1">
                                         <span className="flex items-center justify-between gap-2">
@@ -522,9 +656,9 @@ export function ChatsPage() {
                     onActivity={() => { qc.invalidateQueries({ queryKey: ['chats'] }); qc.invalidateQueries({ queryKey: ['badges'] }); }}
                     title={(page) => (
                         <>
-                            <Link to="/chats" aria-label="All chats" className="icon-btn md:hidden"><X size={16} /></Link>
+                            <Link to="/admin/chats" aria-label="All chats" className="icon-btn md:hidden"><X size={16} /></Link>
                             <div className="min-w-0">
-                                <div className="truncate font-semibold text-slate-900">{page?.client ? <Link className="hover:underline" to={`/clients/${page.client.id}`}>{page.client.name}</Link> : 'Chat'}</div>
+                                <div className="truncate font-semibold text-slate-900">{page?.client ? <Link className="hover:underline" to={`/admin/clients/${page.client.id}`}>{page.client.name}</Link> : 'Chat'}</div>
                                 {page?.client && <div className="truncate text-xs text-slate-500">{page.client.email}</div>}
                             </div>
                         </>

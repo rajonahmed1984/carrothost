@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Domain;
 use App\Support\Branding;
 use App\Support\Settings;
 use DateTimeZone;
@@ -32,6 +33,11 @@ class SettingController extends Controller
                 'suspend_after_days' => (int) config('billing.suspend_after_days'),
                 'unsuspension_enabled' => (bool) config('billing.unsuspension_enabled'),
                 'ticket_auto_close_days' => (int) config('billing.ticket_auto_close_days'),
+                'domain_allow_register' => (bool) config('billing.domains.allow_register'),
+                'domain_allow_transfer' => (bool) config('billing.domains.allow_transfer'),
+                'domain_allow_own' => (bool) config('billing.domains.allow_own'),
+                'domain_auto_renew' => (bool) config('billing.domains.auto_renew'),
+                ...collect(range(1, 5))->mapWithKeys(fn ($n) => ["nameserver_{$n}" => config('billing.domains.nameservers.'.($n - 1))]),
                 'recaptcha_enabled' => (bool) config('recaptcha.enabled'),
                 'recaptcha_site_key' => config('recaptcha.site_key'),
                 'recaptcha_project_id' => config('recaptcha.project_id'),
@@ -76,6 +82,11 @@ class SettingController extends Controller
             'suspend_after_days' => 'required|integer|between:0,365',
             'unsuspension_enabled' => 'boolean',
             'ticket_auto_close_days' => 'required|integer|between:0,365',
+            'domain_allow_register' => 'boolean',
+            'domain_allow_transfer' => 'boolean',
+            'domain_allow_own' => 'boolean',
+            'domain_auto_renew' => 'boolean',
+            ...collect(range(1, 5))->mapWithKeys(fn ($n) => ["nameserver_{$n}" => ['nullable', 'string', 'max:255', 'regex:'.Domain::NAME_PATTERN]]),
             'recaptcha_enabled' => 'boolean',
             'recaptcha_site_key' => 'nullable|required_if:recaptcha_enabled,true,1|string|max:255',
             'recaptcha_secret_key' => 'nullable|string|max:255',
@@ -103,6 +114,10 @@ class SettingController extends Controller
                 $this->deleteImage(config("billing.{$key}"));
                 Settings::forget($key);
             }
+        }
+
+        foreach (range(1, 5) as $n) {
+            $data["nameserver_{$n}"] = strtolower(trim((string) $request->input("nameserver_{$n}"))) ?: null;
         }
 
         foreach (Settings::BOOLEANS as $key) {

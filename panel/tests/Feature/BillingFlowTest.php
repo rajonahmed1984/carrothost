@@ -294,6 +294,28 @@ class BillingFlowTest extends TestCase
         $this->actingAs($admin)->getJson('/api/clients')->assertOk();
     }
 
+    public function test_client_list_counts_active_services_and_hides_inactive_clients(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $product = Product::create(['name' => 'Starter', 'type' => 'other']);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '10.00']);
+        $active = Client::create(['name' => 'Habib', 'email' => 'habib@example.com', 'phone' => '01711000000']);
+        Client::create(['name' => 'Gone', 'email' => 'gone@example.com', 'status' => 'inactive']);
+        app(BillingService::class)->createOrder($active, [['product_id' => $product->id, 'cycle' => 'monthly'], ['product_id' => $product->id, 'cycle' => 'monthly']]);
+        $active->services()->first()->update(['status' => 'active']);
+        $this->actingAs($admin);
+
+        $this->getJson('/api/clients')->assertJsonPath('total', 2);
+        $this->getJson('/api/clients?hide_inactive=1')
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.active_services_count', 1)
+            ->assertJsonPath('data.0.services_count', 2)
+            ->assertJsonPath('data.0.active_domains_count', 0);
+        $this->getJson('/api/clients?q=01711')->assertJsonPath('data.0.name', 'Habib');
+    }
+
     public function test_login_rejects_non_admin(): void
     {
         $user = User::factory()->create(['password' => 'secret-password']);
@@ -350,8 +372,39 @@ class BillingFlowTest extends TestCase
         $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk()->assertJsonMissingPath('password');
 
         $this->getJson('/api/client/overview')->assertOk()->assertSee($myInvoice->number)->assertDontSee($theirInvoice->number);
-        $this->getJson("/api/client/invoices/{$myInvoice->id}")->assertOk();
+        $this->getJson('/api/client/invoices')->assertOk()->assertJsonCount(1)->assertJsonPath('0.number', $myInvoice->number)->assertJsonStructure([['created_at', 'paid_at']]);
+        $this->getJson("/api/client/invoices/{$myInvoice->id}")
+            ->assertOk()
+            ->assertJsonPath('client.email', 'mine@example.com')
+            ->assertJsonPath('company.name', config('app.name'))
+            ->assertJsonStructure(['created_at', 'paid_at', 'items' => [['kind', 'service_id', 'domain_id']]])
+            ->assertJsonMissingPath('client.password');
         $this->getJson("/api/client/invoices/{$theirInvoice->id}")->assertNotFound();
+    }
+
+    public function test_customer_dashboard_lists_renewals_and_activity(): void
+    {
+        Queue::fake();
+        $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
+        $product = Product::create(['name' => 'Starter', 'type' => 'other']);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '300.00']);
+        $order = app(BillingService::class)->createOrder($client, [['product_id' => $product->id, 'cycle' => 'monthly']]);
+        $client->services()->first()->update(['status' => 'active', 'next_due_date' => now()->addDays(20)]);
+        $base = ['client_id' => $client->id, 'action' => 'register', 'recurring_amount' => '1600.00', 'status' => 'active'];
+        Domain::create([...$base, 'name' => 'soon.com', 'expires_at' => now()->addDays(5)]);
+        Domain::create([...$base, 'name' => 'later.com', 'expires_at' => now()->addDays(200)]);
+        Domain::create([...$base, 'name' => 'lapsing.com', 'expires_at' => now()->addDays(3), 'auto_renew' => false]);
+        $client->tickets()->create(['number' => '100001', 'department' => 'support', 'subject' => 'Help', 'status' => 'answered', 'last_reply_at' => now()]);
+        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+
+        $this->getJson('/api/client/overview')
+            ->assertOk()
+            ->assertJsonPath('open_tickets', 1)
+            ->assertJsonCount(2, 'renewals')
+            ->assertJsonPath('renewals.0.name', 'soon.com')
+            ->assertJsonPath('renewals.1.name', 'Starter')
+            ->assertJsonPath('activity.0.title', 'Ticket #100001 answered')
+            ->assertJsonFragment(['title' => "Invoice #{$order->invoices()->value('number')} issued"]);
     }
 
     public function test_customer_session_cannot_reach_the_admin_api(): void
@@ -437,7 +490,11 @@ class BillingFlowTest extends TestCase
         $this->assertCount(1, $data['invoices']);
         $this->assertCount(1, $data['transactions']);
         $this->assertSame('shared_hosting', $data['service_counts'][0]['type']);
-        $this->assertNotEmpty($data['log']);
+
+        // The log pages separately, newest first, and covers the client's invoices too.
+        $log = $this->getJson("/api/clients/{$invoice->client_id}/log")->assertOk()->json();
+        $this->assertSame('payment.recorded', $log['data'][0]['action']);
+        $this->assertNotContains($other->id, array_column($log['data'], 'subject_id'));
     }
 
     public function test_admin_creates_invoice_and_saves_notes_for_client(): void

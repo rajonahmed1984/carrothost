@@ -14,8 +14,16 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         return Invoice::with('client:id,name')
-            ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
-            ->latest()
+            ->when($request->query('q'), fn ($query, $q) => $query->where(fn ($w) => $w
+                ->where('number', 'like', "%{$q}%")
+                ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%"))))
+            ->when($request->query('status'), function ($q, $status) {
+                if ($status === 'overdue') {
+                    return $q->where('status', 'unpaid')->whereDate('due_date', '<', today());
+                }
+                return $q->where('status', $status);
+            })
+            ->latest('id')
             ->paginate(25);
     }
 

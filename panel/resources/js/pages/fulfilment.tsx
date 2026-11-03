@@ -7,7 +7,7 @@ import { Button, ErrorNote, Field, Input, Modal, PagedTable, Status } from '../u
 export type Service = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; provision_status: string;
     provision_error: string | null; remote_id: string | null; next_due_date: string | null;
-    client: { name: string }; product: { name: string; module: string | null }; server: { name: string } | null;
+    client: { id: number; name: string }; product: { name: string; module: string | null }; server: { name: string } | null;
 };
 
 const confirmText: Record<string, string> = {
@@ -57,22 +57,76 @@ export function ServiceActions({ service }: { service: Service }) {
 
 export function ServicesPage() {
     const [status, setStatus] = useState('');
+    const [search, setSearch] = useState('');
+
+    const params: Record<string, string> = {
+        ...(search ? { q: search } : {}),
+        ...(status ? { status } : {}),
+    };
 
     return (
         <>
             <PagedTable<Service>
                 url="/services"
                 noun="services"
-                tabs={{ value: status, onChange: setStatus, options: [{ key: '', label: 'All' }, { key: 'pending', label: 'Pending' }, { key: 'active', label: 'Active' }, { key: 'suspended', label: 'Suspended' }, { key: 'terminated', label: 'Terminated' }] }}
-                params={status ? { status } : undefined}
+                search={{ value: search, onChange: setSearch, placeholder: 'Domain, username, client or product' }}
+                tabs={{
+                    value: status,
+                    onChange: setStatus,
+                    options: [
+                        { key: '', label: 'All' },
+                        { key: 'pending', label: 'Pending' },
+                        { key: 'active', label: 'Active' },
+                        { key: 'suspended', label: 'Suspended' },
+                        { key: 'terminated', label: 'Terminated' },
+                        { key: 'cancelled', label: 'Cancelled' },
+                    ],
+                }}
+                params={params}
                 empty="No services here. Services appear after an order is created."
                 columns={[
-                    { header: 'Service', cell: (s) => <><Link className="table-action-link font-semibold" to={`/services/${s.id}`}>{s.product.name}</Link><div className="text-xs text-slate-500">{s.domain ?? 'No domain'}</div></> },
-                    { header: 'Client', cell: (s) => s.client.name },
+                    {
+                        header: 'Service',
+                        cell: (s) => (
+                            <>
+                                <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>
+                                    {s.product.name}
+                                </Link>
+                                <div className="text-xs text-slate-500">{s.domain ?? 'No domain'}</div>
+                            </>
+                        ),
+                    },
+                    {
+                        header: 'Client',
+                        cell: (s) => (
+                            <Link className="table-action-link font-medium" to={`/admin/clients/${s.client.id}`}>
+                                {s.client.name}
+                            </Link>
+                        ),
+                    },
                     { header: 'Next due', cell: (s) => s.next_due_date ?? '-' },
-                    { header: 'Amount', cell: (s) => <>{money(s.recurring_amount)}<div className="text-xs text-slate-500">{s.cycle}</div></>, align: 'right' },
+                    {
+                        header: 'Amount',
+                        cell: (s) => (
+                            <>
+                                {money(s.recurring_amount)}
+                                <div className="text-xs text-slate-500 capitalize">{s.cycle}</div>
+                            </>
+                        ),
+                        align: 'right',
+                    },
                     { header: 'Status', cell: (s) => <Status value={s.status} /> },
-                    { header: 'Provisioning', cell: (s) => <><Status value={s.provision_status} />{s.provision_error && <div className="max-w-52 text-xs text-slate-500">{s.provision_error}</div>}</> },
+                    {
+                        header: 'Provisioning',
+                        cell: (s) => (
+                            <>
+                                <Status value={s.provision_status} />
+                                {s.provision_error && (
+                                    <div className="max-w-52 text-xs text-slate-500">{s.provision_error}</div>
+                                )}
+                            </>
+                        ),
+                    },
                     { header: '', cell: (s) => <ServiceActions service={s} />, align: 'right' },
                 ]}
             />
@@ -80,7 +134,7 @@ export function ServicesPage() {
     );
 }
 
-type Domain = { id: number; name: string; action: string; years: number; registrar: string | null; status: string; provision_status: string; expires_at: string | null; recurring_amount: string; client: { name: string } };
+type Domain = { id: number; name: string; action: string; years: number; registrar: string | null; status: string; provision_status: string; expires_at: string | null; recurring_amount: string; client: { id: number; name: string } };
 
 function CompleteDomain({ domain, onClose }: { domain: Domain; onClose: () => void }) {
     const qc = useQueryClient();
@@ -104,16 +158,56 @@ function CompleteDomain({ domain, onClose }: { domain: Domain; onClose: () => vo
 
 export function DomainsPage() {
     const [completing, setCompleting] = useState<Domain | null>(null);
+    const [status, setStatus] = useState('');
+    const [search, setSearch] = useState('');
+
+    const params: Record<string, string> = {
+        ...(search ? { q: search } : {}),
+        ...(status ? { status } : {}),
+    };
 
     return (
         <>
             <PagedTable<Domain>
                 url="/domains"
                 noun="domains"
+                search={{ value: search, onChange: setSearch, placeholder: 'Domain name, registrar or client' }}
+                tabs={{
+                    value: status,
+                    onChange: setStatus,
+                    options: [
+                        { key: '', label: 'All' },
+                        { key: 'pending', label: 'Pending' },
+                        { key: 'active', label: 'Active' },
+                        { key: 'expired', label: 'Expired' },
+                        { key: 'cancelled', label: 'Cancelled' },
+                        { key: 'fraud', label: 'Fraud' },
+                    ],
+                }}
+                params={params}
                 empty="No domains yet. Domains appear after an order is created."
                 columns={[
-                    { header: 'Domain', cell: (d) => <><Link className="table-action-link font-semibold" to={`/domains/${d.id}`}>{d.name}</Link><div className="text-xs text-slate-500">{d.action}, {d.years} yr</div></> },
-                    { header: 'Client', cell: (d) => d.client.name },
+                    {
+                        header: 'Domain',
+                        cell: (d) => (
+                            <>
+                                <Link className="table-action-link font-semibold" to={`/admin/domain-registrations/${d.id}`}>
+                                    {d.name}
+                                </Link>
+                                <div className="text-xs text-slate-500 capitalize">
+                                    {d.action}, {d.years} yr
+                                </div>
+                            </>
+                        ),
+                    },
+                    {
+                        header: 'Client',
+                        cell: (d) => (
+                            <Link className="table-action-link font-medium" to={`/admin/clients/${d.client.id}`}>
+                                {d.client.name}
+                            </Link>
+                        ),
+                    },
                     { header: 'Registrar', cell: (d) => d.registrar ?? 'Manual' },
                     { header: 'Expires', cell: (d) => d.expires_at ?? '-' },
                     { header: 'Renewal', cell: (d) => money(d.recurring_amount), align: 'right' },

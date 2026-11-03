@@ -11,6 +11,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginService
@@ -95,6 +96,11 @@ class LoginService
 
         if ($account instanceof Client) {
             $account->update(['last_login_at' => now(), 'last_login_ip' => $request->ip()]);
+            $account->sessions()->create([
+                'session_id' => $request->session()->getId(),
+                'ip_address' => $request->ip(),
+                'user_agent' => Str::limit((string) $request->userAgent(), 500),
+            ]);
             ActivityLog::record('client.login', $account, ['ip' => $request->ip()]);
         } else {
             ActivityLog::record('admin.login', context: ['ip' => $request->ip()]);

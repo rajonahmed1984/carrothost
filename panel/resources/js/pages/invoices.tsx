@@ -38,7 +38,7 @@ function InvoiceModal({ id, onClose }: { id: number; onClose: () => void }) {
                 {inv && (
                     <div className="space-y-4">
                         <div className="flex items-start justify-between gap-3">
-                            <div><Link className="table-action-link font-semibold" to={`/clients/${inv.client.id}`}>{inv.client.name}</Link><div className="text-xs text-slate-500">{inv.client.email} - Due {inv.due_date}</div></div>
+                            <div><Link className="table-action-link font-semibold" to={`/admin/clients/${inv.client.id}`}>{inv.client.name}</Link><div className="text-xs text-slate-500">{inv.client.email} - Due {inv.due_date}</div></div>
                             <Status value={inv.status} />
                         </div>
                         <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200">
@@ -79,28 +79,88 @@ function InvoiceModal({ id, onClose }: { id: number; onClose: () => void }) {
     );
 }
 
-export function InvoicesPage() {
+export function InvoicesPage({ mode = 'all' }: { mode?: 'all' | 'paid' | 'unpaid' | 'overdue' | 'cancelled' | 'refunded' } = {}) {
     const [status, setStatus] = useState('');
+    const [search, setSearch] = useState('');
     const { id } = useParams();
     const navigate = useNavigate();
+
+    const activeStatus = mode === 'all' ? status : mode;
+    const queryParams: Record<string, string> = {
+        ...(activeStatus ? { status: activeStatus } : {}),
+        ...(search ? { q: search } : {}),
+    };
+
+    const nounMap: Record<string, string> = {
+        all: 'invoices',
+        paid: 'paid invoices',
+        unpaid: 'unpaid invoices',
+        overdue: 'overdue invoices',
+        cancelled: 'cancelled invoices',
+        refunded: 'refunded invoices',
+    };
+
+    const emptyMap: Record<string, string> = {
+        all: 'No invoices here.',
+        paid: 'No paid invoices found.',
+        unpaid: 'No unpaid invoices found.',
+        overdue: 'No overdue invoices found.',
+        cancelled: 'No cancelled invoices found.',
+        refunded: 'No refunded invoices found.',
+    };
+
+    const basePath = mode === 'all' ? '/admin/paid-invoices' : `/admin/${mode}-invoices`;
 
     return (
         <>
             <PagedTable<Invoice>
                 url="/invoices"
-                noun="invoices"
-                tabs={{ value: status, onChange: setStatus, options: [{ key: '', label: 'All' }, { key: 'unpaid', label: 'Unpaid' }, { key: 'paid', label: 'Paid' }, { key: 'cancelled', label: 'Cancelled' }] }}
-                params={status ? { status } : undefined}
-                empty="No invoices here."
+                noun={nounMap[mode] ?? 'invoices'}
+                search={{ value: search, onChange: setSearch, placeholder: 'Invoice # or client name...' }}
+                tabs={mode === 'all' ? { value: status, onChange: setStatus, options: [{ key: '', label: 'All' }, { key: 'unpaid', label: 'Unpaid' }, { key: 'paid', label: 'Paid' }, { key: 'cancelled', label: 'Cancelled' }, { key: 'refunded', label: 'Refunded' }] } : undefined}
+                params={queryParams}
+                empty={emptyMap[mode] ?? 'No invoices found.'}
                 columns={[
-                    { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/invoices/${i.id}`}>{i.number}</Link> },
-                    { header: 'Client', cell: (i) => <Link className="hover:text-accent" to={`/clients/${i.client.id}`}>{i.client.name}</Link> },
+                    { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`${basePath}/${i.id}`}>{i.number}</Link> },
+                    { header: 'Client', cell: (i) => <Link className="hover:text-accent" to={`/admin/clients/${i.client.id}`}>{i.client.name}</Link> },
                     { header: 'Due', cell: (i) => i.due_date },
                     { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
                     { header: 'Status', cell: (i) => <Status value={i.status} /> },
                 ]}
             />
-            {id && <InvoiceModal id={Number(id)} onClose={() => navigate('/invoices')} />}
+            {id && <InvoiceModal id={Number(id)} onClose={() => navigate(-1)} />}
         </>
+    );
+}
+
+export type Transaction = {
+    id: number;
+    gateway: string;
+    transaction_id: string;
+    amount: string;
+    currency: string;
+    created_at: string;
+    invoice?: { id: number; number: string; client?: { id: number; name: string } } | null;
+};
+
+export function TransactionsPage() {
+    const [search, setSearch] = useState('');
+
+    return (
+        <PagedTable<Transaction>
+            url="/transactions"
+            noun="transactions"
+            search={{ value: search, onChange: setSearch, placeholder: 'Transaction ID, gateway, invoice #...' }}
+            params={search ? { q: search } : undefined}
+            empty="No transactions found."
+            columns={[
+                { header: 'Date', cell: (t) => new Date(t.created_at).toLocaleDateString('en-GB') },
+                { header: 'Client', cell: (t) => t.invoice?.client ? <Link className="table-action-link font-semibold" to={`/admin/clients/${t.invoice.client.id}`}>{t.invoice.client.name}</Link> : '-' },
+                { header: 'Invoice', cell: (t) => t.invoice ? <Link className="table-action-link font-semibold" to={`/admin/paid-invoices/${t.invoice.id}`}>#{t.invoice.number}</Link> : '-' },
+                { header: 'Gateway', cell: (t) => <span className="capitalize">{t.gateway}</span> },
+                { header: 'Transaction ID', cell: (t) => <span className="font-mono text-xs text-slate-600 break-all">{t.transaction_id}</span> },
+                { header: 'Amount', cell: (t) => money(t.amount, t.currency), align: 'right' },
+            ]}
+        />
     );
 }

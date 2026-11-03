@@ -73,6 +73,10 @@ const tones: Record<string, string> = {
     queued: 'bg-amber-100 text-amber-800',
     running: 'bg-amber-100 text-amber-800',
     manual_required: 'bg-amber-100 text-amber-800',
+    awaiting_accept: 'bg-amber-100 text-amber-800',
+    refunded: 'bg-slate-200 text-slate-700',
+    cancelled: 'bg-slate-200 text-slate-700',
+    terminated: 'bg-rose-100 text-rose-700',
     suspended: 'bg-rose-100 text-rose-700',
     failed: 'bg-rose-100 text-rose-700',
     open: 'bg-amber-100 text-amber-800',
@@ -103,7 +107,9 @@ export function Table<T extends { id?: number; code?: string }>({ columns, rows,
                         {rest.map((c) => {
                             const value = c.cell(row);
 
-                            return c.header ? (
+                            const isAction = !c.header || ((c.header === 'Action' || c.header === 'Actions') && c.align === 'right');
+
+                            return !isAction ? (
                                 <div key={c.header} className="flex items-start justify-between gap-4 text-xs">
                                     <span className="text-[10px] font-semibold uppercase text-slate-400">{c.header}</span>
                                     <span className="text-right text-slate-700">{value}</span>

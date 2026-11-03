@@ -15,9 +15,16 @@ class Product extends Model
         return ['is_active' => 'boolean'];
     }
 
+    public const SETUP_MODES = ['order', 'payment', 'accept', 'manual'];
+
     public function group(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'product_group_id');
+    }
+
+    public function server(): BelongsTo
+    {
+        return $this->belongsTo(Server::class);
     }
 
     public function prices(): HasMany

@@ -1,5 +1,11 @@
 <?php
 
+use App\Payments\BkashDriver;
+use App\Payments\PayPalDriver;
+use App\Payments\SslCommerzDriver;
+use App\Provisioning\CpanelModule;
+use App\Provisioning\WebuzoModule;
+
 return [
     'currency' => env('BILLING_CURRENCY', 'BDT'),
 
@@ -35,6 +41,17 @@ return [
     // Close tickets left Answered this many days with no customer reply. 0 = never.
     'ticket_auto_close_days' => 0,
 
+    // Domain ordering and defaults. Admin > Settings > Domains overrides these.
+    'domains' => [
+        'allow_register' => true,
+        'allow_transfer' => true,
+        'allow_own' => true, // hosting for a domain registered elsewhere
+        'auto_renew' => true, // whether new domains get renewal invoices
+        'nameservers' => [null, null, null, null, null],
+        'lookup_provider' => null, // registrar code that answers availability checks
+        'premium_enabled' => false, // premium names: true = ask for a quote, false = shown as unavailable
+    ],
+
     // Support ticket departments a customer can choose from.
     'ticket_departments' => [
         'support' => 'Technical Support',
@@ -46,8 +63,8 @@ return [
     // It remains an explicit admin action.
 
     'provisioning_modules' => [
-        'cpanel' => ['name' => 'cPanel / WHM', 'class' => App\Provisioning\CpanelModule::class],
-        'webuzo' => ['name' => 'Webuzo', 'class' => App\Provisioning\WebuzoModule::class],
+        'cpanel' => ['name' => 'cPanel / WHM', 'class' => CpanelModule::class],
+        'webuzo' => ['name' => 'Webuzo', 'class' => WebuzoModule::class],
         'webdock' => ['name' => 'Webdock', 'class' => null],
     ],
 
@@ -67,7 +84,7 @@ return [
         'bkash' => [
             'name' => 'bKash',
             'implemented' => true,
-            'driver' => App\Payments\BkashDriver::class,
+            'driver' => BkashDriver::class,
             'has_sandbox' => true,
             'fields' => [
                 ['key' => 'display_name', 'label' => 'Display name', 'required' => true],
@@ -80,7 +97,7 @@ return [
         'sslcommerz' => [
             'name' => 'SSLCommerz',
             'implemented' => true,
-            'driver' => App\Payments\SslCommerzDriver::class,
+            'driver' => SslCommerzDriver::class,
             'has_sandbox' => true,
             'fields' => [
                 ['key' => 'display_name', 'label' => 'Display name', 'required' => true],
@@ -92,7 +109,7 @@ return [
         'paypal' => [
             'name' => 'PayPal',
             'implemented' => true,
-            'driver' => App\Payments\PayPalDriver::class,
+            'driver' => PayPalDriver::class,
             'has_sandbox' => true,
             'callback' => '/pay/paypal/ipn',
             'fields' => [

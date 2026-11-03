@@ -9,6 +9,7 @@ use RuntimeException;
 
 /**
  * Read-only LogicBoxes HTTP API access, used by StarGate/UK2 and ResellCube.
+ * Balance and availability lookups are read-only.
  * Registering and renewing spend the reseller balance, so they are deliberately
  * not here until they can be exercised against a reachable API.
  */
@@ -19,6 +20,27 @@ class LogicBoxesClient
     public function balance(): array
     {
         return $this->get('billing/reseller-balance.json', ['reseller-id' => $this->registrar->reseller_id]);
+    }
+
+    /** $tld without the leading dot, e.g. com or com.bd. */
+    public function isAvailable(string $sld, string $tld): bool
+    {
+        $result = $this->get('domains/available.json', ['domain-name' => $sld, 'tlds' => $tld]);
+        // Keyed by the full domain name, e.g. {"example.com": {"status": "available"}}.
+        $status = ($result["{$sld}.{$tld}"] ?? reset($result) ?: [])['status'] ?? null;
+
+        if (! is_string($status)) {
+            throw new RuntimeException('Registrar returned no availability status.');
+        }
+
+        return $status === 'available';
+    }
+
+    public function isPremium(string $domain): bool
+    {
+        $premium = $this->get('domains/premium-check.json', ['domain-name' => $domain])['premium'] ?? false;
+
+        return $premium === true || $premium === 'true';
     }
 
     private function get(string $path, array $params): array

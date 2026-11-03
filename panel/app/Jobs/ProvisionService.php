@@ -39,7 +39,7 @@ class ProvisionService implements ShouldQueue
             return;
         }
 
-        $server = $service->server ?? $this->pickServer($moduleCode);
+        $server = $service->server ?? $this->pinnedServer($service) ?? $this->pickServer($moduleCode);
 
         if (! $server) {
             $service->update(['provision_status' => 'failed', 'provision_error' => "No active {$moduleCode} server has capacity."]);
@@ -93,6 +93,14 @@ class ProvisionService implements ShouldQueue
         $module->terminate($service);
 
         return ['status' => 'terminated'];
+    }
+
+    /** The server the product is tied to, while it is active and still runs that module. */
+    private function pinnedServer(Service $service): ?Server
+    {
+        $server = $service->product->server;
+
+        return $server?->is_active && $server->module === $service->product->module ? $server : null;
     }
 
     private function pickServer(string $moduleCode): ?Server

@@ -3,7 +3,10 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Auth;
 use App\Http\Controllers\Client\AccountController;
+use App\Http\Controllers\Client\AccountSettingsController;
 use App\Http\Controllers\Client\ChatController as ClientChatController;
+use App\Http\Controllers\Client\DomainController as ClientDomainController;
+use App\Http\Controllers\Client\ServiceController as ClientServiceController;
 use App\Http\Controllers\Client\StoreController;
 use App\Http\Controllers\Client\TicketController as ClientTicketController;
 use App\Http\Controllers\PaymentCallbackController;
@@ -28,6 +31,8 @@ Route::prefix('api')->group(function () {
         Route::post('reset-password', 'reset')->middleware('throttle:5,1');
     });
 
+    Route::match(['get', 'post'], 'contacts/verify', [AccountSettingsController::class, 'verifyContactPublic']);
+
     Route::prefix('client')->group(function () {
         Route::post('login', [AccountController::class, 'login'])->middleware('throttle:login');
 
@@ -49,10 +54,39 @@ Route::prefix('api')->group(function () {
                 Route::put('security', [AccountController::class, 'security']);
                 Route::post('password', [Auth\PasswordController::class, 'change'])->defaults('portal', Portal::CLIENT)->middleware('throttle:5,1');
                 Route::get('overview', [AccountController::class, 'overview']);
+                Route::get('services', [ClientServiceController::class, 'index']);
+                Route::get('services/{id}', [ClientServiceController::class, 'show'])->whereNumber('id');
+                Route::post('services/{id}/password', [ClientServiceController::class, 'password'])->whereNumber('id')->middleware('throttle:10,1');
+                Route::controller(AccountSettingsController::class)->prefix('account')->group(function () {
+                    Route::get('profile', 'profile');
+                    Route::put('profile', 'updateProfile');
+                    Route::get('contacts', 'contacts');
+                    Route::post('contacts', 'storeContact')->middleware('throttle:20,1');
+                    Route::put('contacts/{id}', 'updateContact')->whereNumber('id');
+                    Route::delete('contacts/{id}', 'destroyContact')->whereNumber('id');
+                    Route::post('contacts/{id}/resend', 'resendContactVerification')->whereNumber('id');
+                    Route::post('contacts/verify', 'verifyContact');
+                    Route::get('emails', 'emails');
+                    Route::get('emails/{id}', 'email')->whereNumber('id');
+                    Route::get('support-pin', 'supportPin');
+                    Route::post('support-pin', 'generateSupportPin')->middleware('throttle:10,1');
+                    Route::post('support-pin/cancel', 'cancelSupportPin');
+                    Route::delete('support-pin/{id}', 'cancelSupportPin')->whereNumber('id');
+                    Route::get('sessions', 'sessions');
+                    Route::delete('sessions/{id}', 'destroySession')->whereNumber('id');
+                    Route::delete('sessions', 'destroyOtherSessions');
+                });
+                Route::get('domains', [ClientDomainController::class, 'index']);
+                Route::get('domains/{id}', [ClientDomainController::class, 'show'])->whereNumber('id');
+                Route::put('domains/{id}', [ClientDomainController::class, 'update'])->whereNumber('id');
+                Route::get('invoices', [AccountController::class, 'invoices']);
                 Route::get('invoices/{id}', [AccountController::class, 'invoice'])->whereNumber('id');
                 Route::post('invoices/{id}/pay', [AccountController::class, 'pay'])->whereNumber('id')->middleware('throttle:10,1');
                 Route::get('store', [StoreController::class, 'index']);
                 Route::post('orders', [StoreController::class, 'order'])->middleware('throttle:10,1');
+                Route::get('store/domains', [StoreController::class, 'domainOptions']);
+                Route::get('store/domains/lookup', [StoreController::class, 'lookup'])->middleware('throttle:30,1');
+                Route::post('orders/domain', [StoreController::class, 'orderDomain'])->middleware('throttle:10,1');
 
                 Route::get('badges', [ClientChatController::class, 'badges']);
                 Route::get('tickets', [ClientTicketController::class, 'index']);
@@ -78,11 +112,22 @@ Route::prefix('api')->group(function () {
 
         Route::apiResource('clients', Admin\ClientController::class);
         Route::put('clients/{client}/notes', [Admin\ClientController::class, 'notes']);
+        Route::get('clients/{client}/log', [Admin\ClientController::class, 'log']);
         Route::post('clients/{client}/invoices', [Admin\ClientController::class, 'invoice']);
         Route::post('clients/{client}/close', [Admin\ClientController::class, 'close']);
         Route::post('clients/{client}/reopen', [Admin\ClientController::class, 'reopen']);
+        Route::get('clients/{client}/users', [Admin\ClientController::class, 'users']);
+        Route::post('clients/{client}/users', [Admin\ClientController::class, 'storeUser']);
+        Route::put('clients/{client}/users/{user}', [Admin\ClientController::class, 'updateUser']);
+        Route::post('clients/{client}/users/{user}/approve', [Admin\ClientController::class, 'approveUser']);
+        Route::delete('clients/{client}/users/{user}', [Admin\ClientController::class, 'destroyUser']);
         Route::apiResource('product-groups', Admin\ProductGroupController::class)->except('show');
-        Route::apiResource('products', Admin\ProductController::class)->except('show');
+        Route::get('products/packages', [Admin\ProductController::class, 'packages']);
+        Route::apiResource('products', Admin\ProductController::class);
+        Route::put('tlds', [Admin\TldController::class, 'bulkUpdate']);
+        Route::get('tlds/lookup', [Admin\TldController::class, 'lookup']);
+        Route::put('tlds/lookup', [Admin\TldController::class, 'updateLookup']);
+        Route::post('tlds/pricing', [Admin\TldController::class, 'bulkPricing']);
         Route::apiResource('tlds', Admin\TldController::class)->except('show');
         Route::apiResource('servers', Admin\ServerController::class)->except('show');
         Route::post('servers/{server}/test', [Admin\ServerController::class, 'test']);
@@ -93,12 +138,20 @@ Route::prefix('api')->group(function () {
 
         Route::get('orders', [Admin\OrderController::class, 'index']);
         Route::post('orders', [Admin\OrderController::class, 'store']);
+        Route::post('orders/batch-action', [Admin\OrderController::class, 'batchAction']);
         Route::get('orders/{order}', [Admin\OrderController::class, 'show']);
+        Route::post('orders/{order}/accept', [Admin\OrderController::class, 'accept']);
+        Route::post('orders/{order}/cancel', [Admin\OrderController::class, 'cancel']);
+        Route::patch('orders/{order}/status', [Admin\OrderController::class, 'updateStatus']);
+        Route::post('orders/{order}/resend-verification', [Admin\OrderController::class, 'resendVerification']);
+        Route::post('orders/{order}/notes', [Admin\OrderController::class, 'saveNotes']);
+        Route::delete('orders/{order}', [Admin\OrderController::class, 'destroy']);
 
         Route::get('invoices', [Admin\InvoiceController::class, 'index']);
         Route::get('invoices/{invoice}', [Admin\InvoiceController::class, 'show']);
         Route::post('invoices/{invoice}/payments', [Admin\InvoiceController::class, 'pay']);
         Route::post('invoices/{invoice}/cancel', [Admin\InvoiceController::class, 'cancel']);
+        Route::get('transactions', [Admin\TransactionController::class, 'index']);
 
         Route::get('services', [Admin\ServiceController::class, 'index']);
         Route::get('services/{service}', [Admin\ServiceController::class, 'show']);
@@ -107,6 +160,8 @@ Route::prefix('api')->group(function () {
 
         Route::get('domains', [Admin\DomainController::class, 'index']);
         Route::get('domains/{domain}', [Admin\DomainController::class, 'show']);
+        Route::put('domains/{domain}', [Admin\DomainController::class, 'update']);
+        Route::get('domains/{domain}/epp', [Admin\DomainController::class, 'epp']);
         Route::post('domains/{domain}/complete', [Admin\DomainController::class, 'complete']);
 
         Route::get('gateways', [Admin\GatewayController::class, 'index']);

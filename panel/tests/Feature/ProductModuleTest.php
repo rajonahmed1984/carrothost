@@ -1,0 +1,134 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Jobs\ProvisionService;
+use App\Models\Client;
+use App\Models\Product;
+use App\Models\Server;
+use App\Models\User;
+use App\Services\BillingService;
+use App\Services\RenewalService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
+
+class ProductModuleTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function admin(): User
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+
+        return $admin;
+    }
+
+    private function orderFor(string $setupMode): array
+    {
+        $product = Product::create(['name' => 'Starter', 'type' => 'shared_hosting', 'module' => 'webuzo', 'module_package' => 'starter', 'setup_mode' => $setupMode]);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '300.00']);
+        $client = Client::create(['name' => 'A', 'email' => 'a@example.com']);
+        $order = app(BillingService::class)->createOrder($client, [['product_id' => $product->id, 'cycle' => 'monthly', 'domain' => 'a.com']]);
+
+        return [$order, $order->services()->sole(), $order->invoices()->sole()];
+    }
+
+    public function test_plans_are_loaded_live_from_the_server(): void
+    {
+        Http::fake(['*' => Http::response(['plans' => [
+            'starter' => ['plan' => 'starter', 'plan_name' => 'Starter'],
+            'advanced-plus' => ['plan' => 'advanced-plus', 'plan_name' => 'Advanced Plus'],
+        ]])]);
+        Server::create(['name' => 'Webuzo 1', 'module' => 'webuzo', 'hostname' => 'wz.test', 'username' => 'admin', 'credentials' => 'key']);
+
+        $this->actingAs($this->admin())->getJson('/api/products/packages?module=webuzo')
+            ->assertOk()
+            ->assertJsonPath('server', 'Webuzo 1')
+            ->assertJsonPath('packages.1', ['id' => 'advanced-plus', 'name' => 'Advanced Plus']);
+
+        $this->getJson('/api/products/packages?module=cpanel')->assertUnprocessable()->assertJsonPath('message', 'Add a server for this module first.');
+    }
+
+    public function test_product_saves_server_and_setup_mode(): void
+    {
+        $cpanel = Server::create(['name' => 'WHM', 'module' => 'cpanel', 'hostname' => 'whm.test']);
+        $webuzo = Server::create(['name' => 'WZ', 'module' => 'webuzo', 'hostname' => 'wz.test']);
+        $body = ['name' => 'Starter', 'type' => 'shared_hosting', 'module' => 'webuzo', 'module_package' => 'starter', 'setup_mode' => 'accept', 'prices' => [['cycle' => 'monthly', 'price' => '300']]];
+        $this->actingAs($this->admin());
+
+        $this->postJson('/api/products', [...$body, 'server_id' => $cpanel->id])->assertJsonValidationErrors('server_id');
+
+        $id = $this->postJson('/api/products', [...$body, 'server_id' => $webuzo->id])->assertCreated()->json('id');
+        $this->getJson("/api/products/{$id}")->assertOk()->assertJsonPath('server_id', $webuzo->id)->assertJsonPath('setup_mode', 'accept');
+    }
+
+    public function test_setup_on_order_provisions_before_payment_and_suspends_if_unpaid(): void
+    {
+        Queue::fake();
+        [, $service, $invoice] = $this->orderFor('order');
+
+        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->serviceId === $service->id && $job->action === 'create');
+        $this->assertSame('active', $service->status);
+        $this->assertSame($invoice->due_date->toDateString(), $service->next_due_date->toDateString());
+
+        // The first invoice already covers this due date, so no renewal invoice is raised for it.
+        $this->assertSame(0, app(RenewalService::class)->generateInvoices());
+
+        $service->update(['provision_status' => 'done', 'remote_id' => 'auser']);
+        $this->travel(10)->days();
+        $this->assertSame(1, app(RenewalService::class)->suspendOverdue());
+    }
+
+    public function test_paying_an_order_set_up_on_order_does_not_create_it_twice(): void
+    {
+        Queue::fake();
+        [, $service, $invoice] = $this->orderFor('order');
+        $service->update(['provision_status' => 'done', 'remote_id' => 'auser']);
+
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'T1', '300.00');
+
+        Queue::assertPushed(ProvisionService::class, 1);
+        $this->assertSame('done', $service->refresh()->provision_status);
+    }
+
+    public function test_accept_mode_waits_for_the_admin(): void
+    {
+        Queue::fake();
+        [$order, $service, $invoice] = $this->orderFor('accept');
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'T1', '300.00');
+
+        Queue::assertNothingPushed();
+        $this->assertSame('awaiting_accept', $service->refresh()->provision_status);
+
+        $this->actingAs($this->admin())->postJson("/api/orders/{$order->id}/accept")->assertOk();
+        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->serviceId === $service->id && $job->action === 'create');
+        $this->postJson("/api/orders/{$order->id}/accept")->assertJsonValidationErrors('order');
+    }
+
+    public function test_manual_mode_never_provisions(): void
+    {
+        Queue::fake();
+        [, $service, $invoice] = $this->orderFor('manual');
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'T1', '300.00');
+
+        Queue::assertNothingPushed();
+        $this->assertSame('manual_required', $service->refresh()->provision_status);
+    }
+
+    public function test_job_uses_the_products_server(): void
+    {
+        Http::fake(['*' => Http::response(['done' => ['msg' => 'saved']])]);
+        Server::create(['name' => 'Empty', 'module' => 'webuzo', 'hostname' => 'empty.test']);
+        $pinned = Server::create(['name' => 'Pinned', 'module' => 'webuzo', 'hostname' => 'pinned.test']);
+        [, $service, $invoice] = $this->orderFor('payment');
+        $service->product->update(['server_id' => $pinned->id]);
+
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'T1', '300.00');
+
+        $this->assertSame($pinned->id, $service->refresh()->server_id);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'pinned.test'));
+    }
+}

@@ -39,6 +39,7 @@ class RenewalService
 
         $domains = Domain::with('client')
             ->where('status', 'active')
+            ->where('auto_renew', true)
             ->whereDate('expires_at', '<=', $cutoff)
             ->get();
 

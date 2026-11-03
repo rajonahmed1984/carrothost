@@ -21,7 +21,7 @@ class TicketController extends Controller
         return [
             'tickets' => $client->tickets()
                 ->latest('last_reply_at')
-                ->get(['id', 'number', 'department', 'subject', 'priority', 'status', 'last_reply_at']),
+                ->get(['id', 'number', 'department', 'subject', 'priority', 'status', 'last_reply_at', 'created_at']),
             'departments' => collect(config('billing.ticket_departments'))->map(fn ($name, $code) => ['code' => $code, 'name' => $name])->values(),
             'services' => $client->services()->with('product:id,name')->latest()->get(['id', 'product_id', 'domain']),
         ];

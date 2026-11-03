@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\InvoicePaid;
 use App\Jobs\ProvisionService;
 use App\Models\ActivityLog;
 use App\Models\Client;
@@ -20,13 +21,14 @@ class BillingService
 {
     /**
      * @param  array<int, array{product_id: int, cycle: string, domain?: ?string}>  $services
-     * @param  array<int, array{name: string, action: string, years: int}>  $domains
+     * @param  array<int, array{name: string, action: string, years: int, epp_code?: ?string}>  $domains
      */
     public function createOrder(Client $client, array $services, array $domains = []): Order
     {
         return DB::transaction(function () use ($client, $services, $domains) {
             $order = Order::create(['client_id' => $client->id]);
             $items = [];
+            $setupOnOrder = [];
 
             foreach ($services as $line) {
                 $product = Product::with('prices')->findOrFail($line['product_id']);
@@ -44,6 +46,10 @@ class BillingService
                     'cycle' => $line['cycle'],
                     'recurring_amount' => $price->price,
                 ]);
+
+                if ($product->module && $product->setup_mode === 'order') {
+                    $setupOnOrder[] = $service;
+                }
 
                 $items[] = [
                     'description' => "{$product->name} ({$line['cycle']})".($service->domain ? " - {$service->domain}" : ''),
@@ -65,7 +71,10 @@ class BillingService
                     'name' => $name,
                     'registrar' => $tld->registrar,
                     'action' => $line['action'],
+                    'epp_code' => $line['epp_code'] ?? null,
                     'years' => $line['years'],
+                    'auto_renew' => (bool) config('billing.domains.auto_renew'),
+                    'nameservers' => Domain::defaultNameservers() ?: null,
                     'recurring_amount' => bcmul($tld->renew_price, $years, 2),
                 ]);
 
@@ -77,7 +86,19 @@ class BillingService
                 ];
             }
 
-            $this->createInvoice($client, $items, now()->addDays((int) config('billing.invoice_due_days')), $order);
+            $invoice = $this->createInvoice($client, $items, now()->addDays((int) config('billing.invoice_due_days')), $order);
+
+            // Set up before payment: the service runs from now and falls due with the first
+            // invoice, so overdue suspension catches it if that invoice is never paid.
+            foreach ($setupOnOrder as $service) {
+                $service->update([
+                    'status' => 'active',
+                    'next_due_date' => $invoice->due_date,
+                    'renewal_invoiced_for' => $invoice->due_date,
+                    'provision_status' => 'queued',
+                ]);
+                ProvisionService::dispatch($service->id, 'create')->afterCommit();
+            }
 
             return $order;
         });
@@ -157,7 +178,7 @@ class BillingService
         });
 
         if ($becamePaid) {
-            event(new \App\Events\InvoicePaid($locked));
+            event(new InvoicePaid($locked));
         }
 
         return $payment;
@@ -182,13 +203,21 @@ class BillingService
 
     private function activateService(Service $service): void
     {
+        $product = $service->product;
+        $alreadySetUp = $service->remote_id || in_array($service->provision_status, ['queued', 'running', 'done'], true);
+
         $service->update([
             'status' => 'active',
             'next_due_date' => now()->addMonthsNoOverflow($this->cycleMonths($service->cycle))->toDateString(),
-            'provision_status' => $service->product->module ? 'queued' : 'manual_required',
+            'renewal_invoiced_for' => null,
+            ...$alreadySetUp ? [] : ['provision_status' => match (true) {
+                ! $product->module, $product->setup_mode === 'manual' => 'manual_required',
+                $product->setup_mode === 'accept' => 'awaiting_accept',
+                default => 'queued',
+            }],
         ]);
 
-        if ($service->product->module) {
+        if (! $alreadySetUp && $service->provision_status === 'queued') {
             ProvisionService::dispatch($service->id, 'create')->afterCommit();
         }
     }
@@ -227,7 +256,7 @@ class BillingService
         ]);
     }
 
-    private function tldFor(string $domain): Tld
+    public function tldFor(string $domain): Tld
     {
         // Longest suffix first, so example.com.bd matches .com.bd rather than .bd.
         $parts = explode('.', $domain);
