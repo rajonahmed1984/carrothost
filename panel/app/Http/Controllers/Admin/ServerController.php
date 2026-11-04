@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Server;
+use App\Models\ServerCost;
+use App\Services\ServerProfit;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -12,10 +15,67 @@ use Throwable;
 
 class ServerController extends Controller
 {
-    public function index()
+    public function index(ServerProfit $profit)
     {
-        return Server::withCount(['services' => fn ($q) => $q->whereIn('status', ['active', 'suspended'])])
-            ->orderBy('name')->get();
+        $servers = Server::withCount(['services' => fn ($q) => $q->whereIn('status', ['active', 'suspended'])])->orderBy('name')->get();
+        $month = CarbonImmutable::now()->startOfMonth();
+        $report = collect($profit->report($month, $month, true)['servers'])->keyBy('id');
+
+        return $servers->map(fn (Server $s) => [
+            ...$s->toArray(),
+            'this_month' => $report[$s->id]['months'][$month->format('Y-m')] ?? ['cost' => '0.00', 'sales' => '0.00', 'profit' => '0.00'],
+        ]);
+    }
+
+    /** Profit by month: GET servers/profit?from=2026-01&to=2026-11&spread=1&server_id=1 */
+    public function profit(Request $request, ServerProfit $profit)
+    {
+        $data = $request->validate([
+            'from' => 'required|date_format:Y-m',
+            'to' => 'required|date_format:Y-m|after_or_equal:from',
+            'spread' => 'boolean',
+            'server_id' => 'nullable|integer|exists:servers,id',
+        ]);
+        $from = CarbonImmutable::createFromFormat('Y-m-d', "{$data['from']}-01");
+        $to = CarbonImmutable::createFromFormat('Y-m-d', "{$data['to']}-01");
+
+        if ($from->diffInMonths($to) > 60) {
+            throw ValidationException::withMessages(['from' => 'Choose at most five years.']);
+        }
+
+        return $profit->report($from, $to, $request->boolean('spread'), $data['server_id'] ?? null);
+    }
+
+    public function costs(Server $server)
+    {
+        return $server->costs()->orderByDesc('starts_on')->get();
+    }
+
+    /** Sets the monthly bill from a month on. Setting the same month again replaces it. */
+    public function storeCost(Request $request, Server $server)
+    {
+        $data = $request->validate([
+            'starts_on' => 'required|date_format:Y-m',
+            'amount' => 'required|numeric|min:0|max:99999999',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $cost = $server->costs()->updateOrCreate(
+            ['starts_on' => "{$data['starts_on']}-01"],
+            ['amount' => number_format((float) $data['amount'], 2, '.', ''), 'note' => $data['note'] ?? null],
+        );
+        ActivityLog::record('server.cost_set', $server, ['from' => $data['starts_on'], 'amount' => $cost->amount]);
+
+        return $this->costs($server);
+    }
+
+    public function destroyCost(Server $server, ServerCost $cost)
+    {
+        abort_unless($cost->server_id === $server->id, 404);
+        $cost->delete();
+        ActivityLog::record('server.cost_deleted', $server, ['from' => $cost->starts_on->format('Y-m')]);
+
+        return $this->costs($server);
     }
 
     public function store(Request $request)

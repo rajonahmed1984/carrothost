@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Domain extends Model
 {
@@ -18,9 +19,23 @@ class Domain extends Model
             'auto_renew' => 'boolean',
             'nameservers' => 'array',
             'recurring_amount' => 'decimal:2',
+            'first_payment_amount' => 'decimal:2',
+            'registrar_lock' => 'boolean',
+            'dns_management' => 'boolean',
+            'email_forwarding' => 'boolean',
+            'id_protection' => 'boolean',
             'expires_at' => 'date:Y-m-d',
+            'registered_at' => 'date:Y-m-d',
+            'next_due_date' => 'date:Y-m-d',
             'renewal_invoiced_for' => 'date:Y-m-d',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Domain $domain) {
+            $domain->registered_at ??= today();
+        });
     }
 
     /** Hostnames that pass this are accepted for a domain or nameserver. */
@@ -35,5 +50,15 @@ class Domain extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(DomainReminder::class);
     }
 }

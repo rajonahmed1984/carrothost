@@ -17,7 +17,8 @@ class CreditService
 {
     public function __construct(private readonly BillingService $billing) {}
 
-    public function add(Client $client, string $amount, string $description, ?Invoice $invoice = null, ?int $userId = null): ClientCredit
+    /** $applyToInvoices false keeps the credit on the account instead of paying unpaid invoices with it. */
+    public function add(Client $client, string $amount, string $description, ?Invoice $invoice = null, ?int $userId = null, bool $applyToInvoices = true): ClientCredit
     {
         $this->assertPositive($amount);
 
@@ -29,7 +30,9 @@ class CreditService
         });
 
         ActivityLog::record('client.credit_added', $client, ['amount' => $amount, 'description' => $description]);
-        DB::afterCommit(fn () => $this->applyToDueInvoices($client));
+        if ($applyToInvoices) {
+            DB::afterCommit(fn () => $this->applyToDueInvoices($client));
+        }
 
         return $credit;
     }
@@ -76,13 +79,16 @@ class CreditService
      * "Credit applied" line that lowers the total, as on invoices imported from WHMCS.
      * Returns the amount used.
      */
-    public function applyToInvoice(Invoice $invoice): string
+    public function applyToInvoice(Invoice $invoice, ?string $limit = null): string
     {
-        [$used, $becamePaid, $locked] = DB::transaction(function () use ($invoice) {
+        [$used, $becamePaid, $locked] = DB::transaction(function () use ($invoice, $limit) {
             $client = Client::whereKey($invoice->client_id)->lockForUpdate()->firstOrFail();
             $locked = Invoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
 
             $used = $this->minimum((string) $client->credit_balance, $this->billing->balanceDue($locked));
+            if ($limit !== null) {
+                $used = $this->minimum($used, $limit);
+            }
             if ($locked->status !== 'unpaid' || bccomp($used, '0', 2) <= 0 || BillingService::isPrepayment($locked)) {
                 return ['0.00', false, $locked];
             }
@@ -108,7 +114,7 @@ class CreditService
      * invoice about to be cancelled or deleted. Call inside the same transaction as the cancel,
      * so the returned credit cannot flow straight back into this invoice.
      */
-    public function returnFromInvoice(Invoice $invoice): string
+    public function returnFromInvoice(Invoice $invoice, bool $applyToInvoices = true): string
     {
         $lines = $invoice->items()->where('kind', 'other')->where('description', 'Credit applied')->where('amount', '<', 0)->get();
         $amount = $lines->reduce(fn (string $sum, $line) => bcsub($sum, (string) $line->amount, 2), '0.00');
@@ -119,7 +125,7 @@ class CreditService
 
         $invoice->items()->whereKey($lines->modelKeys())->delete();
         $invoice->update(['total' => bcadd((string) $invoice->total, $amount, 2)]);
-        $this->add($invoice->client, $amount, "Credit returned from Invoice #{$invoice->number}");
+        $this->add($invoice->client, $amount, "Credit returned from Invoice #{$invoice->number}", applyToInvoices: $applyToInvoices);
 
         return $amount;
     }

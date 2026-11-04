@@ -9,7 +9,7 @@ use RuntimeException;
 
 /**
  * Read-only LogicBoxes HTTP API access, used by StarGate/UK2 and ResellCube.
- * Balance and availability lookups are read-only.
+ * Balance, availability and transaction history lookups are read-only.
  * Registering and renewing spend the reseller balance, so they are deliberately
  * not here until they can be exercised against a reachable API.
  */
@@ -41,6 +41,19 @@ class LogicBoxesClient
         $premium = $this->get('domains/premium-check.json', ['domain-name' => $domain])['premium'] ?? false;
 
         return $premium === true || $premium === 'true';
+    }
+
+    /**
+     * One page of the reseller account's transactions, newest first.
+     * Rows come keyed "1", "2"...; "recsindb" is the total.
+     */
+    public function transactions(int $page, int $perPage = 250, ?int $sinceEpoch = null): array
+    {
+        return $this->get('billing/reseller-transactions/search.json', array_filter([
+            'no-of-records' => $perPage,
+            'page-no' => $page,
+            'transaction-date-start' => $sinceEpoch,
+        ], fn ($v) => $v !== null));
     }
 
     private function get(string $path, array $params): array

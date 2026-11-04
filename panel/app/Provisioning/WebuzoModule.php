@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /** Webuzo Admin API. Authenticates with the Access Hash (API key), not the root password. */
-class WebuzoModule implements ProvisioningModule
+class WebuzoModule implements ManagesAccounts, ProvisioningModule
 {
     use GeneratesUsername;
 
@@ -69,14 +69,81 @@ class WebuzoModule implements ProvisioningModule
         $this->call('users', ['delete_user' => $service->remote_id, 'del_sub_acc' => 1, 'skip_reseller' => 1]);
     }
 
-    private function call(string $act, array $params = []): array
+    public function usage(Service $service): array
     {
-        $port = $this->server->port ?: 2005;
+        $user = $this->account($service);
+        $resource = is_array($user['resource'] ?? null) ? $user['resource'] : [];
+        $mb = fn ($bytes) => is_numeric($bytes) ? (int) round($bytes / 1048576) : null;
+        $limit = fn ($value) => in_array((string) $value, ['', 'unlimited', '0'], true) ? null : (string) $value;
+
+        return [
+            'metrics' => collect($resource)->map(fn ($r, $key) => [
+                'key' => (string) $key,
+                'label' => (string) ($r['label'] ?? $key),
+                'used' => (string) ($r['used'] ?? '0'),
+                'limit' => $limit($r['limit'] ?? null),
+                'percent' => isset($r['percent']) && is_numeric($r['percent']) ? round((float) $r['percent'], 2) : null,
+            ])->values()->all(),
+            'disk_used' => $mb($resource['disk']['used_bytes'] ?? null),
+            'disk_limit' => $mb($resource['disk']['limit_bytes'] ?? null),
+            'bw_used' => $mb($resource['bandwidth']['used_bytes'] ?? null),
+            'bw_limit' => $mb($resource['bandwidth']['limit_bytes'] ?? null),
+        ];
+    }
+
+    public function loginUrl(Service $service): string
+    {
+        // Port 2003 is the enduser panel; loginAs signs in as the account with the admin key.
+        $url = $this->call('sso', ['noip' => 1], 2003, ['loginAs' => $service->remote_id])['done']['url'] ?? null;
+
+        if (! is_string($url) || $url === '') {
+            throw new RuntimeException('Webuzo did not return a login link.');
+        }
+
+        return $url;
+    }
+
+    public function changePassword(Service $service, string $password): void
+    {
+        $this->call('changepassword', ['changepass' => 1, 'newpass' => $password, 'conf' => $password], 2003, ['loginAs' => $service->remote_id]);
+    }
+
+    public function changePackage(Service $service, string $package): void
+    {
+        // Edit User replaces the account's settings, so send its current domain and email back unchanged.
+        $user = $this->account($service);
+        $this->call('add_user', [
+            'edit_user' => 1,
+            'user' => $service->remote_id,
+            'user_name' => $service->remote_id,
+            'domain' => $user['domain'] ?? $service->domain,
+            'email' => $user['email'] ?? $service->client->email,
+            'plan' => $package,
+        ]);
+    }
+
+    /** The account's row from the admin user list. */
+    private function account(Service $service): array
+    {
+        $users = $this->call('users', ['search' => $service->remote_id, 'reslen' => 50])['users'] ?? [];
+        $user = collect(is_array($users) ? $users : [])->first(fn ($u) => ($u['user'] ?? null) === $service->remote_id);
+
+        if (! $user) {
+            throw new RuntimeException("Webuzo has no account named {$service->remote_id}.");
+        }
+
+        return $user;
+    }
+
+    private function call(string $act, array $params = [], ?int $port = null, array $extraQuery = []): array
+    {
+        $port ??= $this->server->port ?: 2005;
         $query = http_build_query([
             'api' => 'json',
             'act' => $act,
             'apiuser' => $this->server->username,
             'apikey' => $this->server->credentials,
+            ...$extraQuery,
         ]);
 
         try {

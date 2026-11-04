@@ -111,7 +111,19 @@ Artisan::command('portal:import-orders', function () {
     $this->info('Orders imported and linked successfully.');
 })->purpose('Import orders from carrothost_portal for current clients');
 
+Artisan::command('registrars:sync', function (App\Services\RegistrarSync $sync) {
+    foreach (App\Models\Registrar::whereNotNull('api_key')->get() as $registrar) {
+        try {
+            $result = $sync->sync($registrar);
+            $this->info("{$registrar->code}: {$result['added']} new charge(s)");
+        } catch (Throwable $e) {
+            $this->warn("{$registrar->code}: {$e->getMessage()}");
+        }
+    }
+})->purpose('Copy registrar account transactions so domain costs and profit stay current');
+
 Schedule::command('billing:renewals')->dailyAt('01:00');
+Schedule::command('registrars:sync')->dailyAt('04:00');
 Schedule::command('billing:suspend-overdue')->dailyAt('02:00');
 Schedule::command('tickets:auto-close')->dailyAt('03:00');
 // Shared hosting has no long-running worker, so cron drains the queue each minute.

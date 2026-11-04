@@ -73,6 +73,8 @@ class RenewalService
         $services = Service::where('status', 'active')
             ->whereDate('next_due_date', '<', $cutoff)
             ->whereNotIn('provision_status', ['queued', 'running'])
+            // An admin can hold off suspension until a date ("do not suspend until").
+            ->where(fn ($q) => $q->whereNull('override_suspend_until')->orWhereDate('override_suspend_until', '<', today()))
             ->get();
 
         foreach ($services as $service) {

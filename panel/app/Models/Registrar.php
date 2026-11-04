@@ -12,6 +12,6 @@ class Registrar extends Model
 
     protected function casts(): array
     {
-        return ['api_key' => 'encrypted'];
+        return ['api_key' => 'encrypted', 'last_synced_at' => 'datetime'];
     }
 }

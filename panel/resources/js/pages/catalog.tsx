@@ -5,6 +5,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table, type Column } from '../ui';
 
+import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
+
 type Option = { code: string; name: string; connected: boolean };
 type Meta = { currency: string; cycles: string[]; modules: Option[]; registrars: Option[] };
 
@@ -582,7 +584,7 @@ export function TldsPage() {
     return <QueryState query={query}>{query.data && <TldTable key={query.dataUpdatedAt} data={query.data} />}</QueryState>;
 }
 
-type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; services_count: number };
+type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; services_count: number; this_month: Cell };
 
 function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: () => void }) {
     const qc = useQueryClient();
@@ -591,13 +593,23 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
         name: server?.name ?? '', module: server?.module ?? 'cpanel', hostname: server?.hostname ?? '', port: server?.port ? String(server.port) : '',
         username: server?.username ?? '', auth_type: server?.auth_type ?? 'token', credentials: '', verify_tls: server?.verify_tls ?? true, max_accounts: String(server?.max_accounts ?? 0), is_active: server?.is_active ?? true,
     });
+    const currentCost = server ? Number(server.this_month.cost).toFixed(2) : '';
+    const [cost, setCost] = useState({ amount: currentCost, starts_on: thisMonth() });
     const save = useMutation({
-        mutationFn: () => {
+        mutationFn: async () => {
             const body = { ...form, port: form.port || null, max_accounts: Number(form.max_accounts) };
-
-            return server ? api.put(`/servers/${server.id}`, body) : api.post('/servers', body);
+            const saved = (server ? await api.put<ServerRow>(`/servers/${server.id}`, body) : await api.post<ServerRow>('/servers', body)).data;
+            // A changed monthly bill becomes a new cost entry from the chosen month.
+            if (cost.amount !== '' && Number(cost.amount).toFixed(2) !== currentCost) {
+                await api.post(`/servers/${saved.id}/costs`, { amount: cost.amount, starts_on: cost.starts_on });
+            }
         },
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ['servers'] }); onClose(); },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['servers'] });
+            qc.invalidateQueries({ queryKey: ['/servers/profit'] });
+            qc.invalidateQueries({ queryKey: ['/servers/costs'] });
+            onClose();
+        },
     });
 
     return (
@@ -621,6 +633,10 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                     <Field label={form.module === 'webuzo' ? 'Access Hash' : form.auth_type === 'password' ? 'Password' : 'API token'} hint={server ? 'Leave blank to keep the current value' : 'Stored encrypted'}><Input type="password" autoComplete="new-password" value={form.credentials} onChange={(e) => setForm({ ...form, credentials: e.target.value })} /></Field>
                     <Field label="Max accounts" hint="0 means no limit"><Input type="number" min="0" value={form.max_accounts} onChange={(e) => setForm({ ...form, max_accounts: e.target.value })} /></Field>
                 </div>
+                <div className="grid gap-3 rounded-xl border border-slate-200 p-3 sm:grid-cols-2">
+                    <Field label="Monthly bill (BDT)" hint="What this server costs you each month"><Input type="number" min="0" step="0.01" placeholder="0.00" value={cost.amount} onChange={(e) => setCost({ ...cost, amount: e.target.value })} /></Field>
+                    <Field label="Applies from" hint="Earlier months keep their old cost"><Input type="month" required value={cost.starts_on} onChange={(e) => setCost({ ...cost, starts_on: e.target.value })} /></Field>
+                </div>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.verify_tls} onChange={(e) => setForm({ ...form, verify_tls: e.target.checked })} /> Verify the TLS certificate</label>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Use for new accounts</label>
                 <ErrorNote error={save.error} />
@@ -643,9 +659,10 @@ function TestButton({ id }: { id: number }) {
 export function ServersPage() {
     const query = useQuery({ queryKey: ['servers'], queryFn: async () => (await api.get<ServerRow[]>('/servers')).data });
     const [editing, setEditing] = useState<ServerRow | 'new' | null>(null);
+    const [costs, setCosts] = useState<ServerRow | null>(null);
 
     return (
-        <>
+        <div className="space-y-4">
             <Card title="Servers" action={<Button onClick={() => setEditing('new')}><Plus size={14} /> Add server</Button>}>
                 <QueryState query={query}>
                     <Table<ServerRow>
@@ -656,13 +673,18 @@ export function ServersPage() {
                             { header: 'Panel', cell: (s) => s.module },
                             { header: 'Hostname', cell: (s) => s.hostname },
                             { header: 'Accounts', cell: (s) => `${s.services_count}${s.max_accounts ? ` / ${s.max_accounts}` : ''}`, align: 'right' },
+                            { header: 'Monthly Cost', cell: (s) => <button type="button" className="table-action-link tabular-nums" onClick={() => setCosts(s)}>{Number(s.this_month.cost) > 0 ? money(s.this_month.cost) : 'Set cost'}</button>, align: 'right' },
+                            { header: 'Sales This Month', cell: (s) => <span className="tabular-nums">{money(s.this_month.sales)}</span>, align: 'right' },
+                            { header: 'Profit This Month', cell: (s) => <Profit value={s.this_month.profit} />, align: 'right' },
                             { header: 'Status', cell: (s) => <Status value={s.is_active ? 'active' : 'cancelled'} /> },
-                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} /><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
+                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} /><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
                         ]}
                     />
                 </QueryState>
             </Card>
+            {query.data && query.data.length > 0 && <ServerProfitReport servers={query.data} />}
             {editing && <ServerForm server={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
-        </>
+            {costs && <ServerCostsModal server={costs} onClose={() => setCosts(null)} />}
+        </div>
     );
 }

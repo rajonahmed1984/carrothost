@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ExternalLink, FileText, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, FileText, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Status, Table } from '../ui';
-import { ServiceActions, type Service } from './fulfilment';
+import { DomainView } from './domain-view';
+import { ServiceView } from './service-view';
 
 function Facts({ rows }: { rows: [string, ReactNode][] }) {
     return (
@@ -25,7 +26,6 @@ function useRecord<T>(path: string) {
     return useQuery({ queryKey: [path, id], queryFn: async () => (await api.get<T>(`${path}/${id}`)).data });
 }
 
-const clientLink = (client: { id: number; name: string }) => <Link className="table-action-link" to={`/admin/clients/${client.id}`}>{client.name}</Link>;
 
 type DomainRow = { id: number; name: string; status: string; expires_at: string | null };
 type InvoiceRow = { id: number; number: string; status: string; total: string };
@@ -618,98 +618,15 @@ export function OrderDetailPage() {
 }
 
 export function ServiceDetailPage() {
-    const query = useRecord<Service & { client: { id: number; name: string } }>('/services');
-    const s = query.data;
+    const { id } = useParams();
+    const navigate = useNavigate();
 
-    return (
-        <QueryState query={query}>
-            {s && (
-                <Card title={`${s.product.name}${s.domain ? ` - ${s.domain}` : ''}`} action={<ServiceActions service={s} />}>
-                    <Facts rows={[
-                        ['Client', clientLink(s.client)],
-                        ['Server', s.server?.name],
-                        ['Account', s.remote_id],
-                        ['Amount', `${money(s.recurring_amount)} / ${s.cycle}`],
-                        ['Next due', s.next_due_date],
-                        ['Status', <Status key="s" value={s.status} />],
-                        ['Provisioning', <Status key="p" value={s.provision_status} />],
-                        ['Provisioning note', s.provision_error],
-                    ]} />
-                </Card>
-            )}
-        </QueryState>
-    );
-}
-
-type DomainDetail = DomainRow & {
-    action: string; years: number; registrar: string | null; provision_status: string; recurring_amount: string;
-    auto_renew: boolean; nameservers: string[] | null; client: { id: number; name: string };
-};
-
-function EppCode({ id }: { id: number }) {
-    const reveal = useMutation({ mutationFn: async () => (await api.get<{ epp_code: string | null }>(`/domains/${id}/epp`)).data });
-
-    if (reveal.data) return <span className="font-mono">{reveal.data.epp_code ?? 'None given'}</span>;
-
-    return <Button variant="link" disabled={reveal.isPending} onClick={() => reveal.mutate()}>Show</Button>;
-}
-
-function DomainSettings({ domain }: { domain: DomainDetail }) {
-    const qc = useQueryClient();
-    const [autoRenew, setAutoRenew] = useState(domain.auto_renew);
-    const [nameservers, setNameservers] = useState(() => [0, 1, 2, 3, 4].map((i) => domain.nameservers?.[i] ?? ''));
-    const save = useMutation({
-        mutationFn: async () => (await api.put<DomainDetail>(`/domains/${domain.id}`, { auto_renew: autoRenew, nameservers })).data,
-        onSuccess: (fresh) => qc.setQueryData(['/domains', String(domain.id)], fresh),
-    });
-
-    return (
-        <Card title="Renewal & Nameservers">
-            <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4 p-4">
-                <label className="flex items-center gap-3 text-sm text-slate-700">
-                    <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} /> Raise renewal invoices for this domain
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {nameservers.map((ns, i) => (
-                        <Field key={i} label={`Nameserver ${i + 1}`}>
-                            <Input value={ns} placeholder={i < 2 ? 'Required to resolve' : 'Optional'} onChange={(e) => setNameservers(nameservers.map((v, j) => (j === i ? e.target.value : v)))} />
-                        </Field>
-                    ))}
-                </div>
-                <p className="text-xs text-slate-500">Saved here only. Change them at the registrar too until the registrar module is connected.</p>
-                <ErrorNote error={save.error} />
-                <div className="flex items-center justify-end gap-3">
-                    {save.isSuccess && <span role="status" className="text-xs font-semibold text-emerald-700">Saved.</span>}
-                    <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save'}</Button>
-                </div>
-            </form>
-        </Card>
-    );
+    return <ServiceView id={Number(id)} onSelect={(next) => navigate(`/admin/products-services/${next}`)} />;
 }
 
 export function DomainDetailPage() {
-    const query = useRecord<DomainDetail>('/domains');
-    const d = query.data;
+    const { id } = useParams();
+    const navigate = useNavigate();
 
-    return (
-        <QueryState query={query}>
-            {d && (
-                <div className="space-y-4">
-                    <Card title={d.name}>
-                        <Facts rows={[
-                            ['Client', clientLink(d.client)],
-                            ['Registrar', d.registrar ?? 'Manual'],
-                            ['Order type', `${d.action}, ${d.years} yr`],
-                            ['Expires', d.expires_at],
-                            ['Renewal', `${money(d.recurring_amount)}${d.auto_renew ? '' : ' (not renewing)'}`],
-                            ['Status', <Status key="s" value={d.status} />],
-                            ['Fulfilment', <Status key="f" value={d.provision_status} />],
-                            ...(d.action === 'transfer' ? [['EPP code', <EppCode key="e" id={d.id} />] as [string, ReactNode]] : []),
-                        ]} />
-                    </Card>
-                    <DomainSettings key={d.id} domain={d} />
-                </div>
-            )}
-        </QueryState>
-    );
+    return <DomainView id={Number(id)} onSelect={(next) => navigate(`/admin/domain-registrations/${next}`)} />;
 }

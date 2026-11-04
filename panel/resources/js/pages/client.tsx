@@ -52,19 +52,6 @@ export type Detail = Client & {
     transaction_totals: { in: string; fees: string; out: string; balance: string };
     ticket_stats: { this_month: number; last_month: number; this_year: number; last_year: number };
     users?: UserRow[];
-    contacts?: {
-        id: number;
-        first_name: string;
-        last_name: string;
-        email: string;
-        phone: string | null;
-        company_name: string | null;
-        address1: string | null;
-        city: string | null;
-        state: string | null;
-        country: string | null;
-        created_at: string;
-    }[];
     tickets?: TicketRow[];
     emails?: EmailRow[];
 };
@@ -105,7 +92,6 @@ const tabs = [
     { key: 'summary', label: 'Summary' },
     { key: 'profile', label: 'Profile' },
     { key: 'users', label: 'Users' },
-    { key: 'contacts', label: 'Contacts' },
     { key: 'services', label: 'Products/Services' },
     { key: 'domains', label: 'Domains' },
     { key: 'invoices', label: 'Invoices' },
@@ -252,10 +238,19 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
     const t = c.invoice_totals;
 
     return (
-        <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div className="min-w-0 space-y-4">
                 <Panel title="Client Information" footer={<Action icon={<UserPen size={14} />} onClick={onEdit}>Edit Client</Action>}>
                     <Rows rows={[['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country]]} />
+                </Panel>
+                <Panel title="Other Information">
+                    <Rows rows={[
+                        ['Status', <Status key="s" value={c.status} />],
+                        ['Signup Date', new Date(c.created_at).toLocaleDateString()],
+                        ['Client For', c.client_for],
+                        ['Last Login', c.last_login_at ? `${new Date(c.last_login_at).toLocaleString()} (${c.last_login_ip ?? 'no IP'})` : 'Never'],
+                        ['Support Token', c.support_pin ? <span key="pin"><span className="font-mono font-bold tracking-widest">{c.support_pin}</span> <span className="text-slate-500">until {new Date(c.support_pin_expires_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span> : 'None active'],
+                    ]} />
                 </Panel>
             </div>
             <div className="min-w-0 space-y-4">
@@ -270,17 +265,6 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
                     ]} />
                 </Panel>
                 {credits && <ManageCredits client={c} onClose={() => setCredits(false)} />}
-                <Panel title="Other Information">
-                    <Rows rows={[
-                        ['Status', <Status key="s" value={c.status} />],
-                        ['Signup Date', new Date(c.created_at).toLocaleDateString()],
-                        ['Client For', c.client_for],
-                        ['Last Login', c.last_login_at ? `${new Date(c.last_login_at).toLocaleString()} (${c.last_login_ip ?? 'no IP'})` : 'Never'],
-                        ['Support Token', c.support_pin ? <span key="pin"><span className="font-mono font-bold tracking-widest">{c.support_pin}</span> <span className="text-slate-500">until {new Date(c.support_pin_expires_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span> : 'None active'],
-                    ]} />
-                </Panel>
-            </div>
-            <div className="min-w-0 space-y-4">
                 <Panel title="Products/Services" footer={<><Action icon={<ShoppingCart size={14} />} onClick={() => onTab('services')}>View Services</Action><Action icon={<Plus size={14} />} to={`/admin/active-orders?client=${c.id}`}>Add New Order</Action></>}>
                     <Rows rows={[
                         ...Object.entries(typeLabels).map(([type, label]): [string, ReactNode] => {
@@ -292,7 +276,7 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
                     ]} />
                 </Panel>
             </div>
-            <div className="min-w-0 space-y-4">
+            <div className="min-w-0 space-y-4 md:col-span-2 xl:col-span-1">
                 <Panel title="Other Actions">
                     <div className="space-y-1 p-3">
                         {c.status === 'active' && <Action icon={<LogIn size={14} />} disabled={impersonate.isPending} onClick={() => impersonate.mutate()}>Login as Client</Action>}
@@ -741,7 +725,7 @@ function UsersTab({
                 rows={users}
                 noun="users"
                 empty="No users associated with this client."
-                search={{ placeholder: 'Name or email', text: (u) => `${u.name} ${u.email}` }}
+                search={{ placeholder: 'Name, email or phone', text: (u) => `${u.name} ${u.email} ${u.phone ?? ''}` }}
                 action={<Button onClick={onAssociate}><Plus size={14} /> Associate User</Button>}
                 columns={[
                     {
@@ -756,10 +740,13 @@ function UsersTab({
                                     {!u.has_password && <span title="This user cannot sign in until they set a password. Send them a password reset email." className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">No password yet</span>}
                                 </div>
                                 <div className="mt-0.5 text-xs font-normal text-slate-500">{u.email}</div>
+                                {u.phone && <div className="text-xs font-normal text-slate-500">{u.phone}</div>}
                             </div>
                         ),
                     },
                     { header: 'Permissions', cell: (u) => (u.is_owner ? 'Full access' : `${u.permissions_list.length} of ${ALL_PERMISSION_KEYS.length}`) },
+                    { header: 'Location', cell: () => [client.city, client.country].filter(Boolean).join(', ') || '-' },
+                    { header: 'Added', cell: (u) => formatWhmcsDate(u.created_at).slice(0, 10), sort: (u) => u.created_at },
                     { header: 'Last Login', cell: (u) => formatWhmcsDate(u.last_login_at) },
                     {
                         header: '',
@@ -855,23 +842,6 @@ function ClientSelector({ current }: { current: PickerClient }) {
     );
 }
 
-function ContactsTab({ client }: { client: Detail }) {
-    return (
-        <RecordsTable
-            rows={client.contacts ?? []}
-            noun="contacts"
-            empty="No contacts found for this client."
-            search={{ placeholder: 'Name, company or email', text: (c) => `${c.first_name} ${c.last_name} ${c.company_name ?? ''} ${c.email}` }}
-            columns={[
-                { header: 'Name', wrap: true, cell: (c) => <div><div className="font-semibold text-slate-900">{c.first_name} {c.last_name}</div>{c.company_name && <div className="text-xs text-slate-500">{c.company_name}</div>}</div>, sort: (c) => `${c.first_name} ${c.last_name}` },
-                { header: 'Email', cell: (c) => c.email, sort: (c) => c.email },
-                { header: 'Phone', cell: (c) => c.phone || '-' },
-                { header: 'Location', cell: (c) => [c.city, c.country].filter(Boolean).join(', ') || '-' },
-                { header: 'Added', cell: (c) => formatWhmcsDate(c.created_at).slice(0, 10), sort: (c) => c.created_at },
-            ]}
-        />
-    );
-}
 
 export function ClientDetailPage() {
     const { id } = useParams();
@@ -884,6 +854,11 @@ export function ClientDetailPage() {
     const c = query.data;
     const tab = tabs.some((t) => t.key === params.get('tab')) ? (params.get('tab') as string) : 'summary';
     const setTab = (key: string) => setParams(key === 'summary' ? {} : { tab: key });
+    // A service or domain opened from its tab stays in the URL, so refresh and Back keep it.
+    const viewing = Number(params.get('view')) || null;
+    const editingRecord = params.get('edit') === '1';
+    const openRecord = (id: number | null, edit = false) => setParams(id ? { tab, view: String(id), ...(edit ? { edit: '1' } : {}) } : { tab });
+    const goTo = (target: string, id: number) => setParams({ tab: target, view: String(id) });
 
     return (
         <QueryState query={query}>
@@ -910,13 +885,13 @@ export function ClientDetailPage() {
                         </Card>
                     )}
 
-                    {tab === 'services' && <ServicesTab client={c} />}
+                    {tab === 'services' && <ServicesTab client={c} open={viewing} onOpen={openRecord} />}
 
-                    {tab === 'domains' && <DomainsTab client={c} />}
+                    {tab === 'domains' && <DomainsTab client={c} open={viewing} onOpen={openRecord} />}
 
-                    {tab === 'invoices' && <InvoicesTab client={c} onCreate={() => setInvoicing(true)} />}
+                    {tab === 'invoices' && <InvoicesTab client={c} onCreate={() => setInvoicing(true)} open={viewing} onOpen={openRecord} edit={editingRecord} onGo={goTo} />}
 
-                    {tab === 'transactions' && <TransactionsTab client={c} />}
+                    {tab === 'transactions' && <TransactionsTab client={c} open={viewing} onOpen={openRecord} edit={editingRecord} onGo={goTo} />}
 
                     {tab === 'log' && <ClientLog clientId={c.id} />}
 
@@ -928,11 +903,8 @@ export function ClientDetailPage() {
                         />
                     )}
 
-                    {tab === 'contacts' && (
-                        <ContactsTab client={c} />
-                    )}
 
-                    {tab === 'tickets' && <TicketsTab client={c} />}
+                    {tab === 'tickets' && <TicketsTab client={c} open={viewing} onOpen={openRecord} />}
 
                     {tab === 'emails' && <EmailsTab client={c} />}
 

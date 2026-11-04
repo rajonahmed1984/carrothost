@@ -16,6 +16,11 @@ class Server extends Model
         return ['credentials' => 'encrypted', 'verify_tls' => 'boolean', 'is_active' => 'boolean'];
     }
 
+    public function costs(): HasMany
+    {
+        return $this->hasMany(ServerCost::class);
+    }
+
     public function services(): HasMany
     {
         return $this->hasMany(Service::class);

@@ -166,10 +166,22 @@ Route::prefix('api')->group(function () {
         Route::put('tlds/lookup', [Admin\TldController::class, 'updateLookup']);
         Route::post('tlds/pricing', [Admin\TldController::class, 'bulkPricing']);
         Route::apiResource('tlds', Admin\TldController::class)->except('show');
+        Route::get('servers/profit', [Admin\ServerController::class, 'profit']);
+        Route::get('servers/{server}/costs', [Admin\ServerController::class, 'costs']);
+        Route::post('servers/{server}/costs', [Admin\ServerController::class, 'storeCost']);
+        Route::delete('servers/{server}/costs/{cost}', [Admin\ServerController::class, 'destroyCost']);
         Route::apiResource('servers', Admin\ServerController::class)->except('show');
         Route::post('servers/{server}/test', [Admin\ServerController::class, 'test']);
 
         Route::get('registrars', [Admin\RegistrarController::class, 'index']);
+        Route::get('registrars/profit', [Admin\RegistrarController::class, 'profit']);
+        Route::get('registrars/{code}/ledger', [Admin\RegistrarController::class, 'ledger']);
+        Route::post('registrars/{code}/deposits', [Admin\RegistrarController::class, 'storeDeposit']);
+        Route::delete('registrars/{code}/deposits/{deposit}', [Admin\RegistrarController::class, 'destroyDeposit']);
+        Route::post('registrars/{code}/charges', [Admin\RegistrarController::class, 'storeCharge']);
+        Route::put('registrars/{code}/charges/{charge}', [Admin\RegistrarController::class, 'updateCharge']);
+        Route::delete('registrars/{code}/charges/{charge}', [Admin\RegistrarController::class, 'destroyCharge']);
+        Route::post('registrars/{code}/sync', [Admin\RegistrarController::class, 'sync'])->middleware('throttle:10,1');
         Route::put('registrars/{code}', [Admin\RegistrarController::class, 'update']);
         Route::post('registrars/{code}/test', [Admin\RegistrarController::class, 'test']);
 
@@ -187,6 +199,10 @@ Route::prefix('api')->group(function () {
         Route::get('invoices', [Admin\InvoiceController::class, 'index']);
         Route::get('invoices/{invoice}', [Admin\InvoiceController::class, 'show']);
         Route::post('invoices/{invoice}/payments', [Admin\InvoiceController::class, 'pay']);
+        Route::post('invoices/{invoice}/credit', [Admin\InvoiceController::class, 'credit']);
+        Route::post('invoices/{invoice}/refund', [Admin\InvoiceController::class, 'refund']);
+        Route::put('invoices/{invoice}/notes', [Admin\InvoiceController::class, 'notes']);
+        Route::post('invoices/{invoice}/email', [Admin\InvoiceController::class, 'email'])->middleware('throttle:10,1');
         Route::post('invoices/{invoice}/cancel', [Admin\InvoiceController::class, 'cancel']);
         Route::post('invoices/bulk', [Admin\InvoiceController::class, 'bulk']);
         Route::put('invoices/{invoice}', [Admin\InvoiceController::class, 'update']);
@@ -197,6 +213,16 @@ Route::prefix('api')->group(function () {
 
         Route::get('services', [Admin\ServiceController::class, 'index']);
         Route::get('services/{service}', [Admin\ServiceController::class, 'show']);
+        Route::put('services/{service}', [Admin\ServiceController::class, 'update']);
+        Route::delete('services/{service}', [Admin\ServiceController::class, 'destroy']);
+        Route::post('services/{service}/usage', [Admin\ServiceController::class, 'refreshUsage'])->middleware('throttle:20,1');
+        Route::post('services/{service}/sso', [Admin\ServiceController::class, 'sso'])->middleware('throttle:20,1');
+        Route::post('services/{service}/password', [Admin\ServiceController::class, 'changePassword'])->middleware('throttle:10,1');
+        Route::post('services/{service}/package', [Admin\ServiceController::class, 'changePackage'])->middleware('throttle:10,1');
+        Route::get('services/{service}/upgrade', [Admin\ServiceController::class, 'upgradeQuote']);
+        Route::post('services/{service}/upgrade', [Admin\ServiceController::class, 'upgrade']);
+        Route::post('services/{service}/transfer', [Admin\ServiceController::class, 'transfer']);
+        Route::post('services/{service}/welcome', [Admin\ServiceController::class, 'welcome'])->middleware('throttle:10,1');
         Route::post('services/{service}/action', [Admin\ServiceController::class, 'action']);
         Route::post('services/{service}/credentials', [Admin\ServiceController::class, 'credentials']);
 

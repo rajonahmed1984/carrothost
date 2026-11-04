@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Server;
 use App\Models\Service;
 use App\Provisioning\ProvisioningModule;
+use App\Services\CustomerMailer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -61,6 +62,10 @@ class ProvisionService implements ShouldQueue
 
             $service->update([...$changes, 'provision_status' => 'done']);
             ActivityLog::record("service.{$this->action}", $service);
+
+            if ($this->action === 'create') {
+                app(CustomerMailer::class)->serviceWelcome($service);
+            }
         } catch (Throwable $e) {
             $service->update(['provision_status' => 'failed', 'provision_error' => $e->getMessage()]);
             ActivityLog::record("service.{$this->action}.failed", $service, ['error' => $e->getMessage()]);

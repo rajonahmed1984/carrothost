@@ -132,35 +132,3 @@ export function InvoicesPage({ mode = 'all' }: { mode?: 'all' | 'paid' | 'unpaid
         </>
     );
 }
-
-export type Transaction = {
-    id: number;
-    gateway: string;
-    transaction_id: string;
-    amount: string;
-    currency: string;
-    created_at: string;
-    invoice?: { id: number; number: string; client?: { id: number; name: string } } | null;
-};
-
-export function TransactionsPage() {
-    const [search, setSearch] = useState('');
-
-    return (
-        <PagedTable<Transaction>
-            url="/transactions"
-            noun="transactions"
-            search={{ value: search, onChange: setSearch, placeholder: 'Transaction ID, gateway, invoice #...' }}
-            params={search ? { q: search } : undefined}
-            empty="No transactions found."
-            columns={[
-                { header: 'Date', cell: (t) => new Date(t.created_at).toLocaleDateString('en-GB') },
-                { header: 'Client', cell: (t) => t.invoice?.client ? <Link className="table-action-link font-semibold" to={`/admin/clients/${t.invoice.client.id}`}>{t.invoice.client.name}</Link> : '-' },
-                { header: 'Invoice', cell: (t) => t.invoice ? <Link className="table-action-link font-semibold" to={`/admin/paid-invoices/${t.invoice.id}`}>#{t.invoice.number}</Link> : '-' },
-                { header: 'Gateway', cell: (t) => <span className="capitalize">{t.gateway}</span> },
-                { header: 'Transaction ID', cell: (t) => <span className="font-mono text-xs text-slate-600 break-all">{t.transaction_id}</span> },
-                { header: 'Amount', cell: (t) => money(t.amount, t.currency), align: 'right' },
-            ]}
-        />
-    );
-}

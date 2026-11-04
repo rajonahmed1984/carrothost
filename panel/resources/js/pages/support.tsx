@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Clock, CreditCard, Eye, FileText, MessageSquare, Paperclip, Plus, Reply, Search, Send, Server, ShoppingBag, X } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Clock, CreditCard, ExternalLink, Eye, FileText, MessageSquare, Paperclip, Plus, Reply, Search, Send, Server, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath } from '../api';
@@ -152,11 +152,21 @@ type AdminTicket = TicketRow & {
 
 export function TicketDetailPage() {
     const { id } = useParams();
+
+    return <TicketView id={Number(id)} />;
+}
+
+/** One ticket with its thread and reply box; used on its own page and inside the client profile's Tickets tab. */
+export function TicketView({ id, onBack }: { id: number; onBack?: () => void }) {
     const qc = useQueryClient();
-    const key = ['ticket', id];
+    const key = ['ticket', String(id)];
     const query = useQuery({ queryKey: key, queryFn: async () => (await api.get<AdminTicket>(`/tickets/${id}`)).data });
     const [after, setAfter] = useState('answered');
-    const saved = (t: AdminTicket) => { qc.setQueryData(key, t); qc.invalidateQueries({ queryKey: ['badges'] }); };
+    const saved = (t: AdminTicket) => {
+        qc.setQueryData(key, t);
+        qc.invalidateQueries({ queryKey: ['badges'] });
+        qc.invalidateQueries({ queryKey: ['/clients', String(t.client.id)] });
+    };
     const update = useMutation({ mutationFn: async (body: Record<string, string>) => (await api.put<AdminTicket>(`/tickets/${id}`, body)).data, onSuccess: saved });
     const t = query.data;
 
@@ -164,7 +174,16 @@ export function TicketDetailPage() {
         <QueryState query={query}>
             {t && (
                 <div className="space-y-4">
-                    <Card title={`#${t.number} - ${t.subject}`} action={<Status value={t.status} />}>
+                    <Card
+                        title={`#${t.number} - ${t.subject}`}
+                        action={(
+                            <span className="flex items-center gap-2">
+                                <Status value={t.status} />
+                                {onBack && <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary h-8 px-3 text-xs"><ArrowLeft size={14} /> Back to tickets</button>}
+                                {onBack && <Link to={`/admin/tickets/${t.id}`} className="ui-btn ui-btn-secondary h-8 px-3 text-xs"><ExternalLink size={14} /> Full Page</Link>}
+                            </span>
+                        )}
+                    >
                         <Facts rows={[
                             ['Client', <Link key="c" className="table-action-link" to={`/admin/clients/${t.client.id}`}>{t.client.name}</Link>],
                             ['Email', t.client.email],

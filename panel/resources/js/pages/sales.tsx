@@ -47,7 +47,7 @@ export function ClientForm({ client, onClose }: { client: Client | null; onClose
     );
 }
 
-function SendMessage({ clientIds, onClose, onSent }: { clientIds: number[]; onClose: () => void; onSent: (message: string) => void }) {
+export function SendMessage({ clientIds, onClose, onSent }: { clientIds: number[]; onClose: () => void; onSent: (message: string) => void }) {
     const [form, setForm] = useState({ sender: 'support', subject: '', message: '' });
     const [blank, setBlank] = useState(false);
     const send = useMutation({

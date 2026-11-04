@@ -1,10 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, LifeBuoy, Plus, ReceiptText, Search, Send, Trash2, Wallet } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, LifeBuoy, Pencil, Plus, ReceiptText, Search, Send, Trash2, Wallet } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, ErrorNote, Field, Input, Modal, QueryState, Status } from '../ui';
+import { Button, ErrorNote, Field, Input, Modal, Status } from '../ui';
 import type { Detail, EmailRow, InvoiceRow, TicketRow, TransactionRow } from './client';
+import { DomainView } from './domain-view';
+import { ServiceView } from './service-view';
+import { TicketView } from './support';
+import { InvoiceView } from './invoice-view';
 
 /* The client profile tabs, in the panel's own look: cards, pale headers, pills and text actions. */
 
@@ -187,9 +191,44 @@ function useRefresh(clientId: number) {
     };
 }
 
+/** Top bar of a record opened inside a tab: back arrow, icon, title, status and actions. */
+export function ViewHeader({ onBack, backLabel, icon, title, status, meta, children }: { onBack: () => void; backLabel: string; icon: ReactNode; title: ReactNode; status?: ReactNode; meta?: ReactNode; children?: ReactNode }) {
+    return (
+        <section className="card flex flex-wrap items-center gap-3 px-4 py-3">
+            <button type="button" onClick={onBack} className="icon-btn h-9 w-9" aria-label={backLabel}><ArrowLeft size={16} /></button>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">{icon}</span>
+            <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>{status}</div>
+                {meta && <div className="text-xs text-slate-500">{meta}</div>}
+            </div>
+            {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+        </section>
+    );
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div className="card p-4">
+            <div className="text-xs font-semibold text-slate-500">{label}</div>
+            <div className="mt-1 text-sm break-words text-slate-800">{children}</div>
+        </div>
+    );
+}
+
 /* ---------- Products/Services and Domains ---------- */
 
-export function ServicesTab({ client }: { client: Detail }) {
+type Viewer = { open: number | null; onOpen: (id: number | null, edit?: boolean) => void; edit?: boolean };
+/** Opens a record in another tab of the client profile, e.g. a payment's invoice. */
+type GoTo = (tab: string, id: number) => void;
+
+/** A text button styled like the table links, opening the record inside the tab. */
+export const OpenLink = ({ onClick, children, className = '' }: { onClick: () => void; children: ReactNode; className?: string }) => (
+    <button type="button" onClick={onClick} className={`table-action-link cursor-pointer ${className}`}>{children}</button>
+);
+
+export function ServicesTab({ client, open, onOpen }: { client: Detail } & Viewer) {
+    if (open) return <ServiceView id={open} onSelect={onOpen} onBack={() => onOpen(null)} />;
+
     return (
         <RecordsTable
             rows={client.services}
@@ -199,21 +238,23 @@ export function ServicesTab({ client }: { client: Detail }) {
             initialSort={{ index: 0, desc: true }}
             action={<Link to={`/admin/active-orders?client=${client.id}`} className="ui-btn ui-btn-primary"><Plus size={14} /> Add New Order</Link>}
             columns={[
-                { header: 'ID', cell: (s) => <Link className="table-action-link font-semibold tabular-nums" to={`/admin/products-services/${s.id}`}>{s.id}</Link>, sort: (s) => s.id },
-                { header: 'Product/Service', cell: (s) => <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>{s.product.name}</Link>, sort: (s) => s.product.name },
+                { header: 'ID', cell: (s) => <OpenLink className="font-semibold tabular-nums" onClick={() => onOpen(s.id)}>{s.id}</OpenLink>, sort: (s) => s.id },
+                { header: 'Product/Service', cell: (s) => <OpenLink className="font-semibold" onClick={() => onOpen(s.id)}>{s.product.name}</OpenLink>, sort: (s) => s.product.name },
                 { header: 'Domain', cell: (s) => s.domain ?? '-', sort: (s) => s.domain ?? '' },
                 { header: 'Pricing', cell: (s) => <>{money(s.recurring_amount)} <span className="text-xs text-slate-400 capitalize">/ {s.cycle}</span></>, sort: (s) => Number(s.recurring_amount), align: 'right' },
                 { header: 'Next Due', cell: (s) => day(s.next_due_date), sort: (s) => s.next_due_date ?? '' },
                 { header: 'Server', cell: (s) => s.server?.name ?? '-' },
                 { header: 'Status', cell: (s) => <Status value={s.status} />, sort: (s) => s.status },
                 { header: 'Setup', cell: (s) => <Status value={s.provision_status} /> },
-                { header: '', cell: (s) => <Link to={`/admin/products-services/${s.id}`} className="table-action-link">View</Link>, align: 'right' },
+                { header: '', cell: (s) => <OpenLink onClick={() => onOpen(s.id)}>View</OpenLink>, align: 'right' },
             ]}
         />
     );
 }
 
-export function DomainsTab({ client }: { client: Detail }) {
+export function DomainsTab({ client, open, onOpen }: { client: Detail } & Viewer) {
+    if (open) return <DomainView id={open} onSelect={onOpen} onBack={() => onOpen(null)} />;
+
     return (
         <RecordsTable
             rows={client.domains}
@@ -222,8 +263,8 @@ export function DomainsTab({ client }: { client: Detail }) {
             search={{ placeholder: 'Domain, registrar or status', text: (d) => `${d.name} ${d.registrar ?? ''} ${d.status}` }}
             initialSort={{ index: 0, desc: true }}
             columns={[
-                { header: 'ID', cell: (d) => <Link className="table-action-link font-semibold tabular-nums" to={`/admin/domain-registrations/${d.id}`}>{d.id}</Link>, sort: (d) => d.id },
-                { header: 'Domain', cell: (d) => <Link className="table-action-link font-semibold" to={`/admin/domain-registrations/${d.id}`}>{d.name}</Link>, sort: (d) => d.name },
+                { header: 'ID', cell: (d) => <OpenLink className="font-semibold tabular-nums" onClick={() => onOpen(d.id)}>{d.id}</OpenLink>, sort: (d) => d.id },
+                { header: 'Domain', cell: (d) => <OpenLink className="font-semibold" onClick={() => onOpen(d.id)}>{d.name}</OpenLink>, sort: (d) => d.name },
                 { header: 'Type', cell: (d) => <span className="capitalize">{d.action}</span> },
                 { header: 'Registrar', cell: (d) => d.registrar ?? 'Manual', sort: (d) => d.registrar ?? '' },
                 { header: 'Registered', cell: (d) => day(d.created_at), sort: (d) => d.created_at },
@@ -231,7 +272,7 @@ export function DomainsTab({ client }: { client: Detail }) {
                 { header: 'Renewal', cell: (d) => <>{money(d.recurring_amount)} <span className="text-xs text-slate-400">/ {d.years} yr</span></>, sort: (d) => Number(d.recurring_amount), align: 'right' },
                 { header: 'Auto Renew', cell: (d) => <Status value={d.auto_renew ? 'on' : 'off'} /> },
                 { header: 'Status', cell: (d) => <Status value={d.status} />, sort: (d) => d.status },
-                { header: '', cell: (d) => <Link to={`/admin/domain-registrations/${d.id}`} className="table-action-link">View</Link>, align: 'right' },
+                { header: '', cell: (d) => <OpenLink onClick={() => onOpen(d.id)}>View</OpenLink>, align: 'right' },
             ]}
         />
     );
@@ -243,22 +284,7 @@ type InvoiceDetail = { id: number; number: string; status: string; due_date: str
 
 const isCreditLine = (item: InvoiceDetail['items'][number]) => item.description === 'Credit applied' && Number(item.amount) < 0;
 
-function EditInvoice({ id, onClose, onSaved }: { id: number; onClose: () => void; onSaved: () => void }) {
-    const query = useQuery({ queryKey: ['/invoices', id], queryFn: async () => (await api.get<InvoiceDetail>(`/invoices/${id}`)).data });
-    const inv = query.data;
-
-    return (
-        <Modal wide title={inv ? `Edit invoice #${inv.number}` : 'Edit invoice'} onClose={onClose}>
-            <QueryState query={query}>
-                {inv && (inv.status !== 'unpaid' || inv.payments.length > 0
-                    ? <p className="text-sm text-slate-600">Only an unpaid invoice with no payments can be edited. Mark it unpaid or delete its transactions first.</p>
-                    : <EditInvoiceForm inv={inv} onClose={onClose} onSaved={onSaved} />)}
-            </QueryState>
-        </Modal>
-    );
-}
-
-function EditInvoiceForm({ inv, onClose, onSaved }: { inv: InvoiceDetail; onClose: () => void; onSaved: () => void }) {
+export function EditInvoiceForm({ inv, onClose, onSaved }: { inv: Omit<InvoiceDetail, 'payments'>; onClose: () => void; onSaved: () => void }) {
     const credit = inv.items.filter(isCreditLine);
     const [dueDate, setDueDate] = useState(inv.due_date.slice(0, 10));
     const [items, setItems] = useState<{ id?: number; description: string; amount: string }[]>(inv.items.filter((i) => !isCreditLine(i)).map(({ id, description, amount }) => ({ id, description, amount })));
@@ -298,10 +324,15 @@ const bulkActions: { key: string; label: string; variant?: 'primary' | 'danger';
     { key: 'delete', label: 'Delete', variant: 'danger', confirm: 'Delete the selected invoices? Invoices with payments are kept.' },
 ];
 
-export function InvoicesTab({ client, onCreate }: { client: Detail; onCreate: () => void }) {
+export function InvoicesTab({ client, onCreate, open, onOpen, edit = false, onGo }: { client: Detail; onCreate: () => void; onGo: GoTo } & Viewer) {
+    if (open) return <InvoiceView key={open} id={open} clientId={client.id} edit={edit} onOpen={onOpen} onGo={onGo} />;
+
+    return <InvoiceList client={client} onCreate={onCreate} onOpen={onOpen} />;
+}
+
+function InvoiceList({ client, onCreate, onOpen }: { client: Detail; onCreate: () => void; onOpen: Viewer['onOpen'] }) {
     const refresh = useRefresh(client.id);
     const [selected, setSelected] = useState<number[]>([]);
-    const [editing, setEditing] = useState<number | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
     const bulk = useMutation({
         mutationFn: async (action: string) => (await api.post<{ message: string; invoice_id?: number }>('/invoices/bulk', { invoice_ids: selected, action })).data,
@@ -343,7 +374,7 @@ export function InvoicesTab({ client, onCreate }: { client: Detail; onCreate: ()
                     </Button>
                 ))}
                 columns={[
-                    { header: 'Invoice #', cell: (i) => <Link className="table-action-link font-semibold" to={`/admin/paid-invoices/${i.id}`}>#{i.number}</Link>, sort: (i) => i.id },
+                    { header: 'Invoice #', cell: (i) => <OpenLink className="font-semibold" onClick={() => onOpen(i.id)}>#{i.number}</OpenLink>, sort: (i) => i.id },
                     { header: 'Invoice Date', cell: (i) => day(i.created_at), sort: (i) => i.created_at },
                     { header: 'Due Date', cell: (i) => day(i.due_date), sort: (i) => i.due_date },
                     { header: 'Date Paid', cell: (i) => day(i.paid_at), sort: (i) => i.paid_at ?? '' },
@@ -355,42 +386,93 @@ export function InvoicesTab({ client, onCreate }: { client: Detail; onCreate: ()
                         align: 'right',
                         cell: (i) => (
                             <RowActions>
-                                <Link to={`/admin/paid-invoices/${i.id}`} className="table-action-link">View</Link>
-                                <Button variant="link" onClick={() => setEditing(i.id)}>Edit</Button>
+                                <OpenLink onClick={() => onOpen(i.id)}>View</OpenLink>
+                                <Button variant="link" onClick={() => onOpen(i.id, true)}>Edit</Button>
                                 <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete invoice #${i.number}?`) && remove.mutate(i.id)}>Delete</Button>
                             </RowActions>
                         ),
                     },
                 ]}
             />
-            {editing && <EditInvoice id={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setNotice('Invoice updated.'); refresh(); }} />}
         </div>
     );
 }
 
 /* ---------- Transactions ---------- */
 
-function EditTransaction({ row, onClose, onSaved }: { row: TransactionRow; onClose: () => void; onSaved: () => void }) {
+export function TransactionForm({ row, onCancel, onSaved }: { row: TransactionRow; onCancel: () => void; onSaved: () => void }) {
     const [form, setForm] = useState({ date: row.created_at.slice(0, 10), transaction_id: row.transaction_id, fee: row.fee });
     const save = useMutation({ mutationFn: () => api.put(`/transactions/${row.id}`, form), onSuccess: onSaved });
 
     return (
-        <Modal title={`Edit transaction for invoice #${row.invoice.number}`} onClose={onClose}>
-            <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3">
-                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{row.gateway_name}: <strong className="text-slate-900">{money(row.amount, row.currency)}</strong>. To change the amount, delete this transaction and record the payment again.</p>
+        <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3 p-4">
+            <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Date"><Input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
                 <Field label="Transaction ID"><Input required maxLength={191} value={form.transaction_id} onChange={(e) => setForm({ ...form, transaction_id: e.target.value })} /></Field>
                 <Field label="Fees" hint="What the payment provider kept."><Input type="number" min="0" step="0.01" required value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} /></Field>
-                <ErrorNote error={save.error} />
-                <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save</Button></div>
-            </form>
-        </Modal>
+            </div>
+            <p className="text-xs text-slate-500">To change the amount, delete this transaction and record the payment again.</p>
+            <ErrorNote error={save.error} />
+            <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button><Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save Changes'}</Button></div>
+        </form>
     );
 }
 
-export function TransactionsTab({ client }: { client: Detail }) {
+/** One payment inside the Transactions tab, edited in place. */
+function TransactionView({ client, row, edit, onOpen, onGo }: { client: Detail; row: TransactionRow | undefined; edit: boolean; onOpen: Viewer['onOpen']; onGo: GoTo }) {
     const refresh = useRefresh(client.id);
-    const [editing, setEditing] = useState<TransactionRow | null>(null);
+    const [notice, setNotice] = useState('');
+    const remove = useMutation({ mutationFn: (id: number) => api.delete(`/transactions/${id}`), onSuccess: () => { refresh(); onOpen(null); }, onError: (e) => window.alert(errorMessage(e)) });
+
+    if (!row) {
+        return (
+            <div className="card px-4 py-8 text-center text-sm text-slate-500">
+                This transaction is not on this client. <OpenLink onClick={() => onOpen(null)}>Back to transactions</OpenLink>
+            </div>
+        );
+    }
+
+    const amount = Number(row.amount);
+
+    return (
+        <div className="space-y-4">
+            <ViewHeader
+                onBack={() => onOpen(null)}
+                backLabel="Back to transactions"
+                icon={<Wallet size={18} />}
+                title={<span className={amount < 0 ? 'text-rose-600' : ''}>{money(Math.abs(amount), row.currency)} {amount < 0 ? 'refund' : 'payment'}</span>}
+                meta={<>{row.gateway_name} · {dayTime(row.created_at)}</>}
+            >
+                {!edit && <Button variant="ghost" className="h-9" onClick={() => onOpen(row.id, true)}><Pencil size={14} /> Edit</Button>}
+                <Button variant="danger" className="h-9" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(row.amount, row.currency)} payment? Invoice #${row.invoice.number} goes back to unpaid if it is no longer covered.`) && remove.mutate(row.id)}><Trash2 size={14} /> Delete</Button>
+            </ViewHeader>
+            {notice && <Notice text={notice} onClose={() => setNotice('')} />}
+            {edit && (
+                <section className="card overflow-hidden">
+                    <header className="border-b border-slate-200 px-4 py-3"><h3 className="font-semibold text-slate-900">Edit Transaction</h3></header>
+                    <TransactionForm key={row.id} row={row} onCancel={() => onOpen(row.id)} onSaved={() => { setNotice('Transaction updated.'); refresh(); onOpen(row.id); }} />
+                </section>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <Fact label="Date">{dayTime(row.created_at)}</Fact>
+                <Fact label="Payment Method">{row.gateway_name}</Fact>
+                <Fact label="Transaction ID"><span className="font-mono">{row.transaction_id || '-'}</span></Fact>
+                <Fact label={amount < 0 ? 'Amount Out' : 'Amount In'}><span className={`text-lg font-semibold tabular-nums ${amount < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(Math.abs(amount), row.currency)}</span></Fact>
+                <Fact label="Fees"><span className="tabular-nums">{money(row.fee, row.currency)}</span></Fact>
+                <Fact label="Invoice"><OpenLink className="font-semibold" onClick={() => onGo('invoices', row.invoice.id)}>Invoice #{row.invoice.number}</OpenLink></Fact>
+            </div>
+        </div>
+    );
+}
+
+export function TransactionsTab({ client, open, onOpen, edit = false, onGo }: { client: Detail; onGo: GoTo } & Viewer) {
+    if (open) return <TransactionView client={client} row={client.transactions.find((t) => t.id === open)} edit={edit} onOpen={onOpen} onGo={onGo} />;
+
+    return <TransactionList client={client} onOpen={onOpen} onGo={onGo} />;
+}
+
+function TransactionList({ client, onOpen, onGo }: { client: Detail; onOpen: Viewer['onOpen']; onGo: GoTo }) {
+    const refresh = useRefresh(client.id);
     const remove = useMutation({
         mutationFn: (id: number) => api.delete(`/transactions/${id}`),
         onSuccess: refresh,
@@ -413,12 +495,12 @@ export function TransactionsTab({ client }: { client: Detail }) {
                 search={{ placeholder: 'Method, transaction ID or invoice', text: (p) => `${p.gateway_name} ${p.transaction_id} ${p.invoice.number} ${p.amount}` }}
                 initialSort={{ index: 0, desc: true }}
                 columns={[
-                    { header: 'Date', cell: (p) => day(p.created_at), sort: (p) => p.created_at },
+                    { header: 'Date', cell: (p) => <OpenLink className="tabular-nums" onClick={() => onOpen(p.id)}>{day(p.created_at)}</OpenLink>, sort: (p) => p.created_at },
                     { header: 'Payment Method', cell: (p) => p.gateway_name, sort: (p) => p.gateway_name },
                     {
                         header: 'Description',
                         wrap: true,
-                        cell: (p) => <>Invoice Payment <Link className="table-action-link" to={`/admin/paid-invoices/${p.invoice.id}`}>#{p.invoice.number}</Link>{p.transaction_id && <span className="block font-mono text-[11px] break-all text-slate-400">{p.transaction_id}</span>}</>,
+                        cell: (p) => <>Invoice Payment <OpenLink onClick={() => onGo('invoices', p.invoice.id)}>#{p.invoice.number}</OpenLink>{p.transaction_id && <span className="block font-mono text-[11px] break-all text-slate-400">{p.transaction_id}</span>}</>,
                     },
                     { header: 'Amount In', cell: (p) => (Number(p.amount) > 0 ? <span className="font-semibold text-emerald-700">{money(p.amount, p.currency)}</span> : '-'), sort: (p) => Number(p.amount), align: 'right' },
                     { header: 'Fees', cell: (p) => (Number(p.fee) > 0 ? money(p.fee, p.currency) : '-'), sort: (p) => Number(p.fee), align: 'right' },
@@ -428,21 +510,23 @@ export function TransactionsTab({ client }: { client: Detail }) {
                         align: 'right',
                         cell: (p) => (
                             <RowActions>
-                                <Button variant="link" onClick={() => setEditing(p)}>Edit</Button>
+                                <OpenLink onClick={() => onOpen(p.id)}>View</OpenLink>
+                                <Button variant="link" onClick={() => onOpen(p.id, true)}>Edit</Button>
                                 <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(p.amount, p.currency)} payment? Invoice #${p.invoice.number} goes back to unpaid if it is no longer covered.`) && remove.mutate(p.id)}>Delete</Button>
                             </RowActions>
                         ),
                     },
                 ]}
             />
-            {editing && <EditTransaction row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />}
         </div>
     );
 }
 
 /* ---------- Tickets ---------- */
 
-export function TicketsTab({ client }: { client: Detail }) {
+export function TicketsTab({ client, open, onOpen }: { client: Detail } & Viewer) {
+    if (open) return <TicketView id={open} onBack={() => onOpen(null)} />;
+
     const s = client.ticket_stats;
     const stat = (label: string, value: number, tone: string) => ({ label, value, tone, icon: <LifeBuoy size={20} /> });
 
@@ -464,9 +548,10 @@ export function TicketsTab({ client }: { client: Detail }) {
                 columns={[
                     { header: 'Date Opened', cell: (t) => dayTime(t.created_at), sort: (t) => t.created_at },
                     { header: 'Department', cell: (t) => t.department_name, sort: (t) => t.department_name },
-                    { header: 'Subject', wrap: true, cell: (t) => <Link className="table-action-link" to={`/admin/tickets/${t.id}`}><span className="text-slate-400">#{t.number}</span> {t.subject}</Link>, sort: (t) => t.subject },
+                    { header: 'Subject', wrap: true, cell: (t) => <OpenLink className="text-left" onClick={() => onOpen(t.id)}><span className="text-slate-400">#{t.number}</span> {t.subject}</OpenLink>, sort: (t) => t.subject },
                     { header: 'Status', cell: (t) => <Status value={t.status} />, sort: (t) => t.status },
                     { header: 'Last Reply', cell: (t) => (t.last_reply_at ? dayTime(t.last_reply_at) : '-'), sort: (t) => t.last_reply_at ?? '' },
+                    { header: '', cell: (t) => <OpenLink onClick={() => onOpen(t.id)}>View</OpenLink>, align: 'right' },
                 ]}
             />
         </div>

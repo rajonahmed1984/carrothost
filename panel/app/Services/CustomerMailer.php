@@ -6,6 +6,7 @@ use App\Mail\CustomerNotice;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Service;
 use App\Support\EmailHtml;
 use App\Support\MailFrom;
 use Illuminate\Support\Facades\Log;
@@ -78,6 +79,28 @@ class CustomerMailer
             body: "Hello {$invoice->client->name},\n\nThank you. We have received full payment for invoice {$invoice->number} ({$this->money($invoice)}).",
             url: url("invoices/{$invoice->id}"),
             button: 'View invoice',
+        ));
+    }
+
+    /** Hosting is ready: where to sign in. The password stays in the client area, not in email. */
+    public function serviceWelcome(Service $service): void
+    {
+        $service->loadMissing('client', 'product', 'server');
+        $username = $service->credentials['username'] ?? $service->remote_id;
+        $ports = ['cpanel' => 2083, 'webuzo' => 2003];
+        $port = $ports[$service->product->module] ?? null;
+        $panel = $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null;
+
+        $this->send($service->client->email, new CustomerNotice(
+            sender: MailFrom::SUPPORT,
+            subjectLine: "Your {$service->product->name} account is ready".($service->domain ? " - {$service->domain}" : ''),
+            heading: 'Welcome aboard',
+            body: "Hello {$service->client->name},\n\nYour {$service->product->name} service".($service->domain ? " for {$service->domain}" : '')." is ready.\n\n"
+                .($username ? "Username: {$username}\n" : '')
+                .($panel ? "Control panel: {$panel}\n" : '')
+                ."\nYour password is shown on the service page in the client area, where you can also sign in to the control panel in one click.",
+            url: url("services/{$service->id}"),
+            button: 'Open your service',
         ));
     }
 

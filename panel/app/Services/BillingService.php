@@ -78,6 +78,8 @@ class BillingService
                     'auto_renew' => (bool) config('billing.domains.auto_renew'),
                     'nameservers' => Domain::defaultNameservers() ?: null,
                     'recurring_amount' => bcmul($tld->renew_price, $years, 2),
+                    'first_payment_amount' => bcmul($unit, $years, 2),
+                    'payment_method' => $order->payment_method,
                 ]);
 
                 $items[] = [
@@ -263,6 +265,14 @@ class BillingService
                 $this->payBundledInvoice($invoice, $item->target_invoice_id, (string) $item->amount, $gateway);
             }
 
+            if ($item->kind === 'upgrade') {
+                if ($item->service) {
+                    app(ServiceTools::class)->applyPaid($item->service, $invoice);
+                }
+
+                continue;
+            }
+
             if ($item->service) {
                 $item->kind === 'renewal' ? $this->renewService($item->service) : $this->activateService($item->service);
             }
@@ -326,8 +336,10 @@ class BillingService
 
     private function renewDomain(Domain $domain): void
     {
+        $expires = $domain->expires_at->copy()->addYearsNoOverflow($domain->years)->toDateString();
         $domain->update([
-            'expires_at' => $domain->expires_at->copy()->addYearsNoOverflow($domain->years)->toDateString(),
+            'expires_at' => $expires,
+            'next_due_date' => $expires,
             'provision_status' => 'manual_required',
         ]);
     }
