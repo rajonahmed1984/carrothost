@@ -249,12 +249,14 @@ function Shell({ name }: { name: string }) {
                         <Route path="/admin/activity" element={<ActivityPage />} />
                         <Route path="/admin/settings" element={<SettingsPage />} />
                         <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
-                        <Route path="/admin/settings/servers" element={<ServersPage />} />
+                        <Route path="/admin/settings/servers-config" element={<ServersPage />} />
+                        <Route path="/admin/settings/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />
                         <Route path="/admin/settings/registrars" element={<RegistrarsPage />} />
                         <Route path="/admin/settings/addons" element={<AddonsPage />} />
-                        {['gateways', 'servers', 'registrars', 'addons'].map((page) => (
+                        {['gateways', 'registrars', 'addons'].map((page) => (
                             <Route key={page} path={`/admin/${page}`} element={<Navigate to={`/admin/settings/${page}`} replace />} />
                         ))}
+                        <Route path="/admin/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />
                         <Route path="/admin/account" element={<AdminAccountPage />} />
 
                         {/* Backward compatibility redirects */}

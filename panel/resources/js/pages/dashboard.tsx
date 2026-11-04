@@ -250,7 +250,7 @@ function ServerTest({ id }: { id: number }) {
 }
 
 function Servers({ data }: { data: Dashboard }) {
-    if (!data.servers.length) return <p className="p-6 text-center text-sm text-slate-500">No servers yet. <Link className="table-action-link" to="/admin/settings/servers">Add a server</Link></p>;
+    if (!data.servers.length) return <p className="p-6 text-center text-sm text-slate-500">No servers yet. <Link className="table-action-link" to="/admin/settings/servers-config">Add a server</Link></p>;
 
     return (
         <ul className="divide-y divide-slate-100">

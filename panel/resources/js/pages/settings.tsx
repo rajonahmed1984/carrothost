@@ -7,7 +7,7 @@ import { Button, ErrorNote, Field, Input, QueryState, Select, type Branding } fr
 /** Integration pages listed under System in the sidebar. */
 export const settings = [
     { to: '/admin/settings/gateways', label: 'Payment Gateways' },
-    { to: '/admin/settings/servers', label: 'Servers' },
+    { to: '/admin/settings/servers-config', label: 'Servers Config' },
     { to: '/admin/settings/registrars', label: 'Domain Registrars' },
     { to: '/admin/settings/addons', label: 'Addons' },
 ];

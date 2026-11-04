@@ -663,7 +663,7 @@ export function ServersPage() {
 
     return (
         <div className="space-y-4">
-            <Card title="Servers" action={<Button onClick={() => setEditing('new')}><Plus size={14} /> Add server</Button>}>
+            <Card title="Servers Config" action={<Button onClick={() => setEditing('new')}><Plus size={14} /> Add server</Button>}>
                 <QueryState query={query}>
                     <Table<ServerRow>
                         rows={query.data ?? []}
