@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Addons\AddonManager;
 use App\Jobs\ProvisionService;
+use App\Mail\CustomerNotice;
 use App\Models\ActivityLog;
 use App\Models\Addon;
 use App\Models\Client;
@@ -22,6 +23,7 @@ use App\Services\BillingService;
 use App\Services\RenewalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -55,6 +57,24 @@ class BillingFlowTest extends TestCase
     public function test_order_invoice_includes_setup_fee(): void
     {
         $this->assertSame('4300.00', $this->orderInvoice()->total);
+    }
+
+    public function test_order_mail_comes_from_sales_and_invoice_mail_from_billing(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        $invoice = $this->orderInvoice(null);
+        $from = fn (string $address, string $subject) => fn (CustomerNotice $mail) => $mail->hasTo('client@example.com') && $mail->hasFrom($address) && str_starts_with($mail->subjectLine, $subject);
+
+        Mail::assertSent(CustomerNotice::class, $from('sales@carrothost.com', 'Order confirmation'));
+        Mail::assertSent(CustomerNotice::class, $from('billing@carrothost.com', "New invoice {$invoice->number}"));
+
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'TX1', '4300.00');
+        Mail::assertSent(CustomerNotice::class, $from('billing@carrothost.com', 'Payment received'));
+
+        $this->actingAs(tap(User::factory()->create(), fn (User $admin) => $admin->forceFill(['is_admin' => true])->save()));
+        $this->postJson('/api/orders/batch-action', ['order_ids' => [$invoice->order_id], 'action' => 'accept'])->assertOk();
+        Mail::assertSent(CustomerNotice::class, $from('sales@carrothost.com', 'Your order'));
     }
 
     public function test_full_payment_activates_service_and_queues_provisioning(): void

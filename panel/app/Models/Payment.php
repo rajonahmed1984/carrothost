@@ -11,7 +11,7 @@ class Payment extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'meta' => 'array'];
+        return ['amount' => 'decimal:2', 'fee' => 'decimal:2', 'meta' => 'array'];
     }
 
     public function invoice(): BelongsTo

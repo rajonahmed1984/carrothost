@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Mail\PasswordResetLink;
 use App\Mail\VerificationCode;
 use App\Models\Client;
 use App\Models\ClientContact;
@@ -16,7 +17,7 @@ class LogClientEmail
     {
         // Sign-in codes and password reset links stay out of the history.
         $notification = (string) ($event->data['__laravel_notification'] ?? '');
-        if (($event->data['__laravel_mailable'] ?? null) === VerificationCode::class || str_contains($notification, 'ResetPassword')) {
+        if (in_array($event->data['__laravel_mailable'] ?? null, [VerificationCode::class, PasswordResetLink::class], true) || str_contains($notification, 'ResetPassword')) {
             return;
         }
 

@@ -92,7 +92,7 @@ class AuthTest extends TestCase
 
         $this->assertGuest('web');
         $this->getJson('/api/me')->assertUnauthorized();
-        Mail::assertSent(VerificationCode::class, fn ($mail) => $mail->hasTo($admin->email));
+        Mail::assertSent(VerificationCode::class, fn ($mail) => $mail->hasTo($admin->email) && $mail->hasFrom('support@carrothost.com', 'CarrotHost Support'));
         $this->assertNotSame($this->lastCode(), $admin->refresh()->login_otp_code, 'Only the hash is stored.');
     }
 
@@ -272,6 +272,7 @@ class AuthTest extends TestCase
 
         $this->assertSame(0, Client::count());
         $this->assertGuest('client');
+        Mail::assertSent(VerificationCode::class, fn ($mail) => $mail->hasTo('new@example.com') && $mail->hasFrom('sales@carrothost.com', 'CarrotHost Sales'));
         $this->getJson('/api/client/register/verify')->assertOk()->assertJsonPath('email', 'ne*w@example.com');
 
         $this->postJson('/api/client/register/verify', ['otp' => '000000'])->assertUnprocessable();

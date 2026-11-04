@@ -25,6 +25,25 @@ class PaymentService
         return $class && $gateway ? new $class($gateway) : null;
     }
 
+    /** The online gateways a customer can pay with, and the bank transfer instructions when Manual has some. */
+    public static function customerMethods(): array
+    {
+        $enabled = Gateway::where('is_enabled', true)->get()->keyBy('code');
+
+        return [
+            'gateways' => $enabled->except('manual')
+                ->filter(fn (Gateway $gateway) => config("billing.gateways.{$gateway->code}.driver"))
+                ->map(fn (Gateway $gateway) => [
+                    'code' => $gateway->code,
+                    'name' => $gateway->config['display_name'] ?? config("billing.gateways.{$gateway->code}.name"),
+                    'button' => $gateway->config['button_label'] ?? null,
+                ])
+                ->values()
+                ->all(),
+            'payment_instructions' => $enabled->get('manual')?->config['instructions'] ?? null,
+        ];
+    }
+
     public function balance(Invoice $invoice): string
     {
         $paid = array_reduce(

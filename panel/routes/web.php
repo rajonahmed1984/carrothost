@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth;
 use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\AccountSettingsController;
 use App\Http\Controllers\Client\ChatController as ClientChatController;
+use App\Http\Controllers\Client\CreditController;
 use App\Http\Controllers\Client\DomainController as ClientDomainController;
 use App\Http\Controllers\Client\ServiceController as ClientServiceController;
 use App\Http\Controllers\Client\StoreController;
@@ -49,55 +50,84 @@ Route::prefix('api')->group(function () {
             Route::post('impersonate/stop', [Auth\ImpersonationController::class, 'stop']);
 
             Route::middleware('client.active')->group(function () {
+                // Everyone signed in to the account: the owner, and its users within their permissions.
                 Route::post('logout', [AccountController::class, 'logout']);
                 Route::get('me', [AccountController::class, 'me']);
-                Route::put('security', [AccountController::class, 'security']);
                 Route::post('password', [Auth\PasswordController::class, 'change'])->defaults('portal', Portal::CLIENT)->middleware('throttle:5,1');
                 Route::get('overview', [AccountController::class, 'overview']);
-                Route::get('services', [ClientServiceController::class, 'index']);
-                Route::get('services/{id}', [ClientServiceController::class, 'show'])->whereNumber('id');
-                Route::post('services/{id}/password', [ClientServiceController::class, 'password'])->whereNumber('id')->middleware('throttle:10,1');
+                Route::get('badges', [ClientChatController::class, 'badges']);
+
                 Route::controller(AccountSettingsController::class)->prefix('account')->group(function () {
                     Route::get('profile', 'profile');
-                    Route::put('profile', 'updateProfile');
-                    Route::get('contacts', 'contacts');
-                    Route::post('contacts', 'storeContact')->middleware('throttle:20,1');
-                    Route::put('contacts/{id}', 'updateContact')->whereNumber('id');
-                    Route::delete('contacts/{id}', 'destroyContact')->whereNumber('id');
-                    Route::post('contacts/{id}/resend', 'resendContactVerification')->whereNumber('id');
+                    Route::put('profile', 'updateProfile')->middleware('client.can:profile');
                     Route::post('contacts/verify', 'verifyContact');
-                    Route::get('emails', 'emails');
-                    Route::get('emails/{id}', 'email')->whereNumber('id');
                     Route::get('support-pin', 'supportPin');
                     Route::post('support-pin', 'generateSupportPin')->middleware('throttle:10,1');
                     Route::post('support-pin/cancel', 'cancelSupportPin');
                     Route::delete('support-pin/{id}', 'cancelSupportPin')->whereNumber('id');
-                    Route::get('sessions', 'sessions');
-                    Route::delete('sessions/{id}', 'destroySession')->whereNumber('id');
-                    Route::delete('sessions', 'destroyOtherSessions');
-                });
-                Route::get('domains', [ClientDomainController::class, 'index']);
-                Route::get('domains/{id}', [ClientDomainController::class, 'show'])->whereNumber('id');
-                Route::put('domains/{id}', [ClientDomainController::class, 'update'])->whereNumber('id');
-                Route::get('invoices', [AccountController::class, 'invoices']);
-                Route::get('invoices/{id}', [AccountController::class, 'invoice'])->whereNumber('id');
-                Route::post('invoices/{id}/pay', [AccountController::class, 'pay'])->whereNumber('id')->middleware('throttle:10,1');
-                Route::get('store', [StoreController::class, 'index']);
-                Route::post('orders', [StoreController::class, 'order'])->middleware('throttle:10,1');
-                Route::get('store/domains', [StoreController::class, 'domainOptions']);
-                Route::get('store/domains/lookup', [StoreController::class, 'lookup'])->middleware('throttle:30,1');
-                Route::post('orders/domain', [StoreController::class, 'orderDomain'])->middleware('throttle:10,1');
 
-                Route::get('badges', [ClientChatController::class, 'badges']);
-                Route::get('tickets', [ClientTicketController::class, 'index']);
-                Route::post('tickets', [ClientTicketController::class, 'store'])->middleware('throttle:10,1');
-                Route::get('tickets/{id}', [ClientTicketController::class, 'show'])->whereNumber('id');
-                Route::post('tickets/{id}/replies', [ClientTicketController::class, 'reply'])->whereNumber('id')->middleware('throttle:20,1');
-                Route::get('tickets/{id}/replies/{reply}/attachment', [ClientTicketController::class, 'attachment'])->whereNumber(['id', 'reply']);
-                Route::post('tickets/{id}/close', [ClientTicketController::class, 'close'])->whereNumber('id');
-                Route::get('chat', [ClientChatController::class, 'index']);
-                Route::post('chat', [ClientChatController::class, 'store'])->middleware('throttle:30,1');
-                Route::get('chat/{message}/attachment', [ClientChatController::class, 'attachment'])->whereNumber('message');
+                    Route::get('contacts', 'contacts')->middleware('client.can:contacts');
+                    // These manage the account's users and their permissions, so a user could raise their own: owner only.
+                    Route::middleware('client.can:owner')->group(function () {
+                        Route::post('contacts', 'storeContact')->middleware('throttle:20,1');
+                        Route::put('contacts/{id}', 'updateContact')->whereNumber('id');
+                        Route::delete('contacts/{id}', 'destroyContact')->whereNumber('id');
+                        Route::post('contacts/{id}/resend', 'resendContactVerification')->whereNumber('id');
+                    });
+
+                    Route::middleware('client.can:emails')->group(function () {
+                        Route::get('emails', 'emails');
+                        Route::get('emails/{id}', 'email')->whereNumber('id');
+                    });
+
+                    // Sign-in security belongs to the account owner.
+                    Route::middleware('client.can:owner')->group(function () {
+                        Route::get('sessions', 'sessions');
+                        Route::delete('sessions/{id}', 'destroySession')->whereNumber('id');
+                        Route::delete('sessions', 'destroyOtherSessions');
+                    });
+                });
+                Route::put('security', [AccountController::class, 'security'])->middleware('client.can:owner');
+
+                Route::middleware('client.can:products')->group(function () {
+                    Route::get('services', [ClientServiceController::class, 'index']);
+                    Route::get('services/{id}', [ClientServiceController::class, 'show'])->whereNumber('id');
+                });
+                Route::post('services/{id}/password', [ClientServiceController::class, 'password'])->whereNumber('id')->middleware(['client.can:manageproducts', 'throttle:10,1']);
+
+                Route::middleware('client.can:domains')->group(function () {
+                    Route::get('domains', [ClientDomainController::class, 'index']);
+                    Route::get('domains/{id}', [ClientDomainController::class, 'show'])->whereNumber('id');
+                });
+                Route::put('domains/{id}', [ClientDomainController::class, 'update'])->whereNumber('id')->middleware('client.can:managedomains');
+
+                Route::middleware('client.can:invoices')->group(function () {
+                    Route::get('invoices', [AccountController::class, 'invoices']);
+                    Route::get('invoices/{id}', [AccountController::class, 'invoice'])->whereNumber('id');
+                    Route::post('invoices/{id}/pay', [AccountController::class, 'pay'])->whereNumber('id')->middleware('throttle:10,1');
+                    Route::get('credits', [CreditController::class, 'index']);
+                    Route::post('credits', [CreditController::class, 'store'])->middleware('throttle:10,1');
+                });
+
+                Route::middleware('client.can:orders')->group(function () {
+                    Route::get('store', [StoreController::class, 'index']);
+                    Route::post('orders', [StoreController::class, 'order'])->middleware('throttle:10,1');
+                    Route::get('store/domains', [StoreController::class, 'domainOptions']);
+                    Route::get('store/domains/lookup', [StoreController::class, 'lookup'])->middleware('throttle:30,1');
+                    Route::post('orders/domain', [StoreController::class, 'orderDomain'])->middleware('throttle:10,1');
+                });
+
+                Route::middleware('client.can:tickets')->group(function () {
+                    Route::get('tickets', [ClientTicketController::class, 'index']);
+                    Route::post('tickets', [ClientTicketController::class, 'store'])->middleware('throttle:10,1');
+                    Route::get('tickets/{id}', [ClientTicketController::class, 'show'])->whereNumber('id');
+                    Route::post('tickets/{id}/replies', [ClientTicketController::class, 'reply'])->whereNumber('id')->middleware('throttle:20,1');
+                    Route::get('tickets/{id}/replies/{reply}/attachment', [ClientTicketController::class, 'attachment'])->whereNumber(['id', 'reply']);
+                    Route::post('tickets/{id}/close', [ClientTicketController::class, 'close'])->whereNumber('id');
+                    Route::get('chat', [ClientChatController::class, 'index']);
+                    Route::post('chat', [ClientChatController::class, 'store'])->middleware('throttle:30,1');
+                    Route::get('chat/{message}/attachment', [ClientChatController::class, 'attachment'])->whereNumber('message');
+                });
             });
         });
     });
@@ -110,10 +140,17 @@ Route::prefix('api')->group(function () {
         Route::get('dashboard', Admin\DashboardController::class);
         Route::get('activity', [Admin\DashboardController::class, 'activity']);
 
+        Route::post('clients/message', [Admin\ClientController::class, 'message'])->middleware('throttle:10,1');
         Route::apiResource('clients', Admin\ClientController::class);
         Route::put('clients/{client}/notes', [Admin\ClientController::class, 'notes']);
         Route::get('clients/{client}/log', [Admin\ClientController::class, 'log']);
         Route::post('clients/{client}/invoices', [Admin\ClientController::class, 'invoice']);
+        Route::post('clients/{client}/emails/{email}/resend', [Admin\ClientController::class, 'resendEmail'])->whereNumber('email')->middleware('throttle:20,1');
+        Route::delete('clients/{client}/emails/{email}', [Admin\ClientController::class, 'destroyEmail'])->whereNumber('email');
+        Route::post('clients/{client}/users/{user}/password-reset', [Admin\ClientController::class, 'sendPasswordReset'])->whereNumber('user')->middleware('throttle:10,1');
+        Route::put('clients/{client}/users/{user}/password', [Admin\ClientController::class, 'changePassword'])->whereNumber('user');
+        Route::get('clients/{client}/credits', [Admin\ClientController::class, 'credits']);
+        Route::post('clients/{client}/credits', [Admin\ClientController::class, 'adjustCredit']);
         Route::post('clients/{client}/close', [Admin\ClientController::class, 'close']);
         Route::post('clients/{client}/reopen', [Admin\ClientController::class, 'reopen']);
         Route::get('clients/{client}/users', [Admin\ClientController::class, 'users']);
@@ -151,7 +188,12 @@ Route::prefix('api')->group(function () {
         Route::get('invoices/{invoice}', [Admin\InvoiceController::class, 'show']);
         Route::post('invoices/{invoice}/payments', [Admin\InvoiceController::class, 'pay']);
         Route::post('invoices/{invoice}/cancel', [Admin\InvoiceController::class, 'cancel']);
+        Route::post('invoices/bulk', [Admin\InvoiceController::class, 'bulk']);
+        Route::put('invoices/{invoice}', [Admin\InvoiceController::class, 'update']);
+        Route::delete('invoices/{invoice}', [Admin\InvoiceController::class, 'destroy']);
         Route::get('transactions', [Admin\TransactionController::class, 'index']);
+        Route::put('transactions/{payment}', [Admin\TransactionController::class, 'update']);
+        Route::delete('transactions/{payment}', [Admin\TransactionController::class, 'destroy']);
 
         Route::get('services', [Admin\ServiceController::class, 'index']);
         Route::get('services/{service}', [Admin\ServiceController::class, 'show']);

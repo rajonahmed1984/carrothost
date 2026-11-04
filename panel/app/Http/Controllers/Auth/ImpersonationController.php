@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
 use App\Services\Auth\LoginService;
+use App\Services\Auth\SubUsers;
 use App\Support\Auth\Portal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ class ImpersonationController extends Controller
         ActivityLog::record('client.impersonated', $client);
 
         $request->session()->put(LoginService::IMPERSONATOR, $request->user()->id);
+        $request->session()->forget(SubUsers::SESSION_KEY); // the admin sees the whole account
         Auth::guard('web')->logoutCurrentDevice();
         Auth::guard('client')->login($client);
         $request->session()->regenerate();

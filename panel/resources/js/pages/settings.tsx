@@ -17,12 +17,12 @@ const tabs = [
     { key: 'invoices', label: 'Invoices', hint: 'Currency and when new invoices fall due.' },
     { key: 'domains', label: 'Domains', hint: 'What customers can order, and the defaults each new domain starts with.' },
     { key: 'automation', label: 'Automation', hint: 'Renewals, suspensions and support ticket clean-up.' },
-    { key: 'email', label: 'Email', hint: 'The SMTP server that sends every email.' },
+    { key: 'email', label: 'Email', hint: 'Mail goes out through the server unless an SMTP server is saved here.' },
 ];
 
 type Values = {
     company_name: string; company_email: string | null; pay_to_text: string | null; company_country: string | null; time_zone: string;
-    currency: string; invoice_due_days: number; renewal_notice_days: number; suspension_enabled: boolean; suspend_after_days: number;
+    currency: string; invoice_due_days: number; renewal_notice_days: number; credit_min_deposit: string; credit_max_deposit: string; credit_max_balance: string; suspension_enabled: boolean; suspend_after_days: number;
     unsuspension_enabled: boolean; ticket_auto_close_days: number; domain_allow_register: boolean; domain_allow_transfer: boolean;
     domain_allow_own: boolean; domain_auto_renew: boolean; nameserver_1: string | null; nameserver_2: string | null; nameserver_3: string | null;
     nameserver_4: string | null; nameserver_5: string | null; recaptcha_enabled: boolean; recaptcha_site_key: string | null;
@@ -179,6 +179,11 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             <Field label="Invoice due days" hint="Days after an order that its invoice falls due. 0 = due straight away.">
                                 <Input type="number" min="0" max="365" required {...text('invoice_due_days')} />
                             </Field>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Minimum deposit" hint="Smallest Add Funds amount a client can pay."><Input type="number" min="0.01" step="0.01" {...text('credit_min_deposit')} /></Field>
+                            <Field label="Maximum deposit" hint="Largest single Add Funds payment."><Input type="number" min="0.01" step="0.01" {...text('credit_max_deposit')} /></Field>
+                            <Field label="Maximum balance" hint="Highest credit balance a client can build up."><Input type="number" min="0.01" step="0.01" {...text('credit_max_balance')} /></Field>
                         </div>
                         <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                             Bank transfer and other payment instructions are set on the Manual gateway in <Link className="table-action-link" to="/admin/settings/gateways">Payment Gateways</Link>.

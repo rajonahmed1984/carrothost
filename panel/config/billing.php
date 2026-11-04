@@ -38,6 +38,13 @@ return [
     // Whether paying lifts a suspension that billing applied.
     'unsuspension_enabled' => true,
 
+    // Add Funds limits, in the billing currency. Admin > Settings overrides these.
+    'credit' => [
+        'min_deposit' => '100.00',
+        'max_deposit' => '50000.00',
+        'max_balance' => '100000.00',
+    ],
+
     // Close tickets left Answered this many days with no customer reply. 0 = never.
     'ticket_auto_close_days' => 0,
 

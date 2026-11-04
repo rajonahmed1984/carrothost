@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Order;
 use App\Services\BillingService;
+use App\Services\CustomerMailer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -52,7 +53,7 @@ class OrderController extends Controller
     }
 
     /** Sets up the paid services whose product waits for an admin to accept the order. */
-    public function accept(Order $order)
+    public function accept(Order $order, CustomerMailer $mailer)
     {
         $waiting = $order->services()->where('provision_status', 'awaiting_accept')->get();
 
@@ -72,6 +73,7 @@ class OrderController extends Controller
         }
 
         ActivityLog::record('order.accepted', $order);
+        $mailer->orderAccepted($order);
 
         return $this->show($order);
     }
@@ -114,7 +116,7 @@ class OrderController extends Controller
         return response()->json($order->load('invoices'), 201);
     }
 
-    public function batchAction(Request $request)
+    public function batchAction(Request $request, CustomerMailer $mailer)
     {
         $data = $request->validate([
             'order_ids' => 'required|array',
@@ -133,6 +135,7 @@ class OrderController extends Controller
                 }
                 $order->update(['status' => 'active']);
                 ActivityLog::record('order.accepted', $order);
+                $mailer->orderAccepted($order);
             } elseif ($data['action'] === 'cancel') {
                 $order->update(['status' => 'cancelled']);
                 $order->invoices()->where('status', 'unpaid')->update(['status' => 'cancelled']);

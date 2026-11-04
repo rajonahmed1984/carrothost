@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Mail\VerificationCode;
+use App\Support\MailFrom;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -69,11 +70,13 @@ class RegistrationOtpService
 
         return $this->otp->deliver($email, new VerificationCode(
             code: $code,
-            subjectLine: "Your {$appName} email verification code: {$code}",
-            heading: 'Verify your email',
-            intro: "Finish creating your {$appName} account",
-            instructions: "Enter this 6-digit code to complete your registration. It expires in {$minutes} minutes.",
+            subjectLine: 'Your Email Verification Code',
+            heading: 'Your Email Verification Code',
+            intro: "Thank you for signing up with {$appName}. Enter the code below to verify your email and create your account.",
+            instructions: "This code expires in {$minutes} minutes and can only be used once.",
             footer: 'If you did not try to register, you can ignore this email. No account has been created.',
+            sender: MailFrom::SALES,
+            name: $pending['data']['name'] ?? null,
         ));
     }
 

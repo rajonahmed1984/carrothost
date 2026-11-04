@@ -5,7 +5,14 @@ import { api } from '../api';
 import { Button, Card, ErrorNote } from '../ui';
 import { ProfileHeader } from './account';
 
-export type ClientProfile = { id: number; name: string; email: string; otp_enabled: boolean; has_password: boolean; impersonating: boolean };
+export type ClientProfile = {
+    id: number; name: string; email: string; otp_enabled: boolean; has_password: boolean; impersonating: boolean;
+    /** Set when a user of the account, not its owner, is signed in. */
+    user: { name: string; email: string; permissions: string[] } | null;
+};
+
+/** What the person signed in may use. "owner" is for the account owner alone. */
+export const clientCan = (profile: ClientProfile, permission: string) => (permission === 'owner' ? !profile.user : !profile.user || profile.user.permissions.includes(permission));
 
 function PasswordField({
     label,

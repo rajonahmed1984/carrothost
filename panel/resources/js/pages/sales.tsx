@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, MinusCircle, Plus, Trash2 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, Mail, MinusCircle, Plus, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, money, type Page } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, type Tab } from '../ui';
+
+const RichEditor = lazy(() => import('../editor'));
 
 export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
 
@@ -45,14 +47,61 @@ export function ClientForm({ client, onClose }: { client: Client | null; onClose
     );
 }
 
+function SendMessage({ clientIds, onClose, onSent }: { clientIds: number[]; onClose: () => void; onSent: (message: string) => void }) {
+    const [form, setForm] = useState({ sender: 'support', subject: '', message: '' });
+    const [blank, setBlank] = useState(false);
+    const send = useMutation({
+        mutationFn: async () => (await api.post<{ message: string }>('/clients/message', { ...form, client_ids: clientIds })).data,
+        onSuccess: (data) => onSent(data.message),
+    });
+    // The editor is not a form field, so "required" is checked here.
+    const submit = (e: FormEvent) => {
+        e.preventDefault();
+        const empty = !new DOMParser().parseFromString(form.message, 'text/html').body.textContent?.trim() && !/<img/i.test(form.message);
+        setBlank(empty);
+        if (!empty) send.mutate();
+    };
+
+    return (
+        <Modal wide title={`Send message to ${clientIds.length} client${clientIds.length === 1 ? '' : 's'}`} onClose={onClose}>
+            <form onSubmit={submit} className="space-y-3">
+                <Field label="From">
+                    <Select value={form.sender} onChange={(e) => setForm({ ...form, sender: e.target.value })}>
+                        <option value="support">Support (support@carrothost.com)</option>
+                        <option value="sales">Sales (sales@carrothost.com)</option>
+                        <option value="billing">Billing (billing@carrothost.com)</option>
+                    </Select>
+                </Field>
+                <Field label="Subject"><Input required maxLength={200} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></Field>
+                {/* Not a <Field>: inside a <label>, a click on blank toolbar space would press the first button. */}
+                <div>
+                    <span className="mb-1 block text-xs font-semibold text-slate-600">Message</span>
+                    <Suspense fallback={<div className="grid h-[420px] place-items-center rounded-lg border border-slate-200 text-sm text-slate-500">Loading editor...</div>}>
+                        <RichEditor value={form.message} onChange={(message) => setForm((f) => ({ ...f, message }))} />
+                    </Suspense>
+                    <span className={`mt-1 block text-xs ${blank ? 'font-semibold text-red-700' : 'text-slate-500'}`}>
+                        {blank ? 'Write a message first.' : '{name}, {email} and {company} are replaced with each client\'s details. Use the <> button to edit the HTML.'}
+                    </span>
+                </div>
+                <ErrorNote error={send.error} />
+                <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={send.isPending}>{send.isPending ? 'Sending...' : 'Send message'}</Button></div>
+            </form>
+        </Modal>
+    );
+}
+
 export function ClientsPage() {
     const [search, setSearch] = useState('');
     const [hideInactive, setHideInactive] = useState(true);
     const [editing, setEditing] = useState<Client | 'new' | null>(null);
+    const [selected, setSelected] = useState<number[]>([]);
+    const [messaging, setMessaging] = useState(false);
+    const [sent, setSent] = useState('');
     const params: Record<string, string> = { ...(search ? { q: search } : {}), ...(hideInactive ? { hide_inactive: '1' } : {}) };
 
     return (
         <>
+            {sent && <p role="status" className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{sent}</p>}
             <PagedTable<Client>
                 url="/clients"
                 noun="clients"
@@ -63,10 +112,12 @@ export function ClientsPage() {
                         <Button onClick={() => setEditing('new')}><Plus size={14} /> Add client</Button>
                     </div>
                 }
+                selection={{ ids: selected, onChange: (ids) => { setSelected(ids); setSent(''); } }}
+                bulk={<Button className="px-3 py-1.5 text-xs" onClick={() => setMessaging(true)}><Mail size={13} /> Send Message</Button>}
                 params={params}
                 empty="No clients yet. Add your first client to create an order."
                 columns={[
-                    { header: 'ID', cell: (c) => <Link className="table-action-link font-semibold tabular-nums" to={`/admin/clients/${c.id}`}>#{c.id}</Link> },
+                    { header: 'ID', cell: (c) => <Link className="table-action-link font-semibold tabular-nums" to={`/admin/clients/${c.id}`}>{c.id}</Link> },
                     { header: 'Name', cell: (c) => <Link className="table-action-link font-semibold" to={`/admin/clients/${c.id}`}>{c.name}</Link> },
                     { header: 'Company Name', cell: (c) => c.company ?? '-' },
                     { header: 'Email Address', cell: (c) => c.email },
@@ -78,6 +129,7 @@ export function ClientsPage() {
                 ]}
             />
             {editing && <ClientForm client={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
+            {messaging && <SendMessage clientIds={selected} onClose={() => setMessaging(false)} onSent={(message) => { setMessaging(false); setSelected([]); setSent(message); }} />}
         </>
     );
 }

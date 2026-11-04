@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Domain;
 use App\Support\Branding;
+use App\Support\MailFrom;
 use App\Support\Settings;
 use DateTimeZone;
 use Illuminate\Http\Request;
@@ -29,6 +30,9 @@ class SettingController extends Controller
                 'currency' => config('billing.currency'),
                 'invoice_due_days' => (int) config('billing.invoice_due_days'),
                 'renewal_notice_days' => (int) config('billing.renewal_notice_days'),
+                'credit_min_deposit' => config('billing.credit.min_deposit'),
+                'credit_max_deposit' => config('billing.credit.max_deposit'),
+                'credit_max_balance' => config('billing.credit.max_balance'),
                 'suspension_enabled' => (bool) config('billing.suspension_enabled'),
                 'suspend_after_days' => (int) config('billing.suspend_after_days'),
                 'unsuspension_enabled' => (bool) config('billing.unsuspension_enabled'),
@@ -78,6 +82,9 @@ class SettingController extends Controller
             'currency' => 'required|in:BDT,USD',
             'invoice_due_days' => 'required|integer|between:0,365',
             'renewal_notice_days' => 'required|integer|between:0,90',
+            'credit_min_deposit' => 'nullable|numeric|min:0.01|max:9999999',
+            'credit_max_deposit' => 'nullable|numeric|min:0.01|max:9999999',
+            'credit_max_balance' => 'nullable|numeric|min:0.01|max:9999999',
             'suspension_enabled' => 'boolean',
             'suspend_after_days' => 'required|integer|between:0,365',
             'unsuspension_enabled' => 'boolean',
@@ -104,6 +111,11 @@ class SettingController extends Controller
 
         if ($request->boolean('recaptcha_enabled') && empty($data['recaptcha_secret_key']) && ! Settings::isSet('recaptcha_secret_key') && empty(config('recaptcha.secret_key'))) {
             throw ValidationException::withMessages(['recaptcha_secret_key' => 'Enter the reCAPTCHA secret key to turn it on.']);
+        }
+
+        $limit = fn (string $key) => (float) ($data["credit_{$key}"] ?? config("billing.credit.{$key}"));
+        if ($limit('max_deposit') < $limit('min_deposit')) {
+            throw ValidationException::withMessages(['credit_max_deposit' => 'The maximum deposit cannot be below the minimum.']);
         }
 
         foreach (['logo' => 'logo_path', 'favicon' => 'favicon_path'] as $field => $key) {
@@ -136,14 +148,15 @@ class SettingController extends Controller
 
         try {
             Mail::raw('This is a test email from '.config('app.name').'. Your mail settings work.', function ($message) use ($data) {
-                $message->to($data['email'])->subject('Test email from '.config('app.name'));
+                $from = MailFrom::for(MailFrom::SUPPORT);
+                $message->from($from->address, $from->name)->to($data['email'])->subject('Test email from '.config('app.name'));
             });
         } catch (Throwable $e) {
             return response()->json(['message' => 'Sending failed: '.$e->getMessage()], 422);
         }
 
         return ['message' => config('mail.default') === 'log'
-            ? 'Mail is set to the log driver, so it was written to the log instead of sent. Save an SMTP server first.'
+            ? 'Mail is set to the log driver, so it was written to the log instead of sent. Set MAIL_MAILER=sendmail in .env or save an SMTP server.'
             : "Test email sent to {$data['email']}."];
     }
 

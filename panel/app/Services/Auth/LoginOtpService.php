@@ -35,11 +35,13 @@ class LoginOtpService
 
         return $this->deliver($account->email, new VerificationCode(
             code: $code,
-            subjectLine: "Your {$label} login verification code: {$code}",
-            heading: 'Security verification',
-            intro: "Sign-in attempt for {$label}",
-            instructions: 'Enter this 6-digit code to complete your login. It expires in '.self::OTP_EXPIRY_MINUTES.' minutes.',
+            // No code in the subject: a plain subject and a labelled code is what mail apps recognise.
+            subjectLine: 'Your Login Verification Code',
+            heading: 'Your Login Verification Code',
+            intro: "Someone has just entered the correct password for your {$label} account. Enter the code below to finish signing in.",
+            instructions: 'This code expires in '.self::OTP_EXPIRY_MINUTES.' minutes and can only be used once.',
             footer: 'If you did not try to sign in, change your password immediately.',
+            name: $account->name,
         ));
     }
 

@@ -60,7 +60,7 @@ class SupportTest extends TestCase
             ->assertJsonPath('status', 'open')
             ->assertJsonPath('department_name', 'Billing')
             ->assertJsonPath('replies.0.message', 'Invoice 1001 was paid twice.');
-        Mail::assertSent(TicketNotification::class, fn ($mail) => $mail->hasTo('staff@example.com'));
+        Mail::assertSent(TicketNotification::class, fn ($mail) => $mail->hasTo('staff@example.com') && $mail->hasFrom('support@carrothost.com', 'CarrotHost Support'));
         $this->getJson('/api/client/tickets')->assertJsonPath('tickets.0.subject', 'Charged twice')->assertJsonStructure(['tickets' => [['created_at', 'priority', 'department']]]);
     }
 

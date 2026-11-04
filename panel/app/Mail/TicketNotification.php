@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Support\MailFrom;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -17,7 +18,7 @@ class TicketNotification extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->subjectLine);
+        return new Envelope(from: MailFrom::for(MailFrom::SUPPORT), subject: $this->subjectLine);
     }
 
     public function content(): Content

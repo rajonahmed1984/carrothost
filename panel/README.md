@@ -45,6 +45,15 @@ Customers use `/login` (`clients` table, `client` guard). Admins use `/admin/log
 - **Login as Client** on a client's page lets an admin see their account. Both ends are
   logged, and their password and security settings stay locked meanwhile.
 
+**Mail** goes out through the server's own sendmail (`MAIL_MAILER=sendmail`), the same way
+myapptimatic does, so on cPanel nothing else is needed. Senders (`config/system_mail.php`):
+
+- **sales@carrothost.com**: registration codes, order confirmations, accepted orders
+- **support@carrothost.com**: sign-in codes, password resets, tickets
+- **billing@carrothost.com**: new invoices (orders, renewals, manual) and payment receipts
+
+An SMTP server saved under Settings → Email replaces sendmail.
+
 **Configure a working mailer before going live.** Without one, no admin can receive a code
 and nobody can sign in to the admin panel. To recover, set `MAIL_MAILER=log` and read the
 code from `storage/logs/laravel.log`.

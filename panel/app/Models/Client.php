@@ -25,7 +25,13 @@ class Client extends Authenticatable
             'otp_enabled' => 'boolean',
             'login_otp_expires_at' => 'datetime',
             'support_pin_expires_at' => 'datetime',
+            'credit_balance' => 'decimal:2',
         ];
+    }
+
+    public function credits(): HasMany
+    {
+        return $this->hasMany(ClientCredit::class);
     }
 
     public function requiresLoginOtp(): bool

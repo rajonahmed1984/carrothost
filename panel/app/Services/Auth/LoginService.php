@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\ActivityLog;
 use App\Models\Client;
+use App\Models\ClientUser;
 use App\Services\RecaptchaService;
 use App\Support\Auth\Portal;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -25,6 +26,7 @@ class LoginService
     public function __construct(
         private readonly RecaptchaService $recaptcha,
         private readonly LoginOtpService $otp,
+        private readonly SubUsers $subUsers,
     ) {}
 
     public static function registerRateLimiter(): void
@@ -58,50 +60,65 @@ class LoginService
         $guard = Auth::guard(Portal::guard($portal));
         $scoped = [...$credentials, ...Portal::scope($portal)];
 
-        if (! $guard->validate($scoped)) {
+        $user = null;
+
+        if ($guard->validate($scoped)) {
+            $account = $guard->getLastAttempted();
+            $guard->getProvider()->rehashPasswordIfRequired($account, $credentials);
+        } elseif ($portal === Portal::CLIENT && ($user = $this->subUsers->attempt($credentials['email'], $credentials['password']))) {
+            // A user of a client account signs in to that account, as themselves.
+            $account = $user->client;
+            $remember = false; // a remember cookie restores the client alone, without the user's limits
+        } else {
             ActivityLog::record('login.denied', context: ['portal' => $portal, 'email' => $credentials['email'], 'ip' => $request->ip()]);
 
             throw ValidationException::withMessages(['email' => 'The provided credentials are incorrect.']);
         }
 
-        $account = $guard->getLastAttempted();
-        $guard->getProvider()->rehashPasswordIfRequired($account, $credentials);
+        // A user gets a code when they turned it on for themselves or the account owner requires it.
+        $needsCode = $user ? ($user->two_factor || $account->requiresLoginOtp()) : $account->requiresLoginOtp();
 
-        if (! $account->requiresLoginOtp()) {
-            $this->complete($request, $portal, $account, $remember);
+        if (! $needsCode) {
+            $this->complete($request, $portal, $account, $remember, $user);
 
             return ['requires_otp' => false];
         }
 
-        if (! $this->otp->generateAndSend($account, $portal) && ! LoginOtpService::isLocalDev()) {
+        // The code goes to whoever is signing in: the owner, or the user at their own address.
+        if (! $this->otp->generateAndSend($user ?? $account, $portal) && ! LoginOtpService::isLocalDev()) {
             throw ValidationException::withMessages(['email' => 'We could not send your verification code. Please try again shortly.']);
         }
 
-        $request->session()->put(self::PENDING_OTP, ['id' => $account->getAuthIdentifier(), 'portal' => $portal, 'remember' => $remember]);
+        $request->session()->put(self::PENDING_OTP, ['id' => $account->getAuthIdentifier(), 'portal' => $portal, 'remember' => $remember, 'client_user_id' => $user?->id]);
 
         return ['requires_otp' => true];
     }
 
-    /** Every way in ends here: password, emailed code, registration and Google. */
-    public function complete(Request $request, string $portal, Authenticatable $account, bool $remember = false): void
+    /** Every way in ends here: password, emailed code, registration and Google. $user is set when a client account's user signs in. */
+    public function complete(Request $request, string $portal, Authenticatable $account, bool $remember = false, ?ClientUser $user = null): void
     {
-        Auth::guard(Portal::guard($portal))->login($account, $remember);
+        Auth::guard(Portal::guard($portal))->login($account, $remember && ! $user);
 
         $request->session()->regenerate();
-        // A real sign-in ends any impersonation still recorded in this session.
-        $request->session()->forget([self::IMPERSONATOR, self::PENDING_OTP]);
+        // A real sign-in ends any impersonation still recorded in this session, and any earlier user.
+        $request->session()->forget([self::IMPERSONATOR, self::PENDING_OTP, SubUsers::SESSION_KEY]);
+
+        if ($user) {
+            $request->session()->put(SubUsers::SESSION_KEY, $user->id);
+        }
 
         // The throttle middleware stores its counter under this hash of the limiter name and key.
-        RateLimiter::clear(md5('login'.self::limiterKey($request, $portal, $account->email)));
+        RateLimiter::clear(md5('login'.self::limiterKey($request, $portal, $user->email ?? $account->email)));
 
         if ($account instanceof Client) {
-            $account->update(['last_login_at' => now(), 'last_login_ip' => $request->ip()]);
+            $user?->forceFill(['last_login_at' => now()])->save();
+            $user ? $account->update(['last_login_ip' => $request->ip()]) : $account->update(['last_login_at' => now(), 'last_login_ip' => $request->ip()]);
             $account->sessions()->create([
                 'session_id' => $request->session()->getId(),
                 'ip_address' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 500),
             ]);
-            ActivityLog::record('client.login', $account, ['ip' => $request->ip()]);
+            ActivityLog::record('client.login', $account, array_filter(['ip' => $request->ip(), 'user' => $user?->email]));
         } else {
             ActivityLog::record('admin.login', context: ['ip' => $request->ip()]);
         }

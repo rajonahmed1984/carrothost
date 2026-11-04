@@ -1,6 +1,10 @@
-{{ $heading }}
+@if ($name)
+Dear {{ $name }},
 
-Your code is: {{ $code }}
+@endif
+{{ $intro }}
+
+Verification code: {{ $code }}
 
 {{ $instructions }}
 

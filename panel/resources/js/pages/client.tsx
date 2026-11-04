@@ -1,14 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, FileText, LifeBuoy, Lock, LockOpen, LogIn, MessageSquare, Plus, ReceiptText, ShoppingCart, Trash2, UserPen, Users, X } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, FileText, KeyRound, LifeBuoy, Lock, LockOpen, LogIn, MessageSquare, MoreVertical, Plus, ReceiptText, Send, ShoppingCart, Trash2, UserPen, Users, Wallet, X } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath, errorMessage, money } from '../api';
-import { Button, ErrorNote, Field, FilterTabs, Input, Modal, PagedTable, QueryState, Status, Table } from '../ui';
+import { Button, Card, Dropdown, ErrorNote, Field, FilterTabs, Input, Modal, PagedTable, QueryState, Select, Status } from '../ui';
 import { ClientForm, type Client } from './sales';
+import { DomainsTab, EmailsTab, InvoicesTab, Notice, RecordsTable, ServicesTab, TicketsTab, TransactionsTab } from './client-tabs';
 
-type InvoiceRow = { id: number; number: string; status: string; currency: string; total: string; due_date: string };
-type ServiceRow = { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; provision_status: string; product: { name: string }; server: { name: string } | null };
-type DomainRow = { id: number; name: string; status: string; expires_at: string | null; registrar: string | null; recurring_amount: string };
+export type InvoiceRow = { id: number; number: string; status: string; currency: string; total: string; due_date: string; paid_at: string | null; created_at: string; payment_method: string | null };
+export type ServiceRow = { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; provision_status: string; product: { name: string }; server: { name: string } | null };
+export type DomainRow = { id: number; name: string; status: string; expires_at: string | null; registrar: string | null; recurring_amount: string; created_at: string; years: number; auto_renew: boolean; action: string };
 
 type UserRow = {
     id: number;
@@ -26,10 +27,11 @@ type UserRow = {
     verification_token: string | null;
     email_verified_at: string | null;
     last_login_at: string | null;
+    has_password: boolean;
     created_at: string;
 };
 
-type Detail = Client & {
+export type Detail = Client & {
     country: string;
     notes: string | null;
     created_at: string;
@@ -39,13 +41,16 @@ type Detail = Client & {
     support_pin: string | null;
     support_pin_expires_at: string | null;
     invoice_totals: Record<'paid' | 'unpaid' | 'cancelled', { count: number; total: string }>;
+    credit_balance: string;
     overdue_invoices: number;
     gross_revenue: string;
     service_counts: { type: string; total: number; active: number }[];
     services: ServiceRow[];
     domains: DomainRow[];
     invoices: InvoiceRow[];
-    transactions: { id: number; gateway: string; transaction_id: string; amount: string; currency: string; created_at: string; invoice: { id: number; number: string } }[];
+    transactions: TransactionRow[];
+    transaction_totals: { in: string; fees: string; out: string; balance: string };
+    ticket_stats: { this_month: number; last_month: number; this_year: number; last_year: number };
     users?: UserRow[];
     contacts?: {
         id: number;
@@ -60,9 +65,12 @@ type Detail = Client & {
         country: string | null;
         created_at: string;
     }[];
-    tickets?: { id: number; ticket_mask: string; subject: string; status: string; priority: string; created_at: string }[];
-    emails?: { id: number; to: string; subject: string; body: string; created_at: string }[];
+    tickets?: TicketRow[];
+    emails?: EmailRow[];
 };
+export type TransactionRow = { id: number; gateway: string; gateway_name: string; transaction_id: string; amount: string; fee: string; currency: string; created_at: string; invoice: { id: number; number: string } };
+export type TicketRow = { id: number; number: string; department_name: string; subject: string; status: string; priority: string; created_at: string; last_reply_at: string | null };
+export type EmailRow = { id: number; to: string; subject: string; body: string | null; created_at: string };
 
 function formatWhmcsDate(iso: string | null) {
     if (!iso) return 'Never';
@@ -172,7 +180,57 @@ function NewInvoice({ clientId, onClose }: { clientId: number; onClose: () => vo
     );
 }
 
+type CreditRow = { id: number; description: string; amount: string; created_at: string; user: { name: string } | null; invoice: { id: number; number: string } | null };
+
+/** Manage Credits: the balance, a form to add or remove credit, and every change so far. */
+function ManageCredits({ client, onClose }: { client: Detail; onClose: () => void }) {
+    const qc = useQueryClient();
+    const [form, setForm] = useState({ type: 'add', amount: '', description: '' });
+    const [balance, setBalance] = useState(client.credit_balance);
+    const save = useMutation({
+        mutationFn: async () => (await api.post<{ balance: string }>(`/clients/${client.id}/credits`, form)).data,
+        onSuccess: (data) => {
+            setBalance(data.balance);
+            setForm({ type: form.type, amount: '', description: '' });
+            qc.invalidateQueries({ queryKey: [`/clients/${client.id}/credits`] });
+            qc.invalidateQueries({ queryKey: ['/clients'] });
+        },
+    });
+
+    return (
+        <Modal wide title={`Manage Credits: ${client.name}`} onClose={onClose}>
+            <div className="space-y-4">
+                <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    Available credit: <strong className="tabular-nums">{money(balance)}</strong>
+                    <span className="block text-xs text-emerald-800">Added credit pays the client's unpaid invoices straight away, oldest due first.</span>
+                </p>
+                <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="grid items-end gap-3 sm:grid-cols-[8rem_9rem_1fr_auto]">
+                    <Field label="Action">
+                        <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="add">Add credit</option><option value="remove">Remove credit</option></Select>
+                    </Field>
+                    <Field label="Amount"><Input type="number" min="0.01" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+                    <Field label="Description"><Input required maxLength={255} placeholder={form.type === 'add' ? 'e.g. Refund for invoice #1234' : 'e.g. Credit refunded to bKash'} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+                    <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : form.type === 'add' ? 'Add' : 'Remove'}</Button>
+                </form>
+                <ErrorNote error={save.error} />
+                <PagedTable<CreditRow>
+                    url={`/clients/${client.id}/credits`}
+                    noun="entries"
+                    empty="No credit history yet."
+                    columns={[
+                        { header: 'Date', cell: (r) => <span className="whitespace-nowrap">{formatWhmcsDate(r.created_at)}</span> },
+                        { header: 'Description', cell: (r) => r.invoice ? <Link className="table-action-link" to={`/admin/paid-invoices/${r.invoice.id}`}>{r.description}</Link> : r.description },
+                        { header: 'By', cell: (r) => r.user?.name ?? 'System' },
+                        { header: 'Amount', cell: (r) => <span className={Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(r.amount)}</span>, align: 'right' },
+                    ]}
+                />
+            </div>
+        </Modal>
+    );
+}
+
 function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => void; onInvoice: () => void; onTab: (tab: string) => void }) {
+    const [credits, setCredits] = useState(false);
     const qc = useQueryClient();
     const navigate = useNavigate();
     const [notes, setNotes] = useState(c.notes ?? '');
@@ -201,15 +259,17 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
                 </Panel>
             </div>
             <div className="min-w-0 space-y-4">
-                <Panel title="Invoices/Billing" footer={<Action icon={<ReceiptText size={14} />} onClick={onInvoice}>Create Invoice</Action>}>
+                <Panel title="Invoices/Billing" footer={<><Action icon={<ReceiptText size={14} />} onClick={onInvoice}>Create Invoice</Action><Action icon={<Wallet size={14} />} onClick={() => setCredits(true)}>Manage Credits</Action></>}>
                     <Rows rows={[
                         ['Paid', `${t.paid.count} (${money(t.paid.total)})`],
                         ['Unpaid/Due', `${t.unpaid.count} (${money(t.unpaid.total)})`],
                         ['Overdue', String(c.overdue_invoices)],
                         ['Cancelled', `${t.cancelled.count} (${money(t.cancelled.total)})`],
                         ['Gross Revenue', money(c.gross_revenue)],
+                        ['Credit Balance', <span key="credit" className="font-semibold text-emerald-700">{money(c.credit_balance)}</span>],
                     ]} />
                 </Panel>
+                {credits && <ManageCredits client={c} onClose={() => setCredits(false)} />}
                 <Panel title="Other Information">
                     <Rows rows={[
                         ['Status', <Status key="s" value={c.status} />],
@@ -372,7 +432,7 @@ function ManageUserModal({
                     {status === 'pending_approval' && (
                         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
                             <div>
-                                <strong className="font-semibold">Email Verified · Pending Admin Approval</strong>
+                                <strong className="font-semibold">Email Verified Â· Pending Admin Approval</strong>
                                 <p className="text-xs text-amber-700">This user has verified their email address and is awaiting approval.</p>
                             </div>
                             <Button
@@ -622,6 +682,26 @@ function AssociateUserModal({
     );
 }
 
+function ChangeUserPassword({ client, user, onClose, onDone }: { client: Detail; user: UserRow; onClose: () => void; onDone: (message: string) => void }) {
+    const [password, setPassword] = useState('');
+    const save = useMutation({
+        mutationFn: async () => (await api.put<{ message: string }>(`/clients/${client.id}/users/${user.id}/password`, { password })).data,
+        onSuccess: (data) => onDone(data.message),
+    });
+
+    return (
+        <Modal title={`Change password for ${user.email}`} onClose={onClose}>
+            <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3">
+                <Field label="New password" hint="At least 10 characters. Tell the user securely; they can change it after signing in.">
+                    <Input type="password" required minLength={10} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                </Field>
+                <ErrorNote error={save.error} />
+                <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Change password</Button></div>
+            </form>
+        </Modal>
+    );
+}
+
 function UsersTab({
     client,
     onManage,
@@ -643,175 +723,153 @@ function UsersTab({
     });
 
     const users = client.users ?? [];
+    // Every user has a login: the owner's is the client's own, the rest have their own password.
+    const [changingPassword, setChangingPassword] = useState<UserRow | null>(null);
+    const [notice, setNotice] = useState('');
+    const sendReset = useMutation({
+        mutationFn: async (userId: number) => (await api.post<{ message: string }>(`/clients/${client.id}/users/${userId}/password-reset`)).data,
+        onSuccess: (data) => setNotice(data.message),
+        onError: (e) => window.alert(errorMessage(e)),
+    });
 
     return (
-        <section className="card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-white">
-                <Button variant="ghost" onClick={onAssociate} className="border border-slate-300 bg-white shadow-sm hover:bg-slate-50 text-slate-700 text-xs">
-                    <Plus size={13} className="mr-1" /> Associate User
-                </Button>
-                <span className="text-xs text-slate-500 font-medium">
-                    {users.length} user{users.length === 1 ? '' : 's'} linked to this account
-                </span>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead>
-                        <tr className="bg-[#154273] text-white text-xs">
-                            <th className="px-4 py-2.5 font-semibold">Name / Email Address</th>
-                            <th className="px-4 py-2.5 font-semibold">Last Login Time</th>
-                            <th className="px-4 py-2.5 font-semibold text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                        {users.length === 0 ? (
-                            <tr>
-                                <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-500">
-                                    No users associated with this client.
-                                </td>
-                            </tr>
-                        ) : (
-                            users.map((u) => (
-                                <tr key={u.id} className="hover:bg-slate-50/70">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-slate-900">{u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</span>
-                                            {u.is_owner && (
-                                                <span className="rounded bg-neutral-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase">
-                                                    OWNER
-                                                </span>
-                                            )}
-                                            {u.status === 'pending_approval' && (
-                                                <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                                                    Pending Approval
-                                                </span>
-                                            )}
-                                            {u.status === 'pending_verification' && (
-                                                <span className="rounded-md bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
-                                                    Pending Verification
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-xs text-slate-500 font-mono mt-0.5">{u.email}</div>
-                                    </td>
-                                    <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
-                                        {formatWhmcsDate(u.last_login_at)}
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="inline-flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => onManage(u)}
-                                                className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-                                            >
-                                                Manage User
-                                            </button>
-                                            {u.status === 'pending_approval' && (
-                                                <button
-                                                    type="button"
-                                                    disabled={approveMutation.isPending}
-                                                    onClick={() => approveMutation.mutate(u.id)}
-                                                    className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-700"
-                                                >
-                                                    Approve
-                                                </button>
-                                            )}
-                                            <button
-                                                type="button"
-                                                disabled={u.is_owner || removeMutation.isPending}
-                                                onClick={() => {
-                                                    if (window.confirm(`Are you sure you want to remove ${u.name || u.email} from this client?`)) {
-                                                        removeMutation.mutate(u.id);
-                                                    }
-                                                }}
-                                                className="rounded bg-[#d9534f] px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-[#c9302c] disabled:opacity-40 inline-flex items-center gap-1"
-                                            >
-                                                Remove <ChevronDown size={12} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-            <div className="p-3">
-                <ErrorNote error={removeMutation.error || approveMutation.error} />
-            </div>
-        </section>
+        <div className="space-y-3">
+            {notice && <Notice text={notice} onClose={() => setNotice('')} />}
+            <ErrorNote error={removeMutation.error || approveMutation.error} />
+            {changingPassword && <ChangeUserPassword client={client} user={changingPassword} onClose={() => setChangingPassword(null)} onDone={(message) => { setChangingPassword(null); setNotice(message); qc.invalidateQueries({ queryKey: ['/clients', String(client.id)] }); }} />}
+            <RecordsTable<UserRow>
+                rows={users}
+                noun="users"
+                empty="No users associated with this client."
+                search={{ placeholder: 'Name or email', text: (u) => `${u.name} ${u.email}` }}
+                action={<Button onClick={onAssociate}><Plus size={14} /> Associate User</Button>}
+                columns={[
+                    {
+                        header: 'Name / Email',
+                        wrap: true,
+                        cell: (u) => (
+                            <div>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="font-semibold text-slate-900">{u.name || u.email}</span>
+                                    {u.is_owner && <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">Owner</span>}
+                                    {u.status !== 'active' && <Status value={u.status} />}
+                                    {!u.has_password && <span title="This user cannot sign in until they set a password. Send them a password reset email." className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">No password yet</span>}
+                                </div>
+                                <div className="mt-0.5 text-xs font-normal text-slate-500">{u.email}</div>
+                            </div>
+                        ),
+                    },
+                    { header: 'Permissions', cell: (u) => (u.is_owner ? 'Full access' : `${u.permissions_list.length} of ${ALL_PERMISSION_KEYS.length}`) },
+                    { header: 'Last Login', cell: (u) => formatWhmcsDate(u.last_login_at) },
+                    {
+                        header: '',
+                        align: 'right',
+                        cell: (u) => (
+                            <span className="inline-flex items-center gap-2">
+                                {u.status === 'pending_approval' && <Button className="h-8 px-3" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate(u.id)}>Approve</Button>}
+                                <Button variant="ghost" className="h-8 px-3" onClick={() => onManage(u)}>Manage User</Button>
+                                <Dropdown label={`More actions for ${u.email}`} buttonClassName="icon-btn h-8 w-8" button={<MoreVertical size={15} />} menuClassName="w-56 py-1 text-sm">
+                                    <button type="button" role="menuitem" disabled={sendReset.isPending} onClick={() => sendReset.mutate(u.id)} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><Send size={14} className="text-slate-400" /> Send Password Reset Email</button>
+                                    <button type="button" role="menuitem" onClick={() => setChangingPassword(u)} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><KeyRound size={14} className="text-slate-400" /> Change Password</button>
+                                    {!u.is_owner && (
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            disabled={removeMutation.isPending}
+                                            onClick={() => window.confirm(`Remove ${u.name || u.email} from this client? They will no longer be able to sign in.`) && removeMutation.mutate(u.id)}
+                                            className="flex w-full cursor-pointer items-center gap-2 border-t border-slate-100 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"
+                                        >
+                                            <Trash2 size={14} /> Remove User
+                                        </button>
+                                    )}
+                                </Dropdown>
+                            </span>
+                        ),
+                    },
+                ]}
+            />
+        </div>
     );
 }
 
-function ClientSelector({ currentId }: { currentId: number }) {
-    const navigate = useNavigate();
+type PickerClient = { id: number; name: string; company: string | null; email: string };
+
+/** Jump to another client: type a name, company, email, phone or #ID. Searches every client, not just the first page. */
+function ClientSelector({ current }: { current: PickerClient }) {
     const [params] = useSearchParams();
-    const clientsQuery = useQuery({
-        queryKey: ['/clients-quick-list'],
-        queryFn: async () => (await api.get<{ data: { id: number; name: string; company: string | null }[] }>('/clients?per_page=100')).data,
+    const [search, setSearch] = useState('');
+    const [term, setTerm] = useState('');
+    const tab = params.get('tab');
+    const list = useQuery({
+        queryKey: ['/clients-picker', term],
+        queryFn: async () => (await api.get<{ data: PickerClient[] }>('/clients', { params: { q: term, per_page: 50 } })).data.data,
+        placeholderData: keepPreviousData,
     });
-    const clients = clientsQuery.data?.data ?? [];
-    const currentTab = params.get('tab');
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => setTerm(search.trim()), 250);
+
+        return () => window.clearTimeout(timer);
+    }, [search]);
+
+    const label = (cl: PickerClient) => `${cl.name}${cl.company && cl.company !== cl.name ? ` (${cl.company})` : ''} - #${cl.id}`;
 
     return (
-        <select
-            value={currentId}
-            onChange={(e) => navigate(`/admin/clients/${e.target.value}${currentTab ? `?tab=${currentTab}` : ''}`)}
-            className="ui-input py-1.5 px-3 font-semibold text-xs min-w-[280px] max-w-md bg-white border-slate-300 rounded shadow-sm text-slate-800"
+        <Dropdown
+            label="Switch client"
+            buttonClassName="ui-input flex min-w-[280px] max-w-md cursor-pointer items-center justify-between gap-2 bg-white py-1.5 text-left text-xs font-semibold text-slate-800"
+            button={<><span className="truncate">{label(current)}</span><ChevronDown size={14} className="shrink-0 text-slate-400" /></>}
+            menuClassName="w-[24rem] text-xs"
         >
-            {clients.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                    {cl.name}{cl.company ? ` (${cl.company})` : ''} - #{cl.id}
-                </option>
-            ))}
-        </select>
+            <div className="border-b border-slate-100 p-2">
+                <input
+                    autoFocus
+                    type="search"
+                    aria-label="Search clients"
+                    placeholder="Search name, company, email, phone or #ID"
+                    className="ui-input h-9 py-1 text-xs"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    // Enter opens the first match.
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.closest('[role="menu"]')?.querySelector<HTMLAnchorElement>('a[data-match]')?.click(); } }}
+                />
+            </div>
+            <div className="max-h-80 overflow-y-auto py-1">
+                {list.isLoading && <p className="px-3 py-3 text-slate-500">Loading...</p>}
+                {list.data?.length === 0 && <p className="px-3 py-3 text-slate-500">No client matches "{term}".</p>}
+                {list.data?.map((cl) => (
+                    <Link
+                        key={cl.id}
+                        data-match
+                        role="menuitem"
+                        to={`/admin/clients/${cl.id}${tab ? `?tab=${tab}` : ''}`}
+                        onClick={() => setSearch('')}
+                        className={`block px-3 py-1.5 hover:bg-slate-100 ${cl.id === current.id ? 'bg-sky-600 text-white hover:bg-sky-600' : 'text-slate-700'}`}
+                    >
+                        <span className="block truncate">{label(cl)}</span>
+                        <span className={`block truncate text-[11px] ${cl.id === current.id ? 'text-sky-100' : 'text-slate-400'}`}>{cl.email}</span>
+                    </Link>
+                ))}
+            </div>
+        </Dropdown>
     );
 }
 
 function ContactsTab({ client }: { client: Detail }) {
-    const contacts = client.contacts ?? [];
     return (
-        <section className="card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-white">
-                <span className="text-xs text-slate-500 font-medium">
-                    {contacts.length} contact{contacts.length === 1 ? '' : 's'} linked to this account
-                </span>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead>
-                        <tr className="bg-[#154273] text-white text-xs">
-                            <th className="px-4 py-2.5 font-semibold">Name / Company</th>
-                            <th className="px-4 py-2.5 font-semibold">Email</th>
-                            <th className="px-4 py-2.5 font-semibold">Phone</th>
-                            <th className="px-4 py-2.5 font-semibold">Location</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                        {contacts.length === 0 ? (
-                            <tr>
-                                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
-                                    No contacts found for this client.
-                                </td>
-                            </tr>
-                        ) : (
-                            contacts.map((c) => (
-                                <tr key={c.id} className="hover:bg-slate-50/70">
-                                    <td className="px-4 py-3">
-                                        <div className="font-medium text-slate-900">{c.first_name} {c.last_name}</div>
-                                        {c.company_name && <div className="text-xs text-slate-500">{c.company_name}</div>}
-                                    </td>
-                                    <td className="px-4 py-3 text-xs text-slate-600">{c.email}</td>
-                                    <td className="px-4 py-3 text-xs text-slate-600">{c.phone || '-'}</td>
-                                    <td className="px-4 py-3 text-xs text-slate-600">{[c.city, c.country].filter(Boolean).join(', ') || '-'}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        <RecordsTable
+            rows={client.contacts ?? []}
+            noun="contacts"
+            empty="No contacts found for this client."
+            search={{ placeholder: 'Name, company or email', text: (c) => `${c.first_name} ${c.last_name} ${c.company_name ?? ''} ${c.email}` }}
+            columns={[
+                { header: 'Name', wrap: true, cell: (c) => <div><div className="font-semibold text-slate-900">{c.first_name} {c.last_name}</div>{c.company_name && <div className="text-xs text-slate-500">{c.company_name}</div>}</div>, sort: (c) => `${c.first_name} ${c.last_name}` },
+                { header: 'Email', cell: (c) => c.email, sort: (c) => c.email },
+                { header: 'Phone', cell: (c) => c.phone || '-' },
+                { header: 'Location', cell: (c) => [c.city, c.country].filter(Boolean).join(', ') || '-' },
+                { header: 'Added', cell: (c) => formatWhmcsDate(c.created_at).slice(0, 10), sort: (c) => c.created_at },
+            ]}
+        />
     );
 }
 
@@ -831,81 +889,36 @@ export function ClientDetailPage() {
         <QueryState query={query}>
             {c && (
                 <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
-                            <h1 className="text-xl font-bold text-slate-800">Client Profile</h1>
-                            <div className="mt-1">
-                                <ClientSelector currentId={c.id} />
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-xs text-slate-600">
-                            <span className="flex items-center gap-1.5">Status: <Status value={c.status} /></span>
-                            <span>Client Login: <strong className="text-slate-800">{c.last_login_at ? 'Used' : 'Never used'}</strong></span>
-                        </div>
+                    {/* The client picker sits in the tab bar, on the right where there is room. */}
+                    <div className="card flex flex-col overflow-hidden xl:flex-row xl:items-center">
+                        <div className="min-w-0 flex-1 [&>div]:border-b-0"><FilterTabs tabs={tabs} value={tab} onChange={setTab} /></div>
+                        <div className="shrink-0 px-4 pb-3 xl:py-3 xl:pl-0"><ClientSelector current={c} /></div>
                     </div>
-
-                    <div className="card overflow-hidden"><FilterTabs tabs={tabs} value={tab} onChange={setTab} /></div>
 
                     {tab === 'summary' && <Summary key={c.notes ?? ''} c={c} onEdit={() => setEditing(true)} onInvoice={() => setInvoicing(true)} onTab={setTab} />}
 
                     {tab === 'profile' && (
-                        <Panel title="Profile" footer={<Button variant="ghost" onClick={() => setEditing(true)}><UserPen size={14} /> Edit profile</Button>}>
-                            <Rows rows={[['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country], ['Status', <Status key="s" value={c.status} />]]} />
-                        </Panel>
+                        <Card title="Profile" action={<Button onClick={() => setEditing(true)}><UserPen size={14} /> Edit Profile</Button>}>
+                            <dl className="grid gap-x-8 sm:grid-cols-2">
+                                {([['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country], ['Status', <Status key="s" value={c.status} />], ['Signup Date', new Date(c.created_at).toLocaleDateString('en-GB')], ['Credit Balance', money(c.credit_balance)]] as [string, ReactNode][]).map(([label, value]) => (
+                                    <div key={label} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm">
+                                        <dt className="text-slate-500">{label}</dt>
+                                        <dd className="text-right font-medium break-words text-slate-800">{value || '-'}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </Card>
                     )}
 
-                    {tab === 'services' && (
-                        <Panel title="Products/Services">
-                            <Table rows={c.services} empty="No services." columns={[
-                                { header: 'Service', cell: (s) => <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>{s.product.name}{s.domain ? ` - ${s.domain}` : ''}</Link> },
-                                { header: 'Next due', cell: (s) => s.next_due_date ?? '-' },
-                                { header: 'Amount', cell: (s) => `${money(s.recurring_amount)} / ${s.cycle}`, align: 'right' },
-                                { header: 'Status', cell: (s) => <Status value={s.status} /> },
-                                { header: 'Provisioning', cell: (s) => <Status value={s.provision_status} /> },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'services' && <ServicesTab client={c} />}
 
-                    {tab === 'domains' && (
-                        <Panel title="Domains">
-                            <Table rows={c.domains} empty="No domains." columns={[
-                                { header: 'Domain', cell: (d) => <Link className="table-action-link font-semibold" to={`/admin/domain-registrations/${d.id}`}>{d.name}</Link> },
-                                { header: 'Registrar', cell: (d) => d.registrar ?? 'Manual' },
-                                { header: 'Expires', cell: (d) => d.expires_at ?? '-' },
-                                { header: 'Renewal', cell: (d) => money(d.recurring_amount), align: 'right' },
-                                { header: 'Status', cell: (d) => <Status value={d.status} /> },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'domains' && <DomainsTab client={c} />}
 
-                    {tab === 'invoices' && (
-                        <Panel title="Invoices" footer={<Button variant="ghost" onClick={() => setInvoicing(true)}><Plus size={14} /> Create invoice</Button>}>
-                            <Table rows={c.invoices} empty="No invoices." columns={[
-                                { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/admin/paid-invoices/${i.id}`}>{i.number}</Link> },
-                                { header: 'Due', cell: (i) => i.due_date },
-                                { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
-                                { header: 'Status', cell: (i) => <Status value={i.status} /> },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'invoices' && <InvoicesTab client={c} onCreate={() => setInvoicing(true)} />}
 
-                    {tab === 'transactions' && (
-                        <Panel title="Transactions">
-                            <Table rows={c.transactions} empty="No transactions." columns={[
-                                { header: 'Date', cell: (p) => new Date(p.created_at).toLocaleString() },
-                                { header: 'Invoice', cell: (p) => <Link className="table-action-link" to={`/admin/paid-invoices/${p.invoice.id}`}>{p.invoice.number}</Link> },
-                                { header: 'Gateway', cell: (p) => p.gateway },
-                                { header: 'Transaction ID', cell: (p) => <span className="break-all">{p.transaction_id}</span> },
-                                { header: 'Amount', cell: (p) => money(p.amount, p.currency), align: 'right' },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'transactions' && <TransactionsTab client={c} />}
 
-                    {tab === 'log' && (
-                        <Panel title="Log">
-                            <ClientLog clientId={c.id} />
-                        </Panel>
-                    )}
+                    {tab === 'log' && <ClientLog clientId={c.id} />}
 
                     {tab === 'users' && (
                         <UsersTab
@@ -919,26 +932,9 @@ export function ClientDetailPage() {
                         <ContactsTab client={c} />
                     )}
 
-                    {tab === 'tickets' && (
-                        <Panel title="Tickets">
-                            <Table rows={c.tickets ?? []} empty="No tickets." columns={[
-                                { header: 'Ticket #', cell: (t) => <Link className="table-action-link font-semibold" to={`/admin/tickets/${t.id}`}>#{t.ticket_mask || t.id}</Link> },
-                                { header: 'Subject', cell: (t) => t.subject },
-                                { header: 'Status', cell: (t) => <Status value={t.status} /> },
-                                { header: 'Created', cell: (t) => new Date(t.created_at).toLocaleString() },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'tickets' && <TicketsTab client={c} />}
 
-                    {tab === 'emails' && (
-                        <Panel title="Emails">
-                            <Table rows={c.emails ?? []} empty="No emails logged." columns={[
-                                { header: 'Date Sent', cell: (e) => new Date(e.created_at).toLocaleString() },
-                                { header: 'To', cell: (e) => e.to },
-                                { header: 'Subject', cell: (e) => e.subject },
-                            ]} />
-                        </Panel>
-                    )}
+                    {tab === 'emails' && <EmailsTab client={c} />}
 
                     {editing && <ClientForm client={c} onClose={() => setEditing(false)} />}
                     {invoicing && <NewInvoice clientId={c.id} onClose={() => setInvoicing(false)} />}

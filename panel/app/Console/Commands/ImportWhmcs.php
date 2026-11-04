@@ -413,6 +413,7 @@ class ImportWhmcs extends Command
                 'gateway' => $gateway,
                 'transaction_id' => $transactionId,
                 'amount' => $refund ? -$tx->amountout : $tx->amountin,
+                'fee' => (float) $tx->fees,
                 'currency' => $currency,
                 'meta' => array_filter([
                     'source' => 'whmcs',

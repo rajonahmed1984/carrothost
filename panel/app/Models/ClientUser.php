@@ -43,9 +43,13 @@ class ClientUser extends Model
         'last_login_at',
     ];
 
+    protected $hidden = ['password', 'login_otp_code', 'login_otp_expires_at', 'verification_token'];
+
     protected function casts(): array
     {
         return [
+            'password' => 'hashed',
+            'login_otp_expires_at' => 'datetime',
             'is_owner' => 'boolean',
             'two_factor' => 'boolean',
             'email_verified_at' => 'datetime',

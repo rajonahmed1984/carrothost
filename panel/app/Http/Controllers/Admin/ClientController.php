@@ -7,15 +7,27 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientUser;
 use App\Models\Domain;
+use App\Models\Gateway;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Service;
+use App\Services\Auth\SubUsers;
 use App\Services\BillingService;
+use App\Services\CreditService;
+use App\Services\CustomerMailer;
+use App\Support\EmailHtml;
+use App\Support\Auth\Portal;
+use App\Support\MailFrom;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ClientController extends Controller
 {
@@ -24,11 +36,12 @@ class ClientController extends Controller
         return Client::withCount(['services', 'domains', 'services as active_services_count' => fn ($q) => $q->where('status', 'active'),
             'domains as active_domains_count' => fn ($q) => $q->where('status', 'active'),
         ])
-            ->when($request->query('q'), fn ($query, $q) => $query->where(fn ($w) => $w
+            ->when(trim((string) $request->query('q')), fn ($query, $q) => $query->where(fn ($w) => $w
                 ->where('name', 'like', "%{$q}%")
                 ->orWhere('email', 'like', "%{$q}%")
                 ->orWhere('company', 'like', "%{$q}%")
-                ->orWhere('phone', 'like', "%{$q}%")))
+                ->orWhere('phone', 'like', "%{$q}%")
+                ->when(ctype_digit(ltrim($q, '#')), fn ($w) => $w->orWhere('id', (int) ltrim($q, '#')))))
             ->when($request->boolean('hide_inactive'), fn ($query) => $query->where('status', 'active'))
             ->latest('id')
             ->paginate(min($request->integer('per_page', 25), 500));
@@ -42,6 +55,11 @@ class ClientController extends Controller
             ->get()
             ->keyBy('status');
         $payments = Payment::whereIn('invoice_id', $client->invoices()->select('id'));
+        $gateways = Gateway::all()->keyBy('code');
+        $gatewayName = fn (string $code) => match ($code) {
+            'credit' => 'Credit Balance',
+            default => $gateways->get($code)?->config['display_name'] ?? config("billing.gateways.{$code}.name", $code),
+        };
 
         return [
             ...$client->toArray(),
@@ -61,8 +79,25 @@ class ClientController extends Controller
                 ->get(),
             'services' => $client->services()->with('product:id,name,type', 'server:id,name')->latest()->get(),
             'domains' => $client->domains()->latest()->get(),
-            'invoices' => $client->invoices()->latest()->limit(500)->get(),
-            'transactions' => (clone $payments)->with('invoice:id,number')->latest()->limit(500)->get(),
+            'invoices' => $client->invoices()->with('payments:id,invoice_id,gateway')->latest('due_date')->latest('id')->limit(500)->get()
+                ->map(fn (Invoice $i) => [
+                    ...Arr::only($i->toArray(), ['id', 'number', 'status', 'currency', 'total', 'due_date', 'paid_at', 'created_at']), // toArray keeps due_date a plain Y-m-d
+                    'payment_method' => $i->payments->pluck('gateway')->unique()->map($gatewayName)->implode(', ') ?: null,
+                ]),
+            'transactions' => (clone $payments)->with('invoice:id,number')->latest()->limit(500)->get()
+                ->map(fn (Payment $p) => [...$p->toArray(), 'gateway_name' => $gatewayName($p->gateway)]),
+            'transaction_totals' => [
+                'in' => $in = (string) (clone $payments)->where('amount', '>', 0)->sum('amount'),
+                'fees' => $fees = (string) (clone $payments)->sum('fee'),
+                'out' => $out = bcmul((string) (clone $payments)->where('amount', '<', 0)->sum('amount'), '-1', 2),
+                'balance' => bcsub(bcsub($in, $fees, 2), $out, 2),
+            ],
+            'ticket_stats' => [
+                'this_month' => $client->tickets()->where('created_at', '>=', now()->startOfMonth())->count(),
+                'last_month' => $client->tickets()->whereBetween('created_at', [now()->subMonthNoOverflow()->startOfMonth(), now()->startOfMonth()])->count(),
+                'this_year' => $client->tickets()->where('created_at', '>=', now()->startOfYear())->count(),
+                'last_year' => $client->tickets()->whereBetween('created_at', [now()->subYear()->startOfYear(), now()->startOfYear()])->count(),
+            ],
             'users' => $client->users()->orderByDesc('is_owner')->orderBy('id')->get()->map(fn (ClientUser $u) => [
                 'id' => $u->id,
                 'first_name' => $u->first_name,
@@ -79,11 +114,13 @@ class ClientController extends Controller
                 'verification_token' => $u->verification_token,
                 'email_verified_at' => $u->email_verified_at?->toISOString(),
                 'last_login_at' => $u->last_login_at?->toISOString(),
+                'has_password' => $u->is_owner || $u->password !== null,
                 'created_at' => $u->created_at?->toISOString(),
             ]),
             'contacts' => $client->contacts()->latest()->get(),
-            'tickets' => $client->tickets()->latest()->limit(100)->get(),
-            'emails' => $client->emailLogs()->latest()->limit(100)->get(),
+            'tickets' => $client->tickets()->latest()->limit(500)->get()
+                ->map(fn ($t) => [...$t->toArray(), 'department_name' => config("billing.ticket_departments.{$t->department}", $t->department)]),
+            'emails' => $client->emailLogs()->latest('id')->limit(500)->get(),
         ];
     }
 
@@ -111,6 +148,121 @@ class ClientController extends Controller
         ActivityLog::record('client.notes_updated', $client);
 
         return ['ok' => true];
+    }
+
+    /** With Selected: Send Message. Queued, so a long list cannot time out the request. */
+    public function message(Request $request, CustomerMailer $mailer)
+    {
+        $data = $request->validate([
+            'client_ids' => 'required|array|min:1|max:5000',
+            'client_ids.*' => 'integer',
+            'sender' => ['required', Rule::in([MailFrom::SALES, MailFrom::SUPPORT, MailFrom::BILLING])],
+            'subject' => 'required|string|max:200',
+            'message' => 'required|string|max:'.EmailHtml::MAX_LENGTH,
+        ]);
+
+        $message = EmailHtml::clean($data['message']);
+        if (trim(EmailHtml::toText($message)) === '' && ! str_contains($message, '<img')) {
+            throw ValidationException::withMessages(['message' => 'Write a message first.']);
+        }
+
+        $clients = Client::whereIn('id', $data['client_ids'])->whereNotNull('email')->get();
+
+        foreach ($clients as $client) {
+            $mailer->message($client, $data['sender'], $data['subject'], $message);
+        }
+
+        ActivityLog::record('clients.messaged', context: ['count' => $clients->count(), 'subject' => $data['subject'], 'sender' => $data['sender']]);
+
+        return ['message' => "Message queued for {$clients->count()} client(s)."];
+    }
+
+    /** Sends a logged email to the client again, exactly as it was. */
+    public function resendEmail(Client $client, int $email)
+    {
+        $log = $client->emailLogs()->findOrFail($email);
+        $from = MailFrom::for(MailFrom::SUPPORT);
+
+        try {
+            Mail::html((string) $log->body, fn ($message) => $message->from($from->address, $from->name)->to($log->to)->subject($log->subject));
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages(['email' => 'Sending failed: '.$e->getMessage()]);
+        }
+
+        ActivityLog::record('client.email_resent', $client, ['subject' => $log->subject]);
+
+        return ['message' => "Sent again to {$log->to}."];
+    }
+
+    public function destroyEmail(Client $client, int $email)
+    {
+        $client->emailLogs()->findOrFail($email)->delete();
+
+        return response()->noContent();
+    }
+
+    /** The account owner signs in as the client, so these act on the client's own login. */
+    /** The owner row stands for the client's own login; any other user has a login of their own. */
+    public function sendPasswordReset(Client $client, int $userId, SubUsers $subUsers)
+    {
+        $user = $client->users()->findOrFail($userId);
+
+        try {
+            $this->isOwnerLogin($client, $user)
+                ? Password::broker(Portal::broker(Portal::CLIENT))->sendResetLink(['email' => $client->email, ...Portal::scope(Portal::CLIENT)])
+                : $subUsers->sendResetLink($user);
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages(['email' => 'Sending failed: '.$e->getMessage()]);
+        }
+
+        ActivityLog::record('client.password_reset_sent', $client, ['email' => $user->email]);
+
+        return ['message' => "Password reset link sent to {$user->email}."];
+    }
+
+    public function changePassword(Request $request, Client $client, int $userId, SubUsers $subUsers)
+    {
+        $user = $client->users()->findOrFail($userId);
+        $data = $request->validate(['password' => 'required|string|min:'.Portal::minPassword(Portal::CLIENT)]);
+
+        if ($this->isOwnerLogin($client, $user)) {
+            $client->forceFill(['password' => $data['password']])->setRememberToken(Str::random(60));
+            $client->save();
+        } else {
+            $subUsers->setPassword($user, $data['password']);
+        }
+
+        ActivityLog::record('client.password_changed', $client, ['email' => $user->email]);
+
+        return ['message' => "Password changed for {$user->email}."];
+    }
+
+    private function isOwnerLogin(Client $client, ClientUser $user): bool
+    {
+        return $user->is_owner || strcasecmp($user->email, $client->email) === 0;
+    }
+
+    public function credits(Request $request, Client $client)
+    {
+        return $client->credits()->with('user:id,name', 'invoice:id,number')->latest('id')
+            ->paginate(min($request->integer('per_page', 25), 100));
+    }
+
+    /** Manage Credits: add or remove credit by hand, with a reason the client also sees. */
+    public function adjustCredit(Request $request, Client $client, CreditService $credits)
+    {
+        $data = $request->validate([
+            'type' => 'required|in:add,remove',
+            'amount' => 'required|numeric|min:0.01|max:9999999',
+            'description' => 'required|string|max:255',
+        ]);
+        $amount = number_format((float) $data['amount'], 2, '.', '');
+
+        $data['type'] === 'add'
+            ? $credits->add($client, $amount, $data['description'], userId: $request->user()->id)
+            : $credits->remove($client, $amount, $data['description'], $request->user()->id);
+
+        return ['balance' => $client->refresh()->credit_balance];
     }
 
     public function invoice(Request $request, Client $client, BillingService $billing)
@@ -302,7 +454,7 @@ class ClientController extends Controller
         return $user;
     }
 
-    public function approveUser(Request $request, Client $client, int $userId)
+    public function approveUser(Request $request, Client $client, int $userId, SubUsers $subUsers)
     {
         $user = $client->users()->findOrFail($userId);
         $user->update([
@@ -319,6 +471,15 @@ class ClientController extends Controller
         ]);
 
         ActivityLog::record('admin.client_user_approved', $client, ['email' => $user->email]);
+
+        // A newly approved user has no password yet: email them a link to choose one.
+        if (! $this->isOwnerLogin($client, $user) && $user->password === null) {
+            try {
+                $subUsers->sendResetLink($user);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
 
         return $user;
     }

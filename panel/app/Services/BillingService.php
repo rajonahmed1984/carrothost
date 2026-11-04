@@ -19,6 +19,8 @@ use Illuminate\Validation\ValidationException;
 
 class BillingService
 {
+    public function __construct(private readonly CustomerMailer $mailer) {}
+
     /**
      * @param  array<int, array{product_id: int, cycle: string, domain?: ?string}>  $services
      * @param  array<int, array{name: string, action: string, years: int, epp_code?: ?string}>  $domains
@@ -100,6 +102,8 @@ class BillingService
                 ProvisionService::dispatch($service->id, 'create')->afterCommit();
             }
 
+            DB::afterCommit(fn () => $this->mailer->orderPlaced($order));
+
             return $order;
         });
     }
@@ -119,6 +123,13 @@ class BillingService
 
             $invoice->update(['number' => 'INV-'.str_pad((string) $invoice->id, 6, '0', STR_PAD_LEFT)]);
             $invoice->items()->createMany($items);
+            DB::afterCommit(function () use ($invoice) {
+                $this->mailer->invoiceCreated($invoice);
+                // Credit the client already holds pays new invoices straight away. Add Funds invoices are how credit is bought, so never.
+                if (! self::isPrepayment($invoice)) {
+                    app(CreditService::class)->applyToInvoice($invoice);
+                }
+            });
 
             return $invoice->refresh();
         });
@@ -161,32 +172,97 @@ class BillingService
 
             ActivityLog::record('payment.recorded', $locked, ['gateway' => $gateway, 'amount' => $amount]);
 
-            $paid = array_reduce(
-                $locked->payments()->pluck('amount')->all(),
-                fn (string $sum, $value) => bcadd($sum, (string) $value, 2),
-                '0',
-            );
-
-            $becamePaid = $locked->status === 'unpaid' && bccomp($paid, (string) $locked->total, 2) >= 0;
-
-            if ($becamePaid) {
-                $locked->update(['status' => 'paid', 'paid_at' => now()]);
-                $this->applyPaidInvoice($locked);
-            }
-
-            return [$payment, $becamePaid, $locked];
+            return [$payment, $this->markPaidIfCovered($locked, $gateway, $transactionId), $locked];
         });
 
         if ($becamePaid) {
-            event(new InvoicePaid($locked));
+            $this->announcePaid($locked);
         }
 
         return $payment;
     }
 
-    private function applyPaidInvoice(Invoice $invoice): void
+    /** What is still owed: the total less what has been paid. Never negative. */
+    public function balanceDue(Invoice $invoice): string
+    {
+        $due = bcsub((string) $invoice->total, $this->paid($invoice), 2);
+
+        return bccomp($due, '0', 2) > 0 ? $due : '0.00';
+    }
+
+    /**
+     * Marks an unpaid invoice paid once payments cover its total, and sets up what it was for.
+     * Call inside a transaction with the invoice locked. True when it became paid now.
+     */
+    public function markPaidIfCovered(Invoice $locked, string $gateway, string $transactionId = ''): bool
+    {
+        if ($locked->status !== 'unpaid' || bccomp($this->paid($locked), (string) $locked->total, 2) < 0) {
+            return false;
+        }
+
+        $locked->update(['status' => 'paid', 'paid_at' => now()]);
+        $this->applyPaidInvoice($locked, $gateway, $transactionId);
+
+        return true;
+    }
+
+    /** Tells listeners and the customer, once the payment is safely stored. */
+    public function announcePaid(Invoice $invoice): void
+    {
+        event(new InvoicePaid($invoice));
+        DB::afterCommit(fn () => $this->mailer->paymentReceived($invoice));
+    }
+
+    /** Item kinds that pay for something other than a service: buying credit, or other invoices at once. */
+    public const PREPAYMENT_KINDS = ['add_funds', 'mass_pay'];
+
+    /** Credit never pays these: Add Funds is how credit is bought, and Mass Pay only bundles other invoices. */
+    public static function isPrepayment(Invoice $invoice): bool
+    {
+        return $invoice->items()->whereIn('kind', self::PREPAYMENT_KINDS)->exists();
+    }
+
+    private function paid(Invoice $invoice): string
+    {
+        return array_reduce(
+            $invoice->payments()->pluck('amount')->all(),
+            fn (string $sum, $value) => bcadd($sum, (string) $value, 2),
+            '0',
+        );
+    }
+
+    /**
+     * One line of a paid Mass Pay invoice. It pays what its invoice still owes now, which can
+     * be less than when the bundle was made; anything over becomes credit, so nothing is lost.
+     */
+    private function payBundledInvoice(Invoice $bundle, ?int $targetId, string $amount, string $gateway): void
+    {
+        $target = $targetId ? Invoice::find($targetId) : null;
+        $owed = $target && $target->status === 'unpaid' ? $this->balanceDue($target) : '0.00';
+        $paying = bccomp($owed, $amount, 2) < 0 ? $owed : $amount;
+
+        if (bccomp($paying, '0', 2) > 0) {
+            $this->recordPayment($target, $gateway, "MASSPAY-{$bundle->number}-{$target->id}", $paying, ['mass_pay_invoice' => $bundle->id]);
+        }
+
+        $left = bcsub($amount, $paying, 2);
+        if (bccomp($left, '0', 2) > 0) {
+            app(CreditService::class)->add($bundle->client, $left, "Overpayment on Mass Pay Invoice #{$bundle->number}", $bundle);
+        }
+    }
+
+    private function applyPaidInvoice(Invoice $invoice, string $gateway, string $transactionId): void
     {
         foreach ($invoice->items()->with(['service.product', 'domain'])->get() as $item) {
+            if ($item->kind === 'add_funds') {
+                $via = config("billing.gateways.{$gateway}.name", $gateway);
+                app(CreditService::class)->add($invoice->client, (string) $item->amount, "Add Funds via {$via}".($transactionId !== '' ? " (TRXID: {$transactionId})" : ''), $invoice);
+            }
+
+            if ($item->kind === 'mass_pay') {
+                $this->payBundledInvoice($invoice, $item->target_invoice_id, (string) $item->amount, $gateway);
+            }
+
             if ($item->service) {
                 $item->kind === 'renewal' ? $this->renewService($item->service) : $this->activateService($item->service);
             }

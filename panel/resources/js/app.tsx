@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Boxes, ChevronDown, KeyRound, LayoutDashboard, LogOut, Menu, MoreHorizontal, PanelLeft, Receipt, Users, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api, basePath, setDefaultCurrency } from './api';
@@ -19,7 +19,7 @@ import { ClientDetailPage } from './pages/client';
 import { GuestPages, isGuestPath, safeRedirect } from './pages/auth';
 import { AdminAccountPage, type ClientProfile } from './pages/security';
 import { ChatsPage, TicketDetailPage, TicketsPage } from './pages/support';
-import { LogoIcon, useAppConfig, useBranding } from './ui';
+import { Dropdown, LogoIcon, useAppConfig, useBranding } from './ui';
 
 type Badges = { awaiting_tickets: number; unread_chat: number };
 type NavItem = { to: string; label: string; badge?: keyof Badges; end?: boolean };
@@ -91,44 +91,35 @@ const bottomNav: [string, string, LucideIcon][] = [
 
 function UserMenu({ name }: { name: string }) {
     const client = useQueryClient();
-    const [open, setOpen] = useState(false);
-    const root = useRef<HTMLDivElement>(null);
     const logout = useMutation({
         mutationFn: () => api.post('/logout'),
         onSuccess: () => client.clear(),
         onSettled: () => window.location.assign(`${basePath}/admin/login`),
     });
 
-    useEffect(() => {
-        const close = (e: MouseEvent) => {
-            if (!root.current?.contains(e.target as Node)) setOpen(false);
-        };
-        document.addEventListener('mousedown', close);
-
-        return () => document.removeEventListener('mousedown', close);
-    }, []);
-
     return (
-        <div ref={root} className="relative">
-            <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(!open)} className="flex cursor-pointer items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-slate-100">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-bold text-white">{name.charAt(0).toUpperCase()}</span>
-                <span className="hidden text-left sm:block">
-                    <span className="block max-w-36 truncate text-xs font-semibold text-slate-900">{name}</span>
-                    <span className="block text-[10px] text-slate-500">Master Administrator</span>
-                </span>
-                <ChevronDown size={14} className="hidden text-slate-500 sm:block" />
-            </button>
-            {open && (
-                <div role="menu" className="absolute right-0 z-40 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                    <Link to="/admin/account" role="menuitem" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                        <KeyRound size={14} /> Change password
-                    </Link>
-                    <button type="button" role="menuitem" disabled={logout.isPending} onClick={() => logout.mutate()} className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                        <LogOut size={14} /> Sign out
-                    </button>
-                </div>
+        <Dropdown
+            label="Account menu"
+            buttonClassName="flex cursor-pointer items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-slate-100"
+            menuClassName="w-44 p-1"
+            button={(
+                <>
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-bold text-white">{name.charAt(0).toUpperCase()}</span>
+                    <span className="hidden text-left sm:block">
+                        <span className="block max-w-36 truncate text-xs font-semibold text-slate-900">{name}</span>
+                        <span className="block text-[10px] text-slate-500">Master Administrator</span>
+                    </span>
+                    <ChevronDown size={14} className="hidden text-slate-500 sm:block" />
+                </>
             )}
-        </div>
+        >
+            <Link to="/admin/account" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                <KeyRound size={14} /> Change password
+            </Link>
+            <button type="button" role="menuitem" disabled={logout.isPending} onClick={() => logout.mutate()} className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                <LogOut size={14} /> Sign out
+            </button>
+        </Dropdown>
     );
 }
 

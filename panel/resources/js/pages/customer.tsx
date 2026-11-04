@@ -3,12 +3,13 @@ import {
     ArrowLeft, ArrowRight, ArrowRightLeft, ArrowUpDown, Bell, Building2, CalendarDays, ChevronDown, ChevronRight, CircleCheck, CircleX, Clock, CreditCard, Download, ExternalLink, Eye, FileText, Filter, Globe, HardDrive, Headset, History, Info,
     LayoutList, LockKeyhole, LogOut, Menu, MessageCircle, MessageSquareText, MoreVertical, Package, Plus, Printer, Search, Server, ShieldCheck, ShoppingCart, User, X, Contact, KeyRound, Mail, MonitorSmartphone, Power,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, LogoIcon, QueryState, Select, Status, Table, useBranding } from '../ui';
+import { Button, Card, Dropdown, ErrorNote, Field, Input, LogoIcon, QueryState, Select, Status, Table, useBranding } from '../ui';
 import { ContactsPage, EmailPage, EmailsPage, MyDetailsPage, SessionsPage, SupportPinPage } from './account';
-import { ClientPasswordPage, ClientSecurityPage, type ClientProfile } from './security';
+import { AddFundsPage, CreditHistoryPage } from './credits';
+import { clientCan, ClientPasswordPage, ClientSecurityPage, type ClientProfile } from './security';
 import { ClientChatPage, ClientNewTicketPage, ClientTicketPage, ClientTicketsPage } from './support';
 
 type Overview = {
@@ -68,6 +69,7 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
     const d = query.data;
     const unpaid = d?.invoices.filter((i) => i.status === 'unpaid') ?? [];
     const activityIcon = { ticket: <MessageSquareText size={16} />, invoice: <FileText size={16} />, service: <Server size={16} /> };
+    const can = (permission: string) => clientCan(profile, permission);
 
     return (
         <QueryState query={query}>
@@ -75,17 +77,17 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
                 <div className="space-y-5">
 
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <StatCard icon={<Server size={24} />} value={d.services.filter((x) => x.status === 'active').length} label="Services" to="/services" action="Manage Services" />
-                        <StatCard icon={<Globe size={24} />} value={d.domains.filter((x) => x.status === 'active').length} label="Domains" to="/domains" action="Manage Domains" />
-                        <StatCard icon={<MessageSquareText size={24} />} value={d.open_tickets} label="Open Tickets" to="/tickets" action="View Tickets" />
-                        <StatCard
+                        {can('products') && <StatCard icon={<Server size={24} />} value={d.services.filter((x) => x.status === 'active').length} label="Services" to="/services" action="Manage Services" />}
+                        {can('domains') && <StatCard icon={<Globe size={24} />} value={d.domains.filter((x) => x.status === 'active').length} label="Domains" to="/domains" action="Manage Domains" />}
+                        {can('tickets') && <StatCard icon={<MessageSquareText size={24} />} value={d.open_tickets} label="Open Tickets" to="/tickets" action="View Tickets" />}
+                        {can('invoices') && <StatCard
                             icon={<FileText size={24} />}
                             value={unpaid.length}
                             label="Unpaid Invoices"
                             badge={<span className={`mt-1 inline-block rounded-md px-2 py-0.5 text-[11px] font-bold ${unpaid.length ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>{unpaid.length ? `${money(unpaid.reduce((sum, i) => sum + Number(i.total), 0), unpaid[0].currency)} due` : 'All paid'}</span>}
                             to="/invoices"
                             action="View Invoices"
-                        />
+                        />}
                     </div>
 
                     <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
@@ -115,12 +117,12 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
 
                         <Card title="Quick Actions">
                             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">
-                                <QuickAction to={firstStore ?? '/order-domain'} icon={<ShoppingCart size={18} />} label="Order New Service" />
-                                <QuickAction to="/order-domain" icon={<Globe size={18} />} label="Register Domain" />
-                                <QuickAction to="/order-domain?action=transfer" icon={<ArrowRightLeft size={18} />} label="Transfer Domain" />
-                                <QuickAction to="/services" icon={<Server size={18} />} label="Manage Services" />
-                                <QuickAction to="/invoices" icon={<FileText size={18} />} label="View Invoices" />
-                                <QuickAction to="/tickets/new" icon={<Headset size={18} />} label="Open Support Ticket" />
+                                {can('orders') && <QuickAction to={firstStore ?? '/order-domain'} icon={<ShoppingCart size={18} />} label="Order New Service" />}
+                                {can('orders') && <QuickAction to="/order-domain" icon={<Globe size={18} />} label="Register Domain" />}
+                                {can('orders') && <QuickAction to="/order-domain?action=transfer" icon={<ArrowRightLeft size={18} />} label="Transfer Domain" />}
+                                {can('products') && <QuickAction to="/services" icon={<Server size={18} />} label="Manage Services" />}
+                                {can('invoices') && <QuickAction to="/invoices" icon={<FileText size={18} />} label="View Invoices" />}
+                                {can('tickets') && <QuickAction to="/tickets/new" icon={<Headset size={18} />} label="Open Support Ticket" />}
                             </div>
                         </Card>
                     </div>
@@ -134,7 +136,7 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
                                     <p className="mt-1 text-sm text-slate-600">
                                         {profile.otp_enabled ? 'Two-step sign-in is on: we email you a code each time you log in.' : 'Turn on two-step sign-in and keep your account safe from unauthorised access.'}
                                     </p>
-                                    {!profile.impersonating && (
+                                    {!profile.impersonating && can('owner') && (
                                         <Link to="/security" className={`mt-4 inline-block rounded-xl border-2 px-5 py-2 text-sm font-semibold ${profile.otp_enabled ? 'border-slate-300 text-slate-700' : 'border-[var(--accent)] text-accent hover:bg-[var(--accent-soft)]'}`}>
                                             {profile.otp_enabled ? 'Security settings' : 'Enable 2FA'}
                                         </Link>
@@ -217,20 +219,12 @@ function SummaryCard({ icon, tone, label, value, note }: { icon: ReactNode; tone
 }
 
 function RowMenu({ service }: { service: ClientService }) {
-    const [open, setOpen] = useState(false);
-    const ref = useClickOutside(open, () => setOpen(false));
-
     return (
-        <div ref={ref} className="relative">
-            <button type="button" aria-label={`More actions for ${service.product.name}`} aria-expanded={open} className="icon-btn" onClick={() => setOpen(!open)}><MoreVertical size={16} /></button>
-            {open && (
-                <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-xl">
-                    <Link to={`/services/${service.id}`} className="block px-4 py-2 text-slate-700 hover:bg-slate-50">View details</Link>
-                    <Link to={`/tickets/new?service=${service.id}`} className="block px-4 py-2 text-slate-700 hover:bg-slate-50">Get support</Link>
-                    <Link to="/invoices" className="block px-4 py-2 text-slate-700 hover:bg-slate-50">View invoices</Link>
-                </div>
-            )}
-        </div>
+        <Dropdown label={`More actions for ${service.product.name}`} buttonClassName="icon-btn" button={<MoreVertical size={16} />} menuClassName="w-48 py-1 text-sm">
+            <Link to={`/services/${service.id}`} role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50">View details</Link>
+            <Link to={`/tickets/new?service=${service.id}`} role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50">Get support</Link>
+            <Link to="/invoices" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50">View invoices</Link>
+        </Dropdown>
     );
 }
 
@@ -810,21 +804,7 @@ function MyInvoices() {
     );
 }
 
-function useClickOutside(open: boolean, close: () => void) {
-    const ref = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) close(); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [open, close]);
-
-    return ref;
-}
-
 function Notifications({ chat, tickets, invoices }: { chat: number; tickets: number; invoices: number }) {
-    const [open, setOpen] = useState(false);
-    const ref = useClickOutside(open, () => setOpen(false));
     const total = chat + tickets + invoices;
     const items = [
         { n: tickets, to: '/tickets', text: `${tickets} ticket${tickets === 1 ? '' : 's'} answered by support` },
@@ -833,62 +813,62 @@ function Notifications({ chat, tickets, invoices }: { chat: number; tickets: num
     ].filter((i) => i.n > 0);
 
     return (
-        <div ref={ref} className="relative">
-            <button type="button" aria-label={`Notifications (${total})`} aria-expanded={open} className="icon-btn relative" onClick={() => setOpen(!open)}>
-                <Bell size={20} />
-                {total > 0 && <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">{total}</span>}
-            </button>
-            {open && (
-                <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    <div className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-900">Notifications</div>
-                    {items.length === 0 ? <p className="px-4 py-6 text-center text-xs text-slate-500">You're all caught up.</p> : items.map((i) => (
-                        <Link key={i.to} to={i.to} onClick={() => setOpen(false)} className="block border-b border-slate-100 px-4 py-3 text-sm text-slate-700 last:border-0 hover:bg-slate-50">{i.text}</Link>
-                    ))}
-                </div>
-            )}
-        </div>
+        <Dropdown
+            label={`Notifications (${total})`}
+            buttonClassName="icon-btn relative"
+            menuClassName="w-72 rounded-2xl"
+            button={<><Bell size={20} />{total > 0 && <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">{total}</span>}</>}
+        >
+            <div className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-900">Notifications</div>
+            {items.length === 0 ? <p className="px-4 py-6 text-center text-xs text-slate-500">You're all caught up.</p> : items.map((i) => (
+                <Link key={i.to} to={i.to} role="menuitem" className="block border-b border-slate-100 px-4 py-3 text-sm text-slate-700 last:border-0 hover:bg-slate-50">{i.text}</Link>
+            ))}
+        </Dropdown>
     );
 }
 
 function AccountMenu({ profile, onLogout, busy }: { profile: ClientProfile; onLogout: () => void; busy: boolean }) {
-    const [open, setOpen] = useState(false);
-    const ref = useClickOutside(open, () => setOpen(false));
-    const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+    // A user of the account sees their own name; the account is still the client's.
+    const who = profile.user ?? profile;
+    const initials = who.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+    const can = (permission: string) => clientCan(profile, permission);
     // Security and password belong to the customer, so an admin viewing the account does not get them.
     const groups: [string, ReactNode, string, boolean][][] = [
-        [['/account/details', <User key="i" size={17} />, 'My Details', true], ['/account/contacts', <Contact key="i" size={17} />, 'Contacts', true], ['/account/emails', <Mail key="i" size={17} />, 'My Emails', true]],
-        [['/account/password', <KeyRound key="i" size={17} />, 'Change Password', !profile.impersonating], ['/security', <ShieldCheck key="i" size={17} />, 'Security', !profile.impersonating], ['/account/support-token', <FileText key="i" size={17} />, 'Support Tokens', true], ['/account/sessions', <MonitorSmartphone key="i" size={17} />, 'Activity Sessions', true]],
+        [['/account/details', <User key="i" size={17} />, 'My Details', true], ['/account/contacts', <Contact key="i" size={17} />, 'Contacts', can('contacts')], ['/account/emails', <Mail key="i" size={17} />, 'My Emails', can('emails')]],
+        [['/account/password', <KeyRound key="i" size={17} />, 'Change Password', !profile.impersonating], ['/security', <ShieldCheck key="i" size={17} />, 'Security', !profile.impersonating && can('owner')], ['/account/support-token', <FileText key="i" size={17} />, 'Support Tokens', true], ['/account/sessions', <MonitorSmartphone key="i" size={17} />, 'Activity Sessions', can('owner')]],
     ];
 
     return (
-        <div ref={ref} className="relative">
-            <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex cursor-pointer items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-slate-100">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-white">{initials}</span>
-                <span className="hidden min-w-0 text-left sm:block">
-                    <span className="block max-w-40 truncate text-sm font-semibold text-slate-900">{profile.name}</span>
-                    <span className="block text-[11px] text-slate-500">Account Owner</span>
-                </span>
-                <ChevronDown size={14} className="text-slate-400" />
-            </button>
-            {open && (
-                <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    <div className="flex items-center gap-3 bg-[var(--accent)] px-4 py-4 text-white">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-base font-bold">{initials}</span>
-                        <div className="min-w-0"><div className="truncate font-semibold">{profile.name}</div><div className="truncate text-xs text-white/85">{profile.email}</div></div>
-                    </div>
-                    {groups.map((group, i) => (
-                        <div key={i} className="border-b border-slate-100 py-1.5">
-                            {group.filter(([, , , show]) => show).map(([to, icon, label]) => (
-                                <Link key={to} to={to} onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"><span className="text-slate-500">{icon}</span>{label}</Link>
-                            ))}
-                        </div>
-                    ))}
-                    <div className="py-1.5">
-                        <button type="button" disabled={busy} onClick={onLogout} className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"><Power size={17} /> Logout</button>
-                    </div>
-                </div>
+        <Dropdown
+            label="Account menu"
+            buttonClassName="flex cursor-pointer items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-slate-100"
+            menuClassName="w-72 rounded-2xl"
+            button={(
+                <>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-white">{initials}</span>
+                    <span className="hidden min-w-0 text-left sm:block">
+                        <span className="block max-w-40 truncate text-sm font-semibold text-slate-900">{who.name}</span>
+                        <span className="block max-w-40 truncate text-[11px] text-slate-500">{profile.user ? `User of ${profile.name}` : 'Account Owner'}</span>
+                    </span>
+                    <ChevronDown size={14} className="text-slate-400" />
+                </>
             )}
-        </div>
+        >
+            <div className="flex items-center gap-3 bg-[var(--accent)] px-4 py-4 text-white">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-base font-bold">{initials}</span>
+                <div className="min-w-0"><div className="truncate font-semibold">{who.name}</div><div className="truncate text-xs text-white/85">{who.email}</div></div>
+            </div>
+            {groups.map((group, i) => (
+                <div key={i} className="border-b border-slate-100 py-1.5">
+                    {group.filter(([, , , show]) => show).map(([to, icon, label]) => (
+                        <Link key={to} to={to} role="menuitem" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"><span className="text-slate-500">{icon}</span>{label}</Link>
+                    ))}
+                </div>
+            ))}
+            <div className="py-1.5">
+                <button type="button" role="menuitem" disabled={busy} onClick={onLogout} className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"><Power size={17} /> Logout</button>
+            </div>
+        </Dropdown>
     );
 }
 
@@ -1101,7 +1081,7 @@ function Invoice() {
 type StoreProduct = { id: number; name: string; type: string; description: string | null; prices: { cycle: string; price: string; setup_fee: string }[] };
 type StoreGroup = { id: number; name: string; slug: string; headline: string | null; products: StoreProduct[] };
 
-const useStore = () => useQuery({ queryKey: ['client-store'], queryFn: async () => (await api.get<StoreGroup[]>('/client/store')).data });
+const useStore = (enabled = true) => useQuery({ queryKey: ['client-store'], queryFn: async () => (await api.get<StoreGroup[]>('/client/store')).data, enabled });
 
 type Tld = { tld: string; register_price: string; renew_price: string; transfer_price: string; is_spotlight: boolean; epp_required: boolean };
 type DomainOptions = { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
@@ -1120,7 +1100,7 @@ function LookupResult({ result, action, premium }: { result: Lookup; action: 're
 }
 type DomainAction = 'register' | 'transfer' | 'own';
 
-const useDomainOptions = () => useQuery({ queryKey: ['client-domain-options'], queryFn: async () => (await api.get<DomainOptions>('/client/store/domains')).data });
+const useDomainOptions = (enabled = true) => useQuery({ queryKey: ['client-domain-options'], queryFn: async () => (await api.get<DomainOptions>('/client/store/domains')).data, enabled });
 
 const actionLabels: Record<DomainAction, string> = { register: 'Register a new domain', transfer: 'Transfer my domain to you', own: 'I already own this domain' };
 
@@ -1321,8 +1301,9 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
         onError: () => window.location.assign(`${basePath}/admin/login`),
     });
 
-    const store = useStore();
-    const domainOptions = useDomainOptions();
+    const can = (permission: string) => clientCan(profile, permission);
+    const store = useStore(can('orders'));
+    const domainOptions = useDomainOptions(can('orders'));
     const sellsDomains = !!(domainOptions.data?.register || domainOptions.data?.transfer);
     const brand = useBranding().name;
     const badges = useQuery({ queryKey: ['client-badges'], queryFn: async () => (await api.get<{ unread_chat: number; answered_tickets: number }>('/client/badges')).data, refetchInterval: 30000 });
@@ -1333,7 +1314,7 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
     const dot = <span className="h-2 w-2 shrink-0 rounded-full bg-current" />;
     const overview = useOverview();
     const unpaidCount = overview.data?.invoices.filter((i) => i.status === 'unpaid').length ?? 0;
-    const titles: Record<string, string> = { '/': 'Dashboard', '/services': 'My Services', '/domains': 'My Domains', '/invoices': 'My Invoices', '/security': 'Security', '/tickets': 'My Tickets', '/tickets/new': 'Open Ticket', '/chat': 'Chat', '/order-domain': 'Order a Domain',
+    const titles: Record<string, string> = { '/': 'Dashboard', '/services': 'My Services', '/domains': 'My Domains', '/invoices': 'My Invoices', '/add-funds': 'Add Funds', '/credits': 'Credit History', '/security': 'Security', '/tickets': 'My Tickets', '/tickets/new': 'Open Ticket', '/chat': 'Chat', '/order-domain': 'Order a Domain',
         '/account/details': 'My Details', '/account/contacts': 'Contacts', '/account/emails': 'My Emails', '/account/password': 'Change Password',
         '/account/support-token': 'Support Tokens', '/account/sessions': 'Activity Sessions' };
     // A detail page sits under its list: [list path, list title, page title].
@@ -1372,18 +1353,26 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                         <NavLink to="/" end className={navClass}>{dot} Dashboard</NavLink>
                         <div className="space-y-2">
                             <div className="nav-section">My Account</div>
-                            <NavLink to="/services" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/services/') })}>{dot} My Services</NavLink>
-                            <NavLink to="/domains" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/domains/') })}>{dot} My Domains</NavLink>
-                            <NavLink to="/invoices" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/invoices/') })}>{dot} Invoices{count(unpaidCount)}</NavLink>
-                            {!profile.impersonating && <NavLink to="/security" className={navClass}>{dot} Security</NavLink>}
+                            {can('products') && <NavLink to="/services" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/services/') })}>{dot} My Services</NavLink>}
+                            {can('domains') && <NavLink to="/domains" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/domains/') })}>{dot} My Domains</NavLink>}
+                            {can('invoices') && (
+                                <>
+                                    <NavLink to="/invoices" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/invoices/') })}>{dot} Invoices{count(unpaidCount)}</NavLink>
+                                    <NavLink to="/add-funds" className={navClass}>{dot} Add Funds</NavLink>
+                                    <NavLink to="/credits" className={navClass}>{dot} Credit History</NavLink>
+                                </>
+                            )}
+                            {!profile.impersonating && can('owner') && <NavLink to="/security" className={navClass}>{dot} Security</NavLink>}
                         </div>
-                        <div className="space-y-2">
-                            <div className="nav-section">Support & Chat</div>
-                            <NavLink to="/tickets" end className={({ isActive }) => navClass({ isActive: isActive || (pathname.startsWith('/tickets/') && pathname !== '/tickets/new') })}>{dot} Support Tickets{count(badges.data?.answered_tickets)}</NavLink>
-                            <NavLink to="/tickets/new" className={navClass}>{dot} Open Ticket</NavLink>
-                            <NavLink to="/chat" className={navClass}>{dot} Chat{count(badges.data?.unread_chat)}</NavLink>
-                        </div>
-                        {(!!store.data?.length || sellsDomains) && (
+                        {can('tickets') && (
+                            <div className="space-y-2">
+                                <div className="nav-section">Support & Chat</div>
+                                <NavLink to="/tickets" end className={({ isActive }) => navClass({ isActive: isActive || (pathname.startsWith('/tickets/') && pathname !== '/tickets/new') })}>{dot} Support Tickets{count(badges.data?.answered_tickets)}</NavLink>
+                                <NavLink to="/tickets/new" className={navClass}>{dot} Open Ticket</NavLink>
+                                <NavLink to="/chat" className={navClass}>{dot} Chat{count(badges.data?.unread_chat)}</NavLink>
+                            </div>
+                        )}
+                        {can('orders') && (!!store.data?.length || sellsDomains) && (
                             <div className="space-y-2">
                                 <div className="nav-section">Order New Services</div>
                                 {store.data?.map((g) => <NavLink key={g.id} to={`/store/${g.slug}`} className={navClass}>{dot} <span className="truncate">{g.name}</span></NavLink>)}
@@ -1425,27 +1414,30 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                     <main key={pathname} className="fade-in w-full print:p-0 px-3 py-4 sm:px-4 md:px-6 md:py-6">
                         <Routes>
                             <Route path="/" element={<Home profile={profile} firstStore={store.data?.[0] ? `/store/${store.data[0].slug}` : null} />} />
-                            <Route path="/services" element={<MyServices orderTo={store.data?.[0] ? `/store/${store.data[0].slug}` : '/order-domain'} />} />
-                            <Route path="/services/:id" element={<ServicePage />} />
-                            <Route path="/domains" element={<MyDomains />} />
-                            <Route path="/domains/:id" element={<DomainPage />} />
-                            <Route path="/invoices" element={<MyInvoices />} />
-                            <Route path="/invoices/:id" element={<Invoice />} />
-                            <Route path="/store/:slug" element={<Store />} />
-                            <Route path="/order-domain" element={<DomainOrder />} />
-                            <Route path="/tickets" element={<ClientTicketsPage />} />
-                            <Route path="/tickets/new" element={<ClientNewTicketPage />} />
-                            <Route path="/tickets/:id" element={<ClientTicketPage />} />
-                            <Route path="/chat" element={<ClientChatPage />} />
-                            <Route path="/security" element={<ClientSecurityPage profile={profile} />} />
-                            <Route path="/account/security" element={<ClientSecurityPage profile={profile} />} />
+                            {/* A page the signed-in user may not use falls through to the dashboard. */}
+                            {can('products') && <Route path="/services" element={<MyServices orderTo={store.data?.[0] ? `/store/${store.data[0].slug}` : '/order-domain'} />} />}
+                            {can('products') && <Route path="/services/:id" element={<ServicePage />} />}
+                            {can('domains') && <Route path="/domains" element={<MyDomains />} />}
+                            {can('domains') && <Route path="/domains/:id" element={<DomainPage />} />}
+                            {can('invoices') && <Route path="/invoices" element={<MyInvoices />} />}
+                            {can('invoices') && <Route path="/invoices/:id" element={<Invoice />} />}
+                            {can('invoices') && <Route path="/add-funds" element={<AddFundsPage />} />}
+                            {can('invoices') && <Route path="/credits" element={<CreditHistoryPage />} />}
+                            {can('orders') && <Route path="/store/:slug" element={<Store />} />}
+                            {can('orders') && <Route path="/order-domain" element={<DomainOrder />} />}
+                            {can('tickets') && <Route path="/tickets" element={<ClientTicketsPage />} />}
+                            {can('tickets') && <Route path="/tickets/new" element={<ClientNewTicketPage />} />}
+                            {can('tickets') && <Route path="/tickets/:id" element={<ClientTicketPage />} />}
+                            {can('tickets') && <Route path="/chat" element={<ClientChatPage />} />}
+                            {can('owner') && <Route path="/security" element={<ClientSecurityPage profile={profile} />} />}
+                            {can('owner') && <Route path="/account/security" element={<ClientSecurityPage profile={profile} />} />}
                             <Route path="/account/details" element={<MyDetailsPage />} />
-                            <Route path="/account/contacts" element={<ContactsPage />} />
-                            <Route path="/account/emails" element={<EmailsPage />} />
-                            <Route path="/account/emails/:id" element={<EmailPage />} />
+                            {can('contacts') && <Route path="/account/contacts" element={<ContactsPage />} />}
+                            {can('emails') && <Route path="/account/emails" element={<EmailsPage />} />}
+                            {can('emails') && <Route path="/account/emails/:id" element={<EmailPage />} />}
                             <Route path="/account/password" element={<ClientPasswordPage profile={profile} />} />
                             <Route path="/account/support-token" element={<SupportPinPage />} />
-                            <Route path="/account/sessions" element={<SessionsPage profile={profile} />} />
+                            {can('owner') && <Route path="/account/sessions" element={<SessionsPage profile={profile} />} />}
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                     </main>

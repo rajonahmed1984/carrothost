@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Support\MailFrom;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,11 +16,13 @@ class VerificationCode extends Mailable
         public string $intro,
         public string $instructions,
         public string $footer,
+        public string $sender = MailFrom::SUPPORT,
+        public ?string $name = null,
     ) {}
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->subjectLine);
+        return new Envelope(from: MailFrom::for($this->sender), subject: $this->subjectLine);
     }
 
     public function content(): Content
