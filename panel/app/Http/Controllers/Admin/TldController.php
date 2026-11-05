@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Registrar;
+use App\Models\RegistrarTld;
+use App\Services\RegistrarTldSync;
+use RuntimeException;
 use App\Models\Tld;
 use App\Support\Settings;
 use Illuminate\Http\Request;
@@ -33,6 +36,57 @@ class TldController extends Controller
                 'configured' => (bool) $saved->get($code)?->api_key,
             ])->values(),
         ];
+    }
+
+    /** The TLDs a registrar sells with our cost, next to the price we sell each at (if we do). */
+    public function registrarList(Request $request)
+    {
+        $code = $request->validate(['registrar' => ['required', Rule::in(array_keys(config('billing.registrars')))]])['registrar'];
+        $registrar = Registrar::where('code', $code)->first();
+        $ours = Tld::all()->keyBy('tld');
+
+        return [
+            'registrar' => [
+                'code' => $code,
+                'name' => config("billing.registrars.{$code}.name"),
+                'configured' => (bool) $registrar?->api_key,
+                'currency' => $registrar?->currency ?? 'USD',
+                'synced_at' => $registrar?->tlds_synced_at?->toISOString(),
+            ],
+            'rows' => RegistrarTld::where('registrar_code', $code)->orderBy('tld')->get()->map(fn (RegistrarTld $r) => [
+                'tld' => $r->tld,
+                'currency' => $r->currency,
+                'register_cost' => $r->register_cost,
+                'renew_cost' => $r->renew_cost,
+                'transfer_cost' => $r->transfer_cost,
+                'ours' => ($t = $ours->get($r->tld)) ? [
+                    'id' => $t->id,
+                    'registrar' => $t->registrar,
+                    'register_price' => $t->register_price,
+                    'renew_price' => $t->renew_price,
+                    'transfer_price' => $t->transfer_price,
+                    'is_active' => $t->is_active,
+                ] : null,
+            ]),
+        ];
+    }
+
+    public function registrarSync(string $code, RegistrarTldSync $sync)
+    {
+        abort_unless(config("billing.registrars.{$code}"), 404);
+        $registrar = Registrar::where('code', $code)->first();
+
+        if (! $registrar) {
+            throw ValidationException::withMessages(['registrar' => 'Save the reseller ID and API key first.']);
+        }
+
+        try {
+            $result = $sync->sync($registrar);
+        } catch (RuntimeException $e) {
+            throw ValidationException::withMessages(['registrar' => $e->getMessage()]);
+        }
+
+        return ['message' => "Synced {$result['tlds']} TLDs from ".config("billing.registrars.{$code}.name").", {$result['priced']} with a price.".($result['removed'] ? " {$result['removed']} no longer sold were removed from the list." : '')];
     }
 
     public function updateLookup(Request $request)

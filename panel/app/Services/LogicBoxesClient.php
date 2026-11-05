@@ -56,6 +56,20 @@ class LogicBoxesClient
         ], fn ($v) => $v !== null));
     }
 
+    /* ---------- Products ---------- */
+
+    /** Product keys by category; "domorder" maps each domain product key to its TLDs. */
+    public function categoryKeys(): array
+    {
+        return $this->get('products/category-keys-mapping.json', []);
+    }
+
+    /** What each product costs this reseller, keyed by product key, then action, then years. */
+    public function resellerPrices(): array
+    {
+        return $this->get('products/reseller-price.json', ['reseller-id' => $this->registrar->reseller_id]);
+    }
+
     /* ---------- Domains: lookups ---------- */
 
     /** The order id of a domain in this reseller account, or null when it is not there. */

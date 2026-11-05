@@ -12,7 +12,7 @@ class Registrar extends Model
 
     protected function casts(): array
     {
-        return ['api_key' => 'encrypted', 'last_synced_at' => 'datetime', 'connection_ok' => 'boolean', 'connection_checked_at' => 'datetime'];
+        return ['api_key' => 'encrypted', 'last_synced_at' => 'datetime', 'tlds_synced_at' => 'datetime', 'connection_ok' => 'boolean', 'connection_checked_at' => 'datetime'];
     }
 
     /** Remembers whether the last API call got through, for the Connection column. */

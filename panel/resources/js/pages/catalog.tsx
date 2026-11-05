@@ -7,6 +7,7 @@ import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Statu
 
 import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
 import { alertDialog, ask } from '../dialog';
+import { RegistrarTldList, type TldPreset } from './registrar-tlds';
 
 type Option = { code: string; name: string; connected: boolean };
 type Meta = { currency: string; cycles: string[]; modules: Option[]; registrars: Option[] };
@@ -318,11 +319,11 @@ type Tld = {
     is_active: boolean; is_spotlight: boolean; epp_required: boolean;
 };
 
-function TldForm({ tld, onClose }: { tld: Tld | null; onClose: () => void }) {
+function TldForm({ tld, preset, onClose }: { tld: Tld | null; preset?: TldPreset; onClose: () => void }) {
     const qc = useQueryClient();
     const meta = useMeta();
     const [form, setForm] = useState({
-        tld: tld?.tld ?? '', registrar: tld?.registrar ?? '', register_price: tld?.register_price ?? '',
+        tld: tld?.tld ?? preset?.tld ?? '', registrar: tld?.registrar ?? preset?.registrar ?? '', register_price: tld?.register_price ?? '',
         renew_price: tld?.renew_price ?? '', transfer_price: tld?.transfer_price ?? '', is_active: tld?.is_active ?? true,
     });
     const save = useMutation({
@@ -331,11 +332,11 @@ function TldForm({ tld, onClose }: { tld: Tld | null; onClose: () => void }) {
 
             return tld ? api.put(`/tlds/${tld.id}`, body) : api.post('/tlds', body);
         },
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ['tlds'] }); onClose(); },
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['tlds'] }); qc.invalidateQueries({ queryKey: ['/tlds/registrar-list'] }); onClose(); },
     });
 
     return (
-        <Modal title={tld ? `Edit ${tld.tld}` : 'Add TLD'} onClose={onClose}>
+        <Modal title={tld ? `Edit ${tld.tld}` : preset ? `Add ${preset.tld}` : 'Add TLD'} onClose={onClose}>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="TLD"><Input required placeholder=".com" value={form.tld} onChange={(e) => setForm({ ...form, tld: e.target.value })} /></Field>
@@ -471,7 +472,7 @@ function TldTable({ data }: { data: Tld[] }) {
     const meta = useMeta();
     const [rows, setRows] = useState<TldRow[]>(() => data.map(({ id, tld, registrar, is_active, is_spotlight, epp_required }) => ({ id, tld, registrar, is_active, is_spotlight, epp_required })));
     const [selected, setSelected] = useState<number[]>([]);
-    const [pricing, setPricing] = useState<Tld | 'new' | null>(null);
+    const [pricing, setPricing] = useState<Tld | 'new' | TldPreset | null>(null);
     const byId = new Map(data.map((t) => [t.id, t]));
     const dirty = JSON.stringify(rows) !== JSON.stringify(data.map(({ id, tld, registrar, is_active, is_spotlight, epp_required }) => ({ id, tld, registrar, is_active, is_spotlight, epp_required })));
     const spotlight = rows.filter((r) => r.is_spotlight);
@@ -578,7 +579,10 @@ function TldTable({ data }: { data: Tld[] }) {
                     <BulkPricing ids={selected} onDone={() => setSelected([])} />
                 </div>
             </div>
-            {pricing && <TldForm tld={pricing === 'new' ? null : pricing} onClose={() => setPricing(null)} />}
+            {meta.data && meta.data.registrars.length > 0 && (
+                <RegistrarTldList registrars={meta.data.registrars} onAdd={(preset) => setPricing(preset)} onEdit={(id) => { const t = byId.get(id); if (t) setPricing(t); }} />
+            )}
+            {pricing && <TldForm tld={pricing === 'new' || !('id' in pricing) ? null : pricing} preset={pricing !== 'new' && !('id' in pricing) ? pricing : undefined} onClose={() => setPricing(null)} />}
         </div>
     );
 }
@@ -590,7 +594,11 @@ export function TldsPage() {
     return <QueryState query={query}>{query.data && <TldTable key={query.dataUpdatedAt} data={query.data} />}</QueryState>;
 }
 
-type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; has_credentials?: boolean; connection_ok?: boolean | null; connection_error?: string | null; connection_checked_at?: string | null; services_count: number; this_month: Cell };
+type NsRow = { host: string; ip: string | null };
+const NS_SLOTS = [0, 1, 2, 3, 4];
+const NS_LABELS = ['Primary', 'Secondary', 'Third', 'Fourth', 'Fifth'];
+
+type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; has_credentials?: boolean; ip_address?: string | null; assigned_ips?: string | null; nameservers?: NsRow[] | null; connection_ok?: boolean | null; connection_error?: string | null; connection_checked_at?: string | null; services_count: number; this_month: Cell };
 
 function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: () => void }) {
     const qc = useQueryClient();
@@ -598,7 +606,10 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
     const [form, setForm] = useState({
         name: server?.name ?? '', module: server?.module ?? 'cpanel', hostname: server?.hostname ?? '', port: server?.port ? String(server.port) : '',
         username: server?.username ?? '', auth_type: server?.auth_type ?? 'token', credentials: '', verify_tls: server?.verify_tls ?? true, max_accounts: String(server?.max_accounts ?? 0), is_active: server?.is_active ?? true,
+        ip_address: server?.ip_address ?? '', assigned_ips: server?.assigned_ips ?? '',
+        nameservers: NS_SLOTS.map((i) => ({ host: server?.nameservers?.[i]?.host ?? '', ip: server?.nameservers?.[i]?.ip ?? '' })),
     });
+    const setNs = (i: number, change: { host?: string; ip?: string }) => setForm((f) => ({ ...f, nameservers: f.nameservers.map((ns, j) => (j === i ? { ...ns, ...change } : ns)) }));
     const currentCost = server ? Number(server.this_month.cost).toFixed(2) : '';
     const [showSecret, setShowSecret] = useState(false);
     const secretLabel = form.module === 'webuzo' ? 'Access Hash' : form.auth_type === 'password' ? 'Password' : 'API token';
@@ -624,7 +635,7 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
     });
 
     return (
-        <Modal title={server ? `Edit ${server.name}` : 'Add server'} onClose={onClose}>
+        <Modal title={server ? `Edit ${server.name}` : 'Add server'} onClose={onClose} wide>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Name"><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
@@ -663,6 +674,26 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                     </Field>
                     <Field label="Max accounts" hint="0 means no limit"><Input type="number" min="0" value={form.max_accounts} onChange={(e) => setForm({ ...form, max_accounts: e.target.value })} /></Field>
                 </div>
+                <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3">
+                    <legend className="px-1 text-xs font-semibold text-slate-600">IP addresses</legend>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="IP address" hint="The server's main shared IP"><Input inputMode="decimal" placeholder="172.96.191.68" value={form.ip_address} onChange={(e) => setForm({ ...form, ip_address: e.target.value.trim() })} /></Field>
+                        <Field label="Assigned IP addresses" hint="Extra IPs, one per line">
+                            <textarea className="ui-input min-h-[4.5rem] font-mono text-xs" rows={3} value={form.assigned_ips} onChange={(e) => setForm({ ...form, assigned_ips: e.target.value })} />
+                        </Field>
+                    </div>
+                </fieldset>
+                <fieldset className="space-y-2 rounded-xl border border-slate-200 p-3">
+                    <legend className="px-1 text-xs font-semibold text-slate-600">Nameservers</legend>
+                    <p className="text-xs text-slate-500">Shown to customers on their hosting service, so they know where to point their domain.</p>
+                    {form.nameservers.map((ns, i) => (
+                        <div key={i} className="grid gap-2 sm:grid-cols-[7rem_1fr_11rem] sm:items-center">
+                            <span className="text-xs font-medium text-slate-500">{NS_LABELS[i]} nameserver</span>
+                            <input className="ui-input" aria-label={`${NS_LABELS[i]} nameserver`} placeholder={i < 2 ? `ns${i + 1}.carrothost.com` : 'Optional'} value={ns.host} onChange={(e) => setNs(i, { host: e.target.value.trim() })} />
+                            <input className="ui-input" aria-label={`${NS_LABELS[i]} nameserver IP`} inputMode="decimal" placeholder="IP address" value={ns.ip} onChange={(e) => setNs(i, { ip: e.target.value.trim() })} />
+                        </div>
+                    ))}
+                </fieldset>
                 <div className="grid gap-3 rounded-xl border border-slate-200 p-3 sm:grid-cols-2">
                     <Field label="Monthly bill (BDT)" hint="What this server costs you each month"><Input type="number" min="0" step="0.01" placeholder="0.00" value={cost.amount} onChange={(e) => setCost({ ...cost, amount: e.target.value })} /></Field>
                     <Field label="Applies from" hint="Earlier months keep their old cost"><Input type="month" required value={cost.starts_on} onChange={(e) => setCost({ ...cost, starts_on: e.target.value })} /></Field>
@@ -746,7 +777,16 @@ export function ServersPage() {
                         columns={[
                             { header: 'Name', cell: (s) => <span className="font-medium">{s.name}</span> },
                             { header: 'Panel', cell: (s) => s.module },
-                            { header: 'Hostname', cell: (s) => s.hostname },
+                            {
+                                header: 'Hostname',
+                                cell: (s) => (
+                                    <div>
+                                        <div>{s.hostname}</div>
+                                        {s.ip_address && <div className="font-mono text-[11px] text-slate-500">{s.ip_address}</div>}
+                                        {s.nameservers && s.nameservers.length > 0 && <div className="text-[11px] text-slate-500" title={s.nameservers.map((n) => `${n.host}${n.ip ? ` (${n.ip})` : ''}`).join('\n')}>{s.nameservers.map((n) => n.host).join(', ')}</div>}
+                                    </div>
+                                ),
+                            },
                             { header: 'Accounts', cell: (s) => `${s.services_count}${s.max_accounts ? ` / ${s.max_accounts}` : ''}`, align: 'right' },
                             { header: 'Monthly Cost', cell: (s) => <button type="button" className="table-action-link tabular-nums" onClick={() => setCosts(s)}>{Number(s.this_month.cost) > 0 ? money(s.this_month.cost) : 'Set cost'}</button>, align: 'right' },
                             { header: 'Sales This Month', cell: (s) => <span className="tabular-nums">{money(s.this_month.sales)}</span>, align: 'right' },

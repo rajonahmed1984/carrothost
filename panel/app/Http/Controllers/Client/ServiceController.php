@@ -26,13 +26,16 @@ class ServiceController extends Controller
     public function show(Request $request, int $id)
     {
         $service = $request->user('client')->services()
-            ->with(['product:id,name,type,module,description,product_group_id', 'product.group:id,name', 'server:id,hostname'])
+            ->with(['product:id,name,type,module,description,product_group_id', 'product.group:id,name', 'server:id,hostname,ip_address,nameservers'])
             ->findOrFail($id);
 
         return [
             ...$this->present($service),
             'description' => $service->product->description,
             'has_password' => ! empty($service->credentials['password'] ?? null),
+            // Where to point the domain: the hosting server's nameservers and IP.
+            'nameservers' => collect($service->server?->nameservers ?? [])->pluck('host')->filter()->values(),
+            'server_ip' => $service->server?->ip_address,
             'invoices' => Invoice::whereHas('items', fn ($q) => $q->where('service_id', $service->id))
                 ->where('client_id', $service->client_id)
                 ->latest()

@@ -81,7 +81,7 @@ class ServerController extends Controller
 
     public function store(Request $request)
     {
-        $server = Server::create($this->validated($request));
+        $server = Server::create($this->cleaned($this->validated($request)));
         ActivityLog::record('server.saved', $server);
 
         return response()->json($server, 201);
@@ -89,7 +89,7 @@ class ServerController extends Controller
 
     public function update(Request $request, Server $server)
     {
-        $data = $this->validated($request);
+        $data = $this->cleaned($this->validated($request));
 
         // A blank token on edit means "keep the current one".
         if (empty($data['credentials'])) {
@@ -172,12 +172,40 @@ class ServerController extends Controller
         }
     }
 
+    /** Drops blank nameserver rows and tidies the extra IP list to one valid IP per line. */
+    private function cleaned(array $data): array
+    {
+        if (array_key_exists('nameservers', $data)) {
+            $rows = collect($data['nameservers'] ?? [])
+                ->map(fn ($row) => ['host' => strtolower(trim((string) ($row['host'] ?? ''))), 'ip' => trim((string) ($row['ip'] ?? '')) ?: null])
+                ->filter(fn ($row) => $row['host'] !== '')
+                ->values()->all();
+            $data['nameservers'] = $rows ?: null;
+        }
+
+        if (array_key_exists('assigned_ips', $data)) {
+            $ips = collect(preg_split('/[\s,]+/', (string) $data['assigned_ips']))->map(fn ($ip) => trim($ip))->filter()->unique()->values();
+            $bad = $ips->reject(fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP));
+            if ($bad->isNotEmpty()) {
+                throw ValidationException::withMessages(['assigned_ips' => 'Not an IP address: '.$bad->implode(', ')]);
+            }
+            $data['assigned_ips'] = $ips->implode("\n") ?: null;
+        }
+
+        return $data;
+    }
+
     private function validated(Request $request): array
     {
         return $request->validate([
             'name' => 'required|string|max:255',
             'module' => ['required', Rule::in(array_keys(config('billing.provisioning_modules')))],
             'hostname' => 'required|string|max:255',
+            'ip_address' => 'nullable|ip',
+            'assigned_ips' => 'nullable|string|max:5000',
+            'nameservers' => 'nullable|array|max:5',
+            'nameservers.*.host' => ['nullable', 'string', 'max:255', 'regex:'.\App\Models\Domain::NAME_PATTERN],
+            'nameservers.*.ip' => 'nullable|ip',
             'port' => 'nullable|integer|between:1,65535',
             'username' => 'nullable|string|max:255',
             'auth_type' => 'sometimes|in:token,password',

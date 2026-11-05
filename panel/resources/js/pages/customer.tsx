@@ -175,7 +175,7 @@ type ClientService = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string;
     product: { name: string; type: string; module: string | null; group: string | null }; username: string | null; panel_url: string | null;
 };
-type ServiceDetail = ClientService & { description: string | null; has_password: boolean; invoices: Overview['invoices'] };
+type ServiceDetail = ClientService & { description: string | null; has_password: boolean; nameservers: string[]; server_ip: string | null; invoices: Overview['invoices'] };
 
 const typeTabs = [
     { key: 'all', label: 'All Services', icon: <LayoutList size={15} /> },
@@ -433,6 +433,15 @@ function ServicePage() {
                                 </div>
                                 {s.status === 'suspended' && <p className="border-t border-slate-200 px-4 py-3 text-xs text-rose-700">This service is suspended. Pay any overdue invoice below, or open a ticket if you think this is a mistake.</p>}
                             </Card>
+                            {(s.nameservers.length > 0 || s.server_ip) && (
+                                <Card title="Nameservers">
+                                    <ul className="divide-y divide-slate-100">
+                                        {s.nameservers.map((ns, i) => <li key={ns} className="flex justify-between gap-3 px-4 py-2.5 text-sm"><span className="text-slate-500">Nameserver {i + 1}</span><span className="font-mono break-all text-slate-800">{ns}</span></li>)}
+                                        {s.server_ip && <li className="flex justify-between gap-3 px-4 py-2.5 text-sm"><span className="text-slate-500">Server IP</span><span className="font-mono text-slate-800">{s.server_ip}</span></li>}
+                                    </ul>
+                                    <p className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">Point your domain to these nameservers, or add an A record to the server IP.</p>
+                                </Card>
+                            )}
                             <Card title="Invoices">
                                 <Table rows={s.invoices} empty="No invoices for this service." columns={[
                                     { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/invoices/${i.id}`}>#{i.number}</Link> },

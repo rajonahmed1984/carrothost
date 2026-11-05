@@ -201,7 +201,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
                 default => str_replace('_', ' ', (string) $reason),
             };
 
-            throw new RuntimeException("WHM login failed (HTTP {$response->status()}): {$reason}. Check the username and password, that the account has no two-factor login, and that cPHulk has not blocked this panel's IP after failed tries. An API token avoids all of this.");
+            throw new RuntimeException("WHM login failed (HTTP {$response->status()}): {$reason}. Check the username and password, that the account has no two-factor login, that cPHulk has not blocked this panel's IP after failed tries, and that the hostname is the server your account is on now (hosts move accounts; compare with the IP WHMCS uses). An API token avoids password problems.");
         }
 
         return ['token' => '/'.ltrim($token, '/'), 'cookie' => $cookie];
