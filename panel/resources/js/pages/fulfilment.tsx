@@ -1,13 +1,14 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, ErrorNote, Field, Input, Modal, PagedTable, Status } from '../ui';
+import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status } from '../ui';
+import { alertDialog, ask } from '../dialog';
 
 export type Service = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; provision_status: string;
     provision_error: string | null; remote_id: string | null; next_due_date: string | null;
-    client: { id: number; name: string }; product: { name: string; module: string | null }; server: { name: string } | null;
+    client: { id: number; name: string }; product: { name: string; module: string | null; group?: { id: number; name: string } | null }; server: { name: string } | null;
 };
 
 const confirmText: Record<string, string> = {
@@ -21,16 +22,17 @@ export function ServiceActions({ service }: { service: Service }) {
     const act = useMutation({
         mutationFn: (action: string) => api.post(`/services/${service.id}/action`, { action }),
         onSettled: () => qc.invalidateQueries({ queryKey: ['/services'] }),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const reveal = useMutation({
         mutationFn: async () => (await api.post(`/services/${service.id}/credentials`)).data,
         onSuccess: setCredentials,
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     const run = (action: string) => {
-        if (!confirmText[action] || window.confirm(confirmText[action])) act.mutate(action);
+        if (confirmText[action]) ask(confirmText[action], () => act.mutate(action));
+        else act.mutate(action);
     };
 
     const busy = act.isPending || ['queued', 'running'].includes(service.provision_status);
@@ -58,10 +60,13 @@ export function ServiceActions({ service }: { service: Service }) {
 export function ServicesPage() {
     const [status, setStatus] = useState('');
     const [search, setSearch] = useState('');
+    const [group, setGroup] = useState('');
+    const groups = useQuery({ queryKey: ['product-groups'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/product-groups')).data });
 
     const params: Record<string, string> = {
         ...(search ? { q: search } : {}),
         ...(status ? { status } : {}),
+        ...(group ? { group } : {}),
     };
 
     return (
@@ -70,6 +75,15 @@ export function ServicesPage() {
                 url="/services"
                 noun="services"
                 search={{ value: search, onChange: setSearch, placeholder: 'Domain, username, client or product' }}
+                action={
+                    <div className="w-full sm:w-56">
+                        <Select aria-label="Product group" value={group} onChange={(e) => setGroup(e.target.value)}>
+                            <option value="">All product groups</option>
+                            {groups.data?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                            <option value="none">Ungrouped</option>
+                        </Select>
+                    </div>
+                }
                 tabs={{
                     value: status,
                     onChange: setStatus,
@@ -92,7 +106,7 @@ export function ServicesPage() {
                                 <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>
                                     {s.product.name}
                                 </Link>
-                                <div className="text-xs text-slate-500">{s.domain ?? 'No domain'}</div>
+                                <div className="text-xs text-slate-500">{s.product.group ? `${s.product.group.name} · ` : ''}{s.domain ?? 'No domain'}</div>
                             </>
                         ),
                     },

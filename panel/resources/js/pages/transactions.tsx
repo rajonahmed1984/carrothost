@@ -6,6 +6,7 @@ import { api, errorMessage, money, type Page } from '../api';
 import { Button, Modal, QueryState } from '../ui';
 import type { TransactionRow } from './client';
 import { day, StatCards, TransactionForm } from './client-tabs';
+import { alertDialog, ask } from '../dialog';
 
 type Row = TransactionRow & { invoice: { id: number; number: string; client_id: number; client: { id: number; name: string; company: string | null } | null } };
 type Result = Page<Row> & { totals: { in: string; fees: string; out: string; balance: string }; gateways: { code: string; name: string }[] };
@@ -58,7 +59,7 @@ export function TransactionsPage() {
         qc.invalidateQueries({ queryKey: ['/clients'] });
         qc.invalidateQueries({ queryKey: ['/invoices'] });
     };
-    const remove = useMutation({ mutationFn: (id: number) => api.delete(`/transactions/${id}`), onSuccess: refresh, onError: (e) => window.alert(errorMessage(e)) });
+    const remove = useMutation({ mutationFn: (id: number) => api.delete(`/transactions/${id}`), onSuccess: refresh, onError: (e) => alertDialog(errorMessage(e)) });
     const onSort = (col: Sort) => {
         if (col === sort) setDir(dir === 'asc' ? 'desc' : 'asc');
         else { setSort(col); setDir(col === 'gateway' ? 'asc' : 'desc'); }
@@ -144,7 +145,7 @@ export function TransactionsPage() {
                                                         <span className="inline-flex items-center gap-3">
                                                             <Link to={clientUrl(r, 'transactions', r.id)} className="table-action-link">View</Link>
                                                             <Button variant="link" onClick={() => setEditing(r)}>Edit</Button>
-                                                            <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(r.amount, r.currency)} transaction? Invoice #${r.invoice.number} goes back to unpaid if it is no longer covered.`) && remove.mutate(r.id)}>Delete</Button>
+                                                            <Button variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete this ${money(r.amount, r.currency)} transaction? Invoice #${r.invoice.number} goes back to unpaid if it is no longer covered.`, () => remove.mutate(r.id))}>Delete</Button>
                                                         </span>,
                                                         'text-right whitespace-nowrap',
                                                     )}
@@ -174,7 +175,7 @@ export function TransactionsPage() {
                                                 <span className="text-xs text-slate-500">{Number(r.fee) > 0 ? `Fees ${money(r.fee, r.currency)}` : ''}</span>
                                                 <span className="inline-flex gap-3">
                                                     <Button variant="link" onClick={() => setEditing(r)}>Edit</Button>
-                                                    <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(r.amount, r.currency)} transaction?`) && remove.mutate(r.id)}>Delete</Button>
+                                                    <Button variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete this ${money(r.amount, r.currency)} transaction?`, () => remove.mutate(r.id))}>Delete</Button>
                                                 </span>
                                             </div>
                                         </li>

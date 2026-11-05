@@ -7,6 +7,7 @@ import { Button, Dropdown, ErrorNote, Modal, QueryState, Status } from '../ui';
 import { Row, Section, Toggle } from './domain-view';
 import { SendMessage } from './sales';
 import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tools';
+import { alertDialog, ask } from '../dialog';
 
 type Option = { code: string; name: string };
 
@@ -168,13 +169,13 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const act = useMutation({
         mutationFn: (action: string) => api.post(`/services/${s.id}/action`, { action }),
         onSettled: refresh,
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const run = (action: string) => {
         if (action === 'password') return setDialog('password');
-        if (action === 'package') return window.confirm(`Move ${s.remote_id} to the "${s.product.name}" product's server package?`) && changePackage.mutate();
+        if (action === 'package') return ask(`Move ${s.remote_id} to the "${s.product.name}" product's server package?`, () => changePackage.mutate());
 
-        return window.confirm(confirmText[action]) && act.mutate(action);
+        return ask(confirmText[action], () => act.mutate(action));
     };
     const fresh = (data: ServiceFull) => {
         qc.setQueryData(['/services', String(s.id)], data);
@@ -183,7 +184,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const changePackage = useMutation({
         mutationFn: async () => (await api.post<ServiceFull>(`/services/${s.id}/package`)).data,
         onSuccess: (data) => { fresh(data); setNotice('Package changed on the server.'); },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const usage = useMutation({
         mutationFn: async () => (await api.post<ServiceFull>(`/services/${s.id}/usage`)).data,
@@ -195,13 +196,13 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
         const tab = window.open('about:blank', '_blank');
         sso.mutate(undefined, {
             onSuccess: (url) => { if (tab) tab.location.href = url; else window.location.href = url; },
-            onError: (e) => { tab?.close(); window.alert(errorMessage(e)); },
+            onError: (e) => { tab?.close(); alertDialog(errorMessage(e)); },
         });
     };
     const welcome = useMutation({
         mutationFn: async () => (await api.post<{ message: string }>(`/services/${s.id}/welcome`)).data,
         onSuccess: (data) => setNotice(data.message),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const remove = useMutation({
         mutationFn: () => api.delete(`/services/${s.id}`),
@@ -209,7 +210,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
             qc.invalidateQueries({ queryKey: ['/clients'] });
             if (onBack) onBack(); else navigate(`/admin/clients/${s.client.id}?tab=services`);
         },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const busy = act.isPending || ['queued', 'running'].includes(s.provision_status);
     const hasModule = !!s.product.module;
@@ -255,7 +256,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         <button type="button" role="menuitem" onClick={() => setDialog('transfer')} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><ArrowRightLeft size={14} className="text-slate-400" /> Transfer Ownership</button>
                         <div className="my-1 border-t border-slate-100" />
                         <button type="button" role="menuitem" onClick={() => setDialog('message')} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><Mail size={14} className="text-slate-400" /> Send Message</button>
-                        <button type="button" role="menuitem" disabled={welcome.isPending} onClick={() => window.confirm(`Email the welcome message to ${s.client.email}?`) && welcome.mutate()} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><Send size={14} className="text-slate-400" /> Resend Welcome Email</button>
+                        <button type="button" role="menuitem" disabled={welcome.isPending} onClick={() => ask(`Email the welcome message to ${s.client.email}?`, () => welcome.mutate())} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><Send size={14} className="text-slate-400" /> Resend Welcome Email</button>
                         <button type="button" role="menuitem" onClick={() => setLogin(true)} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><Eye size={14} className="text-slate-400" /> Show Login Details</button>
                         <div className="my-1 border-t border-slate-100" />
                         <Link role="menuitem" to={`/admin/clients/${s.client.id}`} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><User size={14} className="text-slate-400" /> Client Profile</Link>
@@ -266,7 +267,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                             type="button"
                             role="menuitem"
                             disabled={remove.isPending}
-                            onClick={() => window.confirm(`Delete this service record?${s.remote_id && s.status !== 'terminated' ? ` The account ${s.remote_id} stays on the server. Terminate it first to remove it there.` : ''}`) && remove.mutate()}
+                            onClick={() => ask(`Delete this service record?${s.remote_id && s.status !== 'terminated' ? ` The account ${s.remote_id} stays on the server. Terminate it first to remove it there.` : ''}`, () => remove.mutate())}
                             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"
                         >
                             <Trash2 size={14} /> Delete

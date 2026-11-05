@@ -198,7 +198,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             <Check checked={values.domain_allow_transfer} onChange={set('domain_allow_transfer')} label="Allow customers to transfer a domain to you" />
                             <Check checked={values.domain_allow_own} onChange={set('domain_allow_own')} label="Allow customers to use their own domain for hosting" />
                             <p className="text-xs text-slate-500">
-                                Prices come from <Link className="table-action-link" to="/admin/tlds">Domain Pricing</Link>. Only active extensions can be ordered.
+                                Prices come from <Link className="table-action-link" to="/admin/domain-pricing">Domain Pricing</Link>. Only active extensions can be ordered.
                             </p>
                         </Section>
                         <Section title="Renewals">

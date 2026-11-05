@@ -4,13 +4,18 @@ namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
 use App\Models\Client;
+use App\Models\ClientContact;
+use App\Models\ClientCredit;
 use App\Models\Domain;
+use App\Models\EmailLog;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Server;
 use App\Models\Service;
+use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -18,9 +23,11 @@ use Illuminate\Support\Str;
 
 /**
  * Copies active WHMCS clients into the panel with their live services (and the products they use), all their
- * domains, invoices with payments and refunds, and their activity log.
+ * domains, invoices with payments and refunds, contacts, credit, support tickets, email history and activity log.
  * Safe to run again: clients match by email, services by client, product and domain, domains by client, name and
- * expiry, invoices by number (the WHMCS invoice id), and a client's log is copied only once.
+ * expiry, invoices by number (the WHMCS invoice id), tickets by number (the WHMCS ticket id).
+ * While WHMCS is still the live billing system, a re-run brings existing services and invoices up to date with it:
+ * status, due dates, amounts, invoice lines and any payments recorded since.
  * Service passwords are encrypted with the WHMCS key, so only usernames come across.
  */
 class ImportWhmcs extends Command
@@ -78,9 +85,9 @@ class ImportWhmcs extends Command
             ->map(fn ($hostname) => Server::where('hostname', $hostname)->value('id'));
 
         $counts = [
-            'clients new' => 0, 'clients existing' => 0, 'services new' => 0, 'services existing' => 0, 'services skipped' => 0,
-            'domains new' => 0, 'domains existing' => 0, 'invoices new' => 0, 'invoices existing' => 0,
-            'transactions' => 0, 'log entries' => 0,
+            'clients new' => 0, 'clients existing' => 0, 'services new' => 0, 'services updated' => 0, 'services unchanged' => 0, 'services skipped' => 0,
+            'domains new' => 0, 'domains existing' => 0, 'invoices new' => 0, 'invoices updated' => 0, 'invoices unchanged' => 0,
+            'transactions' => 0, 'contacts' => 0, 'credit entries' => 0, 'tickets' => 0, 'ticket replies' => 0, 'emails' => 0, 'log entries' => 0,
         ];
         $lateDue = [];
 
@@ -100,7 +107,7 @@ class ImportWhmcs extends Command
                     }
 
                     $service = $this->serviceMap[$hosting->id] = $this->service($client, $hosting, $this->product($hosting->packageid, $currency), $cycle, $servers->get($hosting->server));
-                    $counts[$service->wasRecentlyCreated ? 'services new' : 'services existing']++;
+                    $counts[$service->wasRecentlyCreated ? 'services new' : ($service->wasChanged() ? 'services updated' : 'services unchanged')]++;
 
                     if ($service->status === 'active' && $service->next_due_date?->lt(today())) {
                         $lateDue[] = [$client->name, $service->domain, $service->next_due_date->toDateString()];
@@ -114,12 +121,18 @@ class ImportWhmcs extends Command
 
                 foreach ($invoices->get($row->id, []) as $invoiceRow) {
                     $currencyCode = $currencies->get($row->currency) ?? config('billing.currency');
-                    $imported = $this->invoice($client, $invoiceRow, $currencyCode);
-                    $counts[$imported === null ? 'invoices existing' : 'invoices new']++;
-                    $counts['transactions'] += (int) $imported;
+                    [$result, $transactions] = $this->invoice($client, $invoiceRow, $currencyCode);
+                    $counts["invoices {$result}"]++;
+                    $counts['transactions'] += $transactions;
                 }
 
                 $counts['transactions'] += $this->orphanPayments($client, $row->id, $currencies->get($row->currency) ?? config('billing.currency'));
+                $counts['contacts'] += $this->contacts($client, $row->id);
+                $counts['credit entries'] += $this->credit($client, $row);
+                [$tickets, $replies] = $this->tickets($client, $row->id);
+                $counts['tickets'] += $tickets;
+                $counts['ticket replies'] += $replies;
+                $counts['emails'] += $this->emails($client, $row->id);
                 $counts['log entries'] += $this->log($client, $row->id);
             }
         };
@@ -221,13 +234,31 @@ class ImportWhmcs extends Command
     {
         $domain = strtolower(trim($row->domain)) ?: null;
         $existing = Service::where(['client_id' => $client->id, 'product_id' => $product->id, 'domain' => $domain])->first();
+        $status = ['Active' => 'active', 'Suspended' => 'suspended', 'Pending' => 'pending', 'Terminated' => 'terminated', 'Cancelled' => 'cancelled'][$row->domainstatus] ?? 'pending';
+        $nextDue = $this->date($row->nextduedate);
 
         if ($existing) {
+            // Billing still runs in WHMCS, so its dates and amounts win. The server side (provisioning) stays as it is.
+            $existing->fill([
+                'status' => $status,
+                'cycle' => $cycle,
+                'recurring_amount' => $row->amount,
+                'next_due_date' => $nextDue,
+                'termination_date' => $this->date($row->termination_date ?? null),
+                'payment_method' => ($row->paymentmethod ?? '') ?: null,
+                'dedicated_ip' => ($row->dedicatedip ?? '') ?: null,
+                'auto_suspended' => $status === 'suspended' && str_contains(strtolower((string) $row->suspendreason), 'overdue'),
+            ]);
+
+            if ($nextDue && $nextDue <= now()->addDays(config('billing.renewal_notice_days'))->toDateString()) {
+                $existing->renewal_invoiced_for = $nextDue;
+            }
+
+            $existing->save();
+
             return $existing;
         }
 
-        $status = ['Active' => 'active', 'Suspended' => 'suspended', 'Pending' => 'pending', 'Terminated' => 'terminated', 'Cancelled' => 'cancelled'][$row->domainstatus] ?? 'pending';
-        $nextDue = $this->date($row->nextduedate);
         // The account already lives on the server only when a connected module can manage it.
         $managed = in_array($status, ['active', 'suspended'], true) && $serverId && config("billing.provisioning_modules.{$product->module}.class") && $row->username;
 
@@ -311,30 +342,49 @@ class ImportWhmcs extends Command
     }
 
     /**
-     * Copies one invoice with its lines and transactions. Returns how many transactions were copied, or null when the
-     * invoice was imported before. Lines tie to the imported service or domain, so paying an open invoice here renews it.
+     * Copies one invoice with its lines and transactions, or brings one imported before up to date with WHMCS.
+     * Returns ['new'|'updated'|'unchanged', transactions copied]. Lines tie to the imported service or domain, so
+     * paying an open invoice here renews it.
      */
-    private function invoice(Client $client, object $row, string $currency): ?int
+    private function invoice(Client $client, object $row, string $currency): array
     {
         $number = (string) $row->id;
-
-        if (Invoice::where('number', $number)->exists()) {
-            return null;
-        }
-
         $status = ['Paid' => 'paid', 'Cancelled' => 'cancelled', 'Refunded' => 'refunded'][$row->status] ?? 'unpaid';
-        $invoice = new Invoice([
-            'client_id' => $client->id,
-            'number' => $number,
+        $fields = [
             'status' => $status,
-            'currency' => $currency,
             'total' => $row->total,
             'due_date' => $this->date($row->duedate) ?? $this->date($row->date) ?? today()->toDateString(),
             'paid_at' => $status === 'paid' && $row->datepaid > '1970' ? $row->datepaid : null,
-        ]);
+        ];
+        $transactions = $this->whmcs->table('tblaccounts')->where('invoiceid', $row->id)->orderBy('id')->get();
+        $invoice = Invoice::where('number', $number)->first();
+
+        if ($invoice) {
+            $totalChanged = bccomp((string) $invoice->total, (string) $row->total, 2) !== 0;
+            $invoice->fill($fields);
+            $changed = $invoice->isDirty();
+            $invoice->save();
+
+            if ($totalChanged) {
+                $invoice->items()->delete();
+                $this->items($invoice, $row);
+            }
+
+            $added = $this->payments($invoice, $transactions, $currency);
+
+            return [$changed || $totalChanged || $added ? 'updated' : 'unchanged', $added];
+        }
+
+        $invoice = new Invoice(['client_id' => $client->id, 'number' => $number, 'currency' => $currency, ...$fields]);
         $invoice->created_at = $this->date($row->date) ?? now();
         $invoice->save();
+        $this->items($invoice, $row);
 
+        return ['new', $this->payments($invoice, $transactions, $currency)];
+    }
+
+    private function items(Invoice $invoice, object $row): void
+    {
         foreach ($this->whmcs->table('tblinvoiceitems')->where('invoiceid', $row->id)->orderBy('id')->get() as $item) {
             // Usage lines are mostly zero-amount bandwidth and disk readings.
             if ($item->type === 'Usage' && (float) $item->amount == 0) {
@@ -367,11 +417,6 @@ class ImportWhmcs extends Command
                 $invoice->items()->create(['description' => $label, 'amount' => $amount, 'kind' => 'other']);
             }
         }
-
-        $transactions = $this->whmcs->table('tblaccounts')->where('invoiceid', $row->id)->orderBy('id')->get();
-        $this->payments($invoice, $transactions, $currency);
-
-        return $transactions->count();
     }
 
     /**
@@ -409,19 +454,28 @@ class ImportWhmcs extends Command
             $invoice->created_at = $first;
             $invoice->save();
             $invoice->items()->create(['description' => "WHMCS invoice #{$whmcsInvoiceId} (deleted in WHMCS; rebuilt from its payments)", 'amount' => $total, 'kind' => 'other']);
-            $this->payments($invoice, $transactions, $currency);
-            $count += $transactions->count();
+            $count += $this->payments($invoice, $transactions, $currency);
         }
 
         return $count;
     }
 
-    private function payments(Invoice $invoice, iterable $transactions, string $currency): void
+    /** Copies the transactions not already on the invoice. Returns how many were copied. */
+    private function payments(Invoice $invoice, iterable $transactions, string $currency): int
     {
+        $copied = 0;
+        $existing = Payment::where('invoice_id', $invoice->id)->get(['transaction_id', 'meta']);
+
         foreach ($transactions as $tx) {
             $refund = (float) $tx->amountout > 0;
             $gateway = self::GATEWAYS[$tx->gateway] ?? 'manual';
             $transactionId = trim((string) $tx->transid) ?: "WHMCS-{$tx->id}";
+
+            // Copied before: recorded with its WHMCS id, or (older imports) under one of the ids given below.
+            if ($existing->contains(fn ($p) => (int) ($p->meta['whmcs_id'] ?? 0) === (int) $tx->id
+                || in_array($p->transaction_id, [$transactionId, "{$transactionId}-WHMCS-{$tx->id}"], true))) {
+                continue;
+            }
 
             // Gateway and transaction id are unique here; WHMCS repeats ids like "free".
             if (Payment::where(['gateway' => $gateway, 'transaction_id' => $transactionId])->exists()) {
@@ -437,6 +491,7 @@ class ImportWhmcs extends Command
                 'currency' => $currency,
                 'meta' => array_filter([
                     'source' => 'whmcs',
+                    'whmcs_id' => $tx->id,
                     'whmcs_gateway' => $tx->gateway,
                     'description' => trim((string) $tx->description) ?: null,
                     'fees' => (float) $tx->fees ? $tx->fees : null,
@@ -445,18 +500,157 @@ class ImportWhmcs extends Command
             ]);
             $payment->created_at = $tx->date && $tx->date > '1970' ? $tx->date : $invoice->created_at;
             $payment->save();
+            $copied++;
         }
+
+        return $copied;
     }
 
-    /** The client's WHMCS activity log, copied once as read-only history. */
-    private function log(Client $client, int $whmcsUserId): int
+    /** Contacts (sub-accounts) by email. Their WHMCS logins are not carried over. */
+    private function contacts(Client $client, int $whmcsUserId): int
     {
-        if (ActivityLog::where(['action' => 'whmcs.log', 'subject_type' => $client->getMorphClass(), 'subject_id' => $client->id])->exists()) {
-            return 0;
+        $count = 0;
+
+        foreach ($this->whmcs->table('tblcontacts')->where('userid', $whmcsUserId)->orderBy('id')->get() as $row) {
+            $email = strtolower(trim((string) $row->email));
+
+            if ($email === '' || $email === $client->email) {
+                continue;
+            }
+
+            $contact = ClientContact::firstOrCreate(['client_id' => $client->id, 'email' => $email], [
+                'name' => trim("{$row->firstname} {$row->lastname}") ?: $email,
+                'phone' => trim((string) $row->phonenumber) ?: null,
+                'receives_support' => (bool) $row->supportemails,
+            ]);
+            $count += (int) $contact->wasRecentlyCreated;
         }
 
+        return $count;
+    }
+
+    /**
+     * The client's credit history, and the balance as WHMCS has it now. The balance is not spent on open invoices
+     * here: WHMCS decided that already.
+     */
+    private function credit(Client $client, object $row): int
+    {
         $count = 0;
-        $this->whmcs->table('tblactivitylog')->where('userid', $whmcsUserId)->orderBy('id')->chunk(500, function ($rows) use ($client, &$count) {
+        $invoiceIds = Invoice::where('client_id', $client->id)->pluck('id', 'number');
+        // WHMCS can hold identical entries (same day, amount and text), so match by how many times each one occurs.
+        $seen = [];
+
+        foreach ($this->whmcs->table('tblcredit')->where('clientid', $row->id)->orderBy('id')->get() as $credit) {
+            $date = $credit->date > '1970' ? $credit->date.' 00:00:00' : now()->toDateTimeString();
+            $description = Str::limit(trim(html_entity_decode((string) $credit->description, ENT_QUOTES)) ?: 'Credit (WHMCS)', 250);
+            $key = "{$date}|{$credit->amount}|{$description}";
+            $seen[$key] = ($seen[$key] ?? 0) + 1;
+
+            if (ClientCredit::where(['client_id' => $client->id, 'amount' => $credit->amount, 'description' => $description, 'created_at' => $date])->count() >= $seen[$key]) {
+                continue;
+            }
+
+            $entry = new ClientCredit([
+                'client_id' => $client->id,
+                'invoice_id' => $credit->relid ? $invoiceIds->get((string) $credit->relid) : null,
+                'description' => $description,
+                'amount' => $credit->amount,
+            ]);
+            $entry->created_at = $date;
+            $entry->save();
+            $count++;
+        }
+
+        DB::table('clients')->where('id', $client->id)->update(['credit_balance' => $row->credit]);
+
+        return $count;
+    }
+
+    /** Support tickets with their conversation. Staff replies are credited to the first panel admin. */
+    private function tickets(Client $client, int $whmcsUserId): array
+    {
+        $staff = User::where('is_admin', true)->orderBy('id')->value('id');
+        $departments = $this->whmcs->table('tblticketdepartments')->pluck('name', 'id');
+        $text = fn (?string $message) => trim(html_entity_decode((string) $message, ENT_QUOTES)) ?: '(no message)';
+        [$tickets, $replies] = [0, 0];
+
+        foreach ($this->whmcs->table('tbltickets')->where('userid', $whmcsUserId)->where('merged_ticket_id', 0)->orderBy('id')->get() as $row) {
+            $department = strtolower((string) $departments->get($row->did));
+            $status = ['Open' => 'open', 'Answered' => 'answered', 'Customer-Reply' => 'customer_reply', 'On Hold' => 'on_hold', 'In Progress' => 'open', 'Closed' => 'closed'][$row->status] ?? 'open';
+            $ticket = Ticket::firstOrNew(['number' => (string) $row->tid]);
+            $ticket->fill([
+                'client_id' => $client->id,
+                'service_id' => preg_match('/^S(\d+)$/', (string) $row->service, $m) ? ($this->serviceMap[(int) $m[1]]->id ?? null) : null,
+                'department' => str_contains($department, 'billing') ? 'billing' : (str_contains($department, 'sales') ? 'sales' : 'support'),
+                'subject' => Str::limit(trim(html_entity_decode((string) $row->title, ENT_QUOTES)) ?: '(no subject)', 250),
+                'priority' => strtolower((string) $row->urgency) ?: 'medium',
+                'status' => $status,
+                'last_reply_at' => $row->lastreply > '1970' ? $row->lastreply : $row->date,
+            ]);
+
+            if (! $ticket->exists) {
+                $ticket->created_at = $row->date;
+                $tickets++;
+            }
+
+            $ticket->save();
+
+            $messages = collect([['date' => $row->date, 'message' => $row->message, 'admin' => $row->admin]])
+                ->concat($this->whmcs->table('tblticketreplies')->where('tid', $row->id)->orderBy('id')->get()->map(fn ($r) => ['date' => $r->date, 'message' => $r->message, 'admin' => $r->admin]));
+
+            foreach ($messages as $message) {
+                if ($ticket->replies()->where('created_at', $message['date'])->exists()) {
+                    continue;
+                }
+
+                $reply = $ticket->replies()->make(['message' => $text($message['message']), 'user_id' => trim((string) $message['admin']) !== '' ? $staff : null]);
+                $reply->created_at = $message['date'];
+                $reply->save();
+                $replies++;
+            }
+        }
+
+        return [$tickets, $replies];
+    }
+
+    /** Emails WHMCS sent the client, for My Emails. Password reset mails stay out, as they do for mail sent here. */
+    private function emails(Client $client, int $whmcsUserId): int
+    {
+        $seen = EmailLog::where('client_id', $client->id)->get(['subject', 'created_at'])
+            ->map(fn ($e) => $e->subject.'|'.$e->created_at)->flip();
+        $rows = [];
+
+        foreach ($this->whmcs->table('tblemails')->where('userid', $whmcsUserId)->where('pending', 0)->orderBy('id')->cursor() as $row) {
+            $subject = Str::limit(trim(html_entity_decode((string) $row->subject, ENT_QUOTES)) ?: '(no subject)', 250);
+            $date = $row->date > '1970' ? $row->date : null;
+
+            if (! $date || preg_match('/password reset|reset your password|verification code/i', $subject) || $seen->has($subject.'|'.$date)) {
+                continue;
+            }
+
+            $rows[] = [
+                'client_id' => $client->id,
+                'to' => Str::limit(strtolower(trim(explode(',', (string) $row->to)[0])) ?: $client->email, 250, ''),
+                'subject' => $subject,
+                'body' => (string) $row->message ?: null,
+                'created_at' => $date,
+            ];
+        }
+
+        foreach (array_chunk($rows, 200) as $chunk) {
+            EmailLog::insert($chunk);
+        }
+
+        return count($rows);
+    }
+
+    /** The client's WHMCS activity log as read-only history; a re-run adds only entries newer than those copied. */
+    private function log(Client $client, int $whmcsUserId): int
+    {
+        $since = ActivityLog::where(['action' => 'whmcs.log', 'subject_type' => $client->getMorphClass(), 'subject_id' => $client->id])->max('created_at');
+
+        $count = 0;
+        $this->whmcs->table('tblactivitylog')->where('userid', $whmcsUserId)->when($since, fn ($q) => $q->where('date', '>', $since))->orderBy('id')->chunk(500, function ($rows) use ($client, &$count) {
             ActivityLog::insert($rows->map(fn ($row) => [
                 'action' => 'whmcs.log',
                 'subject_type' => $client->getMorphClass(),

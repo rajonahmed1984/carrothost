@@ -6,6 +6,7 @@ import { api, basePath, errorMessage, money } from '../api';
 import { Button, Card, Dropdown, ErrorNote, Field, FilterTabs, Input, Modal, PagedTable, QueryState, Select, Status } from '../ui';
 import { ClientForm, type Client } from './sales';
 import { DomainsTab, EmailsTab, InvoicesTab, Notice, RecordsTable, ServicesTab, TicketsTab, TransactionsTab } from './client-tabs';
+import { alertDialog, ask } from '../dialog';
 
 export type InvoiceRow = { id: number; number: string; status: string; currency: string; total: string; due_date: string; paid_at: string | null; created_at: string; payment_method: string | null };
 export type ServiceRow = { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; provision_status: string; product: { name: string }; server: { name: string } | null };
@@ -228,12 +229,12 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
             refresh();
             if (action === 'delete') navigate('/admin/clients');
         },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const impersonate = useMutation({
         mutationFn: () => api.post(`/clients/${c.id}/impersonate`),
         onSuccess: () => window.location.assign(`${basePath}/`),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const t = c.invoice_totals;
 
@@ -285,8 +286,8 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
                         <Action icon={<LifeBuoy size={14} />} to={`/admin/tickets?client=${c.id}`}>View Tickets</Action>
                         {c.status === 'closed'
                             ? <Action icon={<LockOpen size={14} />} disabled={act.isPending} onClick={() => act.mutate('reopen')}>Reopen Account</Action>
-                            : <Action icon={<Lock size={14} />} disabled={act.isPending} onClick={() => { if (window.confirm(`Close ${c.name}'s account? They will no longer be able to log in.`)) act.mutate('close'); }}>Close Account</Action>}
-                        <Action icon={<Trash2 size={14} />} danger disabled={act.isPending} onClick={() => { if (window.confirm(`Permanently delete ${c.name}? This cannot be undone.`)) act.mutate('delete'); }}>Delete Account</Action>
+                            : <Action icon={<Lock size={14} />} disabled={act.isPending} onClick={() => { ask(`Close ${c.name}'s account? They will no longer be able to log in.`, () => act.mutate('close')); }}>Close Account</Action>}
+                        <Action icon={<Trash2 size={14} />} danger disabled={act.isPending} onClick={() => { ask(`Permanently delete ${c.name}? This cannot be undone.`, () => act.mutate('delete')); }}>Delete Account</Action>
                     </div>
                 </Panel>
                 <Panel title="Admin Notes">
@@ -713,7 +714,7 @@ function UsersTab({
     const sendReset = useMutation({
         mutationFn: async (userId: number) => (await api.post<{ message: string }>(`/clients/${client.id}/users/${userId}/password-reset`)).data,
         onSuccess: (data) => setNotice(data.message),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     return (
@@ -763,7 +764,7 @@ function UsersTab({
                                             type="button"
                                             role="menuitem"
                                             disabled={removeMutation.isPending}
-                                            onClick={() => window.confirm(`Remove ${u.name || u.email} from this client? They will no longer be able to sign in.`) && removeMutation.mutate(u.id)}
+                                            onClick={() => ask(`Remove ${u.name || u.email} from this client? They will no longer be able to sign in.`, () => removeMutation.mutate(u.id))}
                                             className="flex w-full cursor-pointer items-center gap-2 border-t border-slate-100 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"
                                         >
                                             <Trash2 size={14} /> Remove User

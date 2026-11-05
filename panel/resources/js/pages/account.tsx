@@ -41,6 +41,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { Button, Card, ErrorNote, Modal, QueryState, Select } from '../ui';
 import type { ClientProfile } from './security';
+import { ask } from '../dialog';
 
 // ISO 3166 codes; names come from the browser so they read naturally.
 const COUNTRY_CODES = 'BD US GB CA AU AF AL DZ AD AO AG AR AM AT AZ BS BH BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI KH CM CV CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HK HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG KP MK NO OM PK PW PS PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA KR SS ES LK SD SR SE CH SY TW TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE UY UZ VU VA VE VN YE ZM ZW'.split(' ');
@@ -958,7 +959,7 @@ export function ContactsPage() {
                                             <button
                                                 type="button"
                                                 disabled={remove.isPending}
-                                                onClick={() => window.confirm(`Remove ${c.name}?`) && remove.mutate(c.id)}
+                                                onClick={() => ask(`Remove ${c.name}?`, () => remove.mutate(c.id))}
                                                 className="icon-btn hover:text-rose-600"
                                                 aria-label="Remove contact"
                                             >
@@ -1467,7 +1468,7 @@ export function SessionsPage({ profile }: { profile: ClientProfile }) {
                         <button
                             type="button"
                             disabled={endOthers.isPending}
-                            onClick={() => window.confirm('Sign out all other devices?') && endOthers.mutate()}
+                            onClick={() => ask('Sign out all other devices?', () => endOthers.mutate())}
                             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
                         >
                             Sign out other devices

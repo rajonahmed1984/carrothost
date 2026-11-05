@@ -20,8 +20,11 @@ class ServiceController extends Controller
 {
     public function index(Request $request)
     {
-        return Service::with(['client:id,name,email', 'product:id,name,module', 'server:id,name'])
+        return Service::with(['client:id,name,email', 'product:id,name,module,product_group_id', 'product.group:id,name', 'server:id,name'])
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            ->when($request->query('group'), fn ($q, $group) => $q->whereHas('product', fn ($p) => $group === 'none'
+                ? $p->whereNull('product_group_id')
+                : $p->where('product_group_id', (int) $group)))
             ->when($request->query('q'), function ($q, $search) {
                 $q->where(function ($w) use ($search) {
                     $w->where('id', 'like', "%{$search}%")

@@ -4,6 +4,7 @@ import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, money, type Page } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, type Tab } from '../ui';
+import { confirmDialog } from '../dialog';
 
 const RichEditor = lazy(() => import('../editor'));
 
@@ -284,10 +285,10 @@ export function OrdersPage({ mode = 'active' }: { mode?: 'active' | 'cancelled' 
         },
     });
 
-    const handleBatch = (action: 'accept' | 'cancel' | 'delete') => {
+    const handleBatch = async (action: 'accept' | 'cancel' | 'delete') => {
         if (selectedIds.length === 0) return;
-        if (action === 'delete' && !window.confirm(`Are you sure you want to delete ${selectedIds.length} selected order(s)?`)) return;
-        if (action === 'cancel' && !window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected order(s)?`)) return;
+        if (action === 'delete' && !(await confirmDialog(`Are you sure you want to delete ${selectedIds.length} selected order(s)?`))) return;
+        if (action === 'cancel' && !(await confirmDialog(`Are you sure you want to cancel ${selectedIds.length} selected order(s)?`))) return;
         batchMutation.mutate(action);
     };
 

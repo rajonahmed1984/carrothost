@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath } from '../api';
 import { Button, Card, ErrorNote, Field, Input, PagedTable, QueryState, Select, Status, Table, useBranding } from '../ui';
+import { ask } from '../dialog';
 
 const fileUrl = (path: string) => `${basePath}/api${path}`;
 const isImage = (name: string) => /\.(png|jpe?g|gif)$/i.test(name);
@@ -462,7 +463,7 @@ export function ClientTicketPage() {
                         action={
                             <div className="flex items-center gap-3">
                                 <Status value={t.status} />
-                                {t.status !== 'closed' && <Button variant="ghost" disabled={close.isPending} onClick={() => window.confirm('Close this ticket?') && close.mutate()}>Close ticket</Button>}
+                                {t.status !== 'closed' && <Button variant="ghost" disabled={close.isPending} onClick={() => ask('Close this ticket?', () => close.mutate())}>Close ticket</Button>}
                             </div>
                         }
                     >

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, errorMessage, money } from '../api';
 import { Button, QueryState, Status } from '../ui';
+import { alertDialog } from '../dialog';
 
 type ChartRow = { label: string; new_orders: number; activated_orders: number; income: number };
 type Range = 'today' | 'month' | 'year';
@@ -242,8 +243,8 @@ function Automation({ data }: { data: Dashboard }) {
 function ServerTest({ id }: { id: number }) {
     const test = useMutation({
         mutationFn: async () => (await api.post<{ message: string }>(`/servers/${id}/test`)).data,
-        onSuccess: (r) => window.alert(r.message),
-        onError: (e) => window.alert(errorMessage(e)),
+        onSuccess: (r) => alertDialog(r.message),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;

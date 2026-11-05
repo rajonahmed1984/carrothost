@@ -6,6 +6,7 @@ import { api, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table, type Column } from '../ui';
 
 import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
+import { alertDialog, ask } from '../dialog';
 
 type Option = { code: string; name: string; connected: boolean };
 type Meta = { currency: string; cycles: string[]; modules: Option[]; registrars: Option[] };
@@ -43,7 +44,7 @@ function GroupForm({ group, onClose }: { group: Group | null; onClose: () => voi
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_visible} onChange={(e) => setForm({ ...form, is_visible: e.target.checked })} /> Show in the customer menu</label>
                 <ErrorNote error={save.error ?? remove.error} />
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    {group ? <Button type="button" variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete the ${group.name} group?`) && remove.mutate()}>Delete group</Button> : <span />}
+                    {group ? <Button type="button" variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete the ${group.name} group?`, () => remove.mutate())}>Delete group</Button> : <span />}
                     <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save group</Button></div>
                 </div>
             </form>
@@ -131,12 +132,12 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             qc.invalidateQueries({ queryKey: ['products'] });
             qc.invalidateQueries({ queryKey: ['product-groups'] });
             qc.setQueryData(['product', String(saved.id)], saved);
-            if (!product) navigate(`/admin/products/${saved.id}?tab=${tab.key}`, { replace: true });
+            if (!product) navigate(`/admin/products-pricing/${saved.id}?tab=${tab.key}`, { replace: true });
         },
     });
     const remove = useMutation({
         mutationFn: () => api.delete(`/products/${product?.id}`),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['product-groups'] }); navigate('/admin/products'); },
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['product-groups'] }); navigate('/admin/products-pricing'); },
     });
 
     return (
@@ -144,10 +145,10 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             <div className="card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <Link className="table-action-link text-xs" to="/admin/products">All products</Link>
+                        <Link className="table-action-link text-xs" to="/admin/products-pricing">All products</Link>
                         <h2 className="truncate text-lg font-semibold text-slate-900">{product ? product.name : 'New product'}</h2>
                     </div>
-                    {product && <Button type="button" variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete ${product.name}?`) && remove.mutate()}>Delete product</Button>}
+                    {product && <Button type="button" variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete ${product.name}?`, () => remove.mutate())}>Delete product</Button>}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {productTabs.map((t) => (
@@ -239,7 +240,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             <ErrorNote error={save.error ?? remove.error} />
             <div className="flex items-center justify-end gap-3 pb-2">
                 {save.isSuccess && <span role="status" className="text-xs font-semibold text-emerald-700">Product saved.</span>}
-                <Button type="button" variant="ghost" onClick={() => navigate('/admin/products')}>Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => navigate('/admin/products-pricing')}>Cancel</Button>
                 <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save changes'}</Button>
             </div>
         </form>
@@ -257,12 +258,12 @@ export function ProductEditPage() {
 }
 
 const productColumns: Column<Product>[] = [
-    { header: 'Name', cell: (p) => <Link className="table-action-link font-semibold" to={`/admin/products/${p.id}`}>{p.name}</Link> },
+    { header: 'Name', cell: (p) => <Link className="table-action-link font-semibold" to={`/admin/products-pricing/${p.id}`}>{p.name}</Link> },
     { header: 'Type', cell: (p) => p.type.replace('_', ' ') },
     { header: 'Automation', cell: (p) => (p.module ? `${p.module}${p.module_package ? ` / ${p.module_package}` : ''}` : 'Manual') },
     { header: 'Pricing', cell: (p) => p.prices.map((x) => `${money(x.price)} / ${x.cycle}`).join(', ') },
     { header: 'Status', cell: (p) => <Status value={p.is_active ? 'active' : 'cancelled'} /> },
-    { header: '', cell: (p) => <Link className="table-action-link" to={`/admin/products/${p.id}`}>Edit</Link>, align: 'right' },
+    { header: '', cell: (p) => <Link className="table-action-link" to={`/admin/products-pricing/${p.id}`}>Edit</Link>, align: 'right' },
 ];
 
 export function ProductsPage() {
@@ -276,7 +277,7 @@ export function ProductsPage() {
         <>
             <div className="mb-4 flex flex-wrap justify-end gap-2">
                 <Button variant="ghost" onClick={() => setEditingGroup('new')}><FolderPlus size={14} /> Add group</Button>
-                <Button onClick={() => navigate('/admin/products/new')}><Plus size={14} /> Add product</Button>
+                <Button onClick={() => navigate('/admin/products-pricing/new')}><Plus size={14} /> Add product</Button>
             </div>
             <QueryState query={query}>
                 <QueryState query={groups}>
@@ -290,7 +291,7 @@ export function ProductsPage() {
                                     <div className="flex flex-wrap items-center gap-3">
                                         {!g.is_visible && <Status value="hidden" />}
                                         <Button variant="link" onClick={() => setEditingGroup(g)}>Edit group</Button>
-                                        <Button variant="ghost" onClick={() => navigate(`/admin/products/new?group=${g.id}`)}><Plus size={14} /> Add product</Button>
+                                        <Button variant="ghost" onClick={() => navigate(`/admin/products-pricing/new?group=${g.id}`)}><Plus size={14} /> Add product</Button>
                                     </div>
                                 }
                             >
@@ -546,7 +547,7 @@ function TldTable({ data }: { data: Tld[] }) {
                                                     <div className="flex items-center justify-end gap-1 text-slate-400">
                                                         <button type="button" aria-label={`Move ${r.tld} up`} disabled={i === 0} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, -1)}><ArrowUp size={14} /></button>
                                                         <button type="button" aria-label={`Move ${r.tld} down`} disabled={i === rows.length - 1} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, 1)}><ArrowDown size={14} /></button>
-                                                        <button type="button" aria-label={`Delete ${r.tld}`} disabled={remove.isPending} className="cursor-pointer rounded p-1 hover:text-rose-600" onClick={() => window.confirm(`Delete ${r.tld}? Customers can no longer order it.`) && remove.mutate(r.id)}><MinusCircle size={14} /></button>
+                                                        <button type="button" aria-label={`Delete ${r.tld}`} disabled={remove.isPending} className="cursor-pointer rounded p-1 hover:text-rose-600" onClick={() => ask(`Delete ${r.tld}? Customers can no longer order it.`, () => remove.mutate(r.id))}><MinusCircle size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -649,8 +650,8 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
 function TestButton({ id }: { id: number }) {
     const test = useMutation({
         mutationFn: async () => (await api.post<{ ok: boolean; message: string }>(`/servers/${id}/test`)).data,
-        onSuccess: (r) => window.alert(r.message),
-        onError: (e) => window.alert(errorMessage(e)),
+        onSuccess: (r) => alertDialog(r.message),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;

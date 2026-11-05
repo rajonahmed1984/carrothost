@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage } from '../api';
 import { Button, Card, PagedTable, QueryState, Status, Table } from '../ui';
+import { alertDialog } from '../dialog';
 
 type Addon = { code: string; name: string; version: string | null; description: string | null; is_enabled: boolean };
 
@@ -10,7 +11,7 @@ export function AddonsPage() {
     const toggle = useMutation({
         mutationFn: (a: Addon) => api.put(`/addons/${a.code}`, { is_enabled: !a.is_enabled }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['addons'] }),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     return (

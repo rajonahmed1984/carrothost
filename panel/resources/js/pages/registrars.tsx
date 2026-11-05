@@ -6,6 +6,7 @@ import { api, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Table } from '../ui';
 import { StatCards } from './client-tabs';
 import { monthLabel, Profit, shiftMonth, thisMonth } from './server-profit';
+import { alertDialog, ask } from '../dialog';
 
 /* Domain registrars: API settings, the money held at each registrar, and what domains really cost and earn. */
 
@@ -80,8 +81,8 @@ function RegistrarForm({ registrar, onClose }: { registrar: Registrar; onClose: 
 function TestButton({ code }: { code: string }) {
     const test = useMutation({
         mutationFn: async () => (await api.post<{ message: string }>(`/registrars/${code}/test`)).data,
-        onSuccess: (r) => window.alert(r.message),
-        onError: (e) => window.alert(errorMessage(e)),
+        onSuccess: (r) => alertDialog(r.message),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;
@@ -91,8 +92,8 @@ function SyncButton({ code }: { code: string }) {
     const qc = useQueryClient();
     const sync = useMutation({
         mutationFn: async () => (await api.post<{ message: string }>(`/registrars/${code}/sync`)).data,
-        onSuccess: (r) => { refreshKeys(qc, code); window.alert(r.message); },
-        onError: (e) => { refreshKeys(qc, code); window.alert(errorMessage(e)); },
+        onSuccess: (r) => { refreshKeys(qc, code); alertDialog(r.message); },
+        onError: (e) => { refreshKeys(qc, code); alertDialog(errorMessage(e)); },
     });
 
     return <Button variant="link" disabled={sync.isPending} onClick={() => sync.mutate()}><RefreshCw size={12} className={sync.isPending ? 'animate-spin' : ''} /> {sync.isPending ? 'Syncing...' : 'Sync'}</Button>;
@@ -208,7 +209,7 @@ function MatchCharge({ registrar, charge, onSaved }: { registrar: Registrar; cha
     const save = useMutation({
         mutationFn: async (d: { id: number; name: string } | null) => (await api.put<Ledger>(`/registrars/${registrar.code}/charges/${charge.id}`, { domain_id: d?.id ?? null, action: charge.action })).data,
         onSuccess: (l) => { setOpen(false); onSaved(l); },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     if (!open) return <Button variant="link" onClick={() => setOpen(true)}>{charge.domain ? charge.domain.name : 'Match domain'}</Button>;
@@ -222,8 +223,8 @@ export function WalletModal({ registrar, onClose }: { registrar: Registrar; onCl
     const ledger = useQuery({ queryKey: key, queryFn: async () => (await api.get<Ledger>(`/registrars/${registrar.code}/ledger`)).data });
     const [tab, setTab] = useState<'deposits' | 'charges'>('deposits');
     const saved = (l: Ledger) => { qc.setQueryData(key, l); refreshKeys(qc, registrar.code); };
-    const removeDeposit = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/deposits/${id}`)).data, onSuccess: saved, onError: (e) => window.alert(errorMessage(e)) });
-    const removeCharge = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/charges/${id}`)).data, onSuccess: saved, onError: (e) => window.alert(errorMessage(e)) });
+    const removeDeposit = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/deposits/${id}`)).data, onSuccess: saved, onError: (e) => alertDialog(errorMessage(e)) });
+    const removeCharge = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/charges/${id}`)).data, onSuccess: saved, onError: (e) => alertDialog(errorMessage(e)) });
     const w = ledger.data?.wallet ?? registrar.wallet;
     const cur = registrar.currency;
 
@@ -268,7 +269,7 @@ export function WalletModal({ registrar, onClose }: { registrar: Registrar; onCl
                                                     <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{money(d.fee_bdt)}</td>
                                                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{inCurrency(d.credited, cur)}</td>
                                                     <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{cur === 'BDT' ? d.rate.toFixed(4) : `৳${d.rate.toFixed(2)}`}</td>
-                                                    <td className="px-3 py-2 text-right"><button type="button" aria-label="Delete deposit" className="icon-btn h-8 w-8 text-rose-600" disabled={removeDeposit.isPending} onClick={() => window.confirm('Delete this deposit? Domain costs are recalculated.') && removeDeposit.mutate(d.id)}><Trash2 size={14} /></button></td>
+                                                    <td className="px-3 py-2 text-right"><button type="button" aria-label="Delete deposit" className="icon-btn h-8 w-8 text-rose-600" disabled={removeDeposit.isPending} onClick={() => ask('Delete this deposit? Domain costs are recalculated.', () => removeDeposit.mutate(d.id))}><Trash2 size={14} /></button></td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -297,7 +298,7 @@ export function WalletModal({ registrar, onClose }: { registrar: Registrar; onCl
                                                     <td className="px-3 py-2"><MatchCharge registrar={registrar} charge={c} onSaved={saved} /></td>
                                                     <td className={`px-3 py-2 text-right tabular-nums ${c.type === 'credit' ? 'text-sky-700' : ''}`}>{c.type === 'credit' ? '-' : ''}{inCurrency(c.amount, cur)}</td>
                                                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(c.cost_bdt)}{c.unfunded && <span title="More than the deposits recorded: costed at the last known rate" className="ml-1 text-amber-600">*</span>}</td>
-                                                    <td className="px-3 py-2 text-right">{c.source === 'manual' && <button type="button" aria-label="Delete charge" className="icon-btn h-8 w-8 text-rose-600" disabled={removeCharge.isPending} onClick={() => window.confirm('Delete this charge?') && removeCharge.mutate(c.id)}><Trash2 size={14} /></button>}</td>
+                                                    <td className="px-3 py-2 text-right">{c.source === 'manual' && <button type="button" aria-label="Delete charge" className="icon-btn h-8 w-8 text-rose-600" disabled={removeCharge.isPending} onClick={() => ask('Delete this charge?', () => removeCharge.mutate(c.id))}><Trash2 size={14} /></button>}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

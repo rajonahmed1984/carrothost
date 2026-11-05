@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { api, money } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, QueryState } from '../ui';
 import { StatCards } from './client-tabs';
+import { ask } from '../dialog';
 
 /* Server running costs and the profit each server makes against its sales, month by month. */
 
@@ -69,7 +70,7 @@ export function ServerCostsModal({ server, onClose }: { server: { id: number; na
                                     </span>
                                     <span className="flex items-center gap-3">
                                         <span className="font-semibold tabular-nums">{money(c.amount)}<span className="text-xs font-normal text-slate-500"> / month</span></span>
-                                        <button type="button" aria-label={`Delete cost from ${monthLabel(c.starts_on)}`} disabled={remove.isPending} onClick={() => window.confirm(`Delete the cost from ${monthLabel(c.starts_on)}?`) && remove.mutate(c.id)} className="icon-btn h-8 w-8 text-rose-600"><Trash2 size={14} /></button>
+                                        <button type="button" aria-label={`Delete cost from ${monthLabel(c.starts_on)}`} disabled={remove.isPending} onClick={() => ask(`Delete the cost from ${monthLabel(c.starts_on)}?`, () => remove.mutate(c.id))} className="icon-btn h-8 w-8 text-rose-600"><Trash2 size={14} /></button>
                                     </span>
                                 </li>
                             ))}

@@ -9,6 +9,7 @@ import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
 import { TicketView } from './support';
 import { InvoiceView } from './invoice-view';
+import { alertDialog, ask } from '../dialog';
 
 /* The client profile tabs, in the panel's own look: cards, pale headers, pills and text actions. */
 
@@ -345,7 +346,7 @@ function InvoiceList({ client, onCreate, onOpen }: { client: Detail; onCreate: (
     const remove = useMutation({
         mutationFn: (id: number) => api.delete(`/invoices/${id}`),
         onSuccess: () => { setNotice('Invoice deleted.'); refresh(); },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const overdue = (i: InvoiceRow) => i.status === 'unpaid' && new Date(`${i.due_date.slice(0, 10)}T23:59:59`) < new Date();
 
@@ -368,7 +369,7 @@ function InvoiceList({ client, onCreate, onOpen }: { client: Detail; onCreate: (
                         variant={a.variant ?? 'ghost'}
                         className="h-8 px-3"
                         disabled={bulk.isPending}
-                        onClick={() => (!a.confirm || window.confirm(a.confirm)) && bulk.mutate(a.key)}
+                        onClick={() => (a.confirm ? ask(a.confirm, () => bulk.mutate(a.key)) : bulk.mutate(a.key))}
                     >
                         {a.label}
                     </Button>
@@ -388,7 +389,7 @@ function InvoiceList({ client, onCreate, onOpen }: { client: Detail; onCreate: (
                             <RowActions>
                                 <OpenLink onClick={() => onOpen(i.id)}>View</OpenLink>
                                 <Button variant="link" onClick={() => onOpen(i.id, true)}>Edit</Button>
-                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete invoice #${i.number}?`) && remove.mutate(i.id)}>Delete</Button>
+                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete invoice #${i.number}?`, () => remove.mutate(i.id))}>Delete</Button>
                             </RowActions>
                         ),
                     },
@@ -422,7 +423,7 @@ export function TransactionForm({ row, onCancel, onSaved }: { row: TransactionRo
 function TransactionView({ client, row, edit, onOpen, onGo }: { client: Detail; row: TransactionRow | undefined; edit: boolean; onOpen: Viewer['onOpen']; onGo: GoTo }) {
     const refresh = useRefresh(client.id);
     const [notice, setNotice] = useState('');
-    const remove = useMutation({ mutationFn: (id: number) => api.delete(`/transactions/${id}`), onSuccess: () => { refresh(); onOpen(null); }, onError: (e) => window.alert(errorMessage(e)) });
+    const remove = useMutation({ mutationFn: (id: number) => api.delete(`/transactions/${id}`), onSuccess: () => { refresh(); onOpen(null); }, onError: (e) => alertDialog(errorMessage(e)) });
 
     if (!row) {
         return (
@@ -444,7 +445,7 @@ function TransactionView({ client, row, edit, onOpen, onGo }: { client: Detail; 
                 meta={<>{row.gateway_name} · {dayTime(row.created_at)}</>}
             >
                 {!edit && <Button variant="ghost" className="h-9" onClick={() => onOpen(row.id, true)}><Pencil size={14} /> Edit</Button>}
-                <Button variant="danger" className="h-9" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(row.amount, row.currency)} payment? Invoice #${row.invoice.number} goes back to unpaid if it is no longer covered.`) && remove.mutate(row.id)}><Trash2 size={14} /> Delete</Button>
+                <Button variant="danger" className="h-9" disabled={remove.isPending} onClick={() => ask(`Delete this ${money(row.amount, row.currency)} payment? Invoice #${row.invoice.number} goes back to unpaid if it is no longer covered.`, () => remove.mutate(row.id))}><Trash2 size={14} /> Delete</Button>
             </ViewHeader>
             {notice && <Notice text={notice} onClose={() => setNotice('')} />}
             {edit && (
@@ -476,7 +477,7 @@ function TransactionList({ client, onOpen, onGo }: { client: Detail; onOpen: Vie
     const remove = useMutation({
         mutationFn: (id: number) => api.delete(`/transactions/${id}`),
         onSuccess: refresh,
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const t = client.transaction_totals;
 
@@ -512,7 +513,7 @@ function TransactionList({ client, onOpen, onGo }: { client: Detail; onOpen: Vie
                             <RowActions>
                                 <OpenLink onClick={() => onOpen(p.id)}>View</OpenLink>
                                 <Button variant="link" onClick={() => onOpen(p.id, true)}>Edit</Button>
-                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm(`Delete this ${money(p.amount, p.currency)} payment? Invoice #${p.invoice.number} goes back to unpaid if it is no longer covered.`) && remove.mutate(p.id)}>Delete</Button>
+                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => ask(`Delete this ${money(p.amount, p.currency)} payment? Invoice #${p.invoice.number} goes back to unpaid if it is no longer covered.`, () => remove.mutate(p.id))}>Delete</Button>
                             </RowActions>
                         ),
                     },
@@ -567,7 +568,7 @@ export function EmailsTab({ client }: { client: Detail }) {
     const resend = useMutation({
         mutationFn: async (id: number) => (await api.post<{ message: string }>(`/clients/${client.id}/emails/${id}/resend`)).data,
         onSuccess: (data) => { setNotice(data.message); refresh(); },
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const remove = useMutation({ mutationFn: (id: number) => api.delete(`/clients/${client.id}/emails/${id}`), onSuccess: refresh });
 
@@ -590,8 +591,8 @@ export function EmailsTab({ client }: { client: Detail }) {
                         cell: (e) => (
                             <RowActions>
                                 <Button variant="link" onClick={() => setViewing(e)}>View</Button>
-                                <Button variant="link" disabled={resend.isPending} onClick={() => window.confirm(`Send "${e.subject}" to ${e.to} again?`) && resend.mutate(e.id)}>Resend</Button>
-                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => window.confirm('Delete this email from the log? The client will no longer see it in My Emails.') && remove.mutate(e.id)}>Delete</Button>
+                                <Button variant="link" disabled={resend.isPending} onClick={() => ask(`Send "${e.subject}" to ${e.to} again?`, () => resend.mutate(e.id))}>Resend</Button>
+                                <Button variant="link-danger" disabled={remove.isPending} onClick={() => ask('Delete this email from the log? The client will no longer see it in My Emails.', () => remove.mutate(e.id))}>Delete</Button>
                             </RowActions>
                         ),
                     },

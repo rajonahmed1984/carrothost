@@ -6,6 +6,7 @@ import { api, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Status, Table } from '../ui';
 import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
+import { alertDialog, ask } from '../dialog';
 
 function Facts({ rows }: { rows: [string, ReactNode][] }) {
     return (
@@ -186,7 +187,7 @@ export function OrderDetailPage() {
 
     const resendVerification = useMutation({
         mutationFn: async () => (await api.post(`/orders/${o?.id}/resend-verification`)).data,
-        onSuccess: () => alert('Verification email has been sent!'),
+        onSuccess: () => alertDialog('Verification email has been sent!'),
     });
 
     const deleteMutation = useMutation({
@@ -249,7 +250,7 @@ export function OrderDetailPage() {
                                     variant="ghost"
                                     disabled={cancel.isPending}
                                     onClick={() => {
-                                        if (window.confirm(`Cancel Order #${o.id}?`)) cancel.mutate();
+                                        ask(`Cancel Order #${o.id}?`, () => cancel.mutate());
                                     }}
                                 >
                                     Cancel order
@@ -259,7 +260,7 @@ export function OrderDetailPage() {
                                 variant="danger"
                                 disabled={deleteMutation.isPending}
                                 onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete Order #${o.id}?`)) deleteMutation.mutate();
+                                    ask(`Are you sure you want to delete Order #${o.id}?`, () => deleteMutation.mutate());
                                 }}
                             >
                                 <Trash2 size={14} className="mr-1" /> Delete
@@ -552,7 +553,7 @@ export function OrderDetailPage() {
                             variant="ghost"
                             disabled={cancel.isPending}
                             onClick={() => {
-                                if (window.confirm(`Cancel Order #${o.id}?`)) cancel.mutate();
+                                ask(`Cancel Order #${o.id}?`, () => cancel.mutate());
                             }}
                         >
                             Cancel Order
@@ -561,7 +562,7 @@ export function OrderDetailPage() {
                             variant="ghost"
                             disabled={cancel.isPending}
                             onClick={() => {
-                                if (window.confirm(`Cancel & Refund Order #${o.id}?`)) cancel.mutate();
+                                ask(`Cancel & Refund Order #${o.id}?`, () => cancel.mutate());
                             }}
                         >
                             Cancel & Refund
@@ -582,7 +583,7 @@ export function OrderDetailPage() {
                             variant="danger"
                             disabled={deleteMutation.isPending}
                             onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete Order #${o.id}?`)) deleteMutation.mutate();
+                                ask(`Are you sure you want to delete Order #${o.id}?`, () => deleteMutation.mutate());
                             }}
                         >
                             <Trash2 size={14} className="mr-1" /> Delete Order

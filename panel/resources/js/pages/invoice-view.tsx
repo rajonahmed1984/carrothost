@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { api, basePath, errorMessage, money } from '../api';
 import { Button, Dropdown, ErrorNote, Field, Input, QueryState, Status, useBranding } from '../ui';
 import { day, dayTime, EditInvoiceForm, Notice, OpenLink, ViewHeader } from './client-tabs';
+import { alertDialog, ask } from '../dialog';
 
 /* One invoice inside the client's Invoices tab, laid out like WHMCS's invoice page in the panel's own look. */
 
@@ -70,7 +71,7 @@ function printInvoice(inv: InvoiceFull, brand: string, download: boolean) {
         ${download ? '<p class="muted" style="margin-top:32px">To save a PDF, choose "Save as PDF" as the printer.</p>' : ''}
     </body></html>`;
     const win = window.open('', '_blank');
-    if (!win) return window.alert('Allow pop-ups for this site to print the invoice.');
+    if (!win) return alertDialog('Allow pop-ups for this site to print the invoice.');
     win.document.write(html);
     win.document.close();
     win.focus();
@@ -107,12 +108,12 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
         setTab('summary');
     };
     const email = useMutation({ mutationFn: async () => (await api.post<{ message: string }>(`/invoices/${inv.id}/email`, { template })).data, onSuccess: (d) => setNotice(d.message) });
-    const cancel = useMutation({ mutationFn: () => api.post(`/invoices/${inv.id}/cancel`), onSuccess: () => { refreshAll(); setNotice('Invoice cancelled.'); }, onError: (e) => window.alert(errorMessage(e)) });
-    const remove = useMutation({ mutationFn: () => api.delete(`/invoices/${inv.id}`), onSuccess: () => { refreshAll(); onOpen(null); }, onError: (e) => window.alert(errorMessage(e)) });
+    const cancel = useMutation({ mutationFn: () => api.post(`/invoices/${inv.id}/cancel`), onSuccess: () => { refreshAll(); setNotice('Invoice cancelled.'); }, onError: (e) => alertDialog(errorMessage(e)) });
+    const remove = useMutation({ mutationFn: () => api.delete(`/invoices/${inv.id}`), onSuccess: () => { refreshAll(); onOpen(null); }, onError: (e) => alertDialog(errorMessage(e)) });
     const viewAsClient = useMutation({
         mutationFn: () => api.post(`/clients/${inv.client.id}/impersonate`),
         onSuccess: () => window.location.assign(`${basePath}/invoices/${inv.id}`),
-        onError: (e) => window.alert(errorMessage(e)),
+        onError: (e) => alertDialog(errorMessage(e)),
     });
     const menuItem = 'flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50';
 
@@ -132,7 +133,7 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
                     className="h-9"
                     disabled={viewAsClient.isPending || inv.client.status !== 'active'}
                     title={inv.client.status !== 'active' ? 'Only an active client can be viewed as.' : undefined}
-                    onClick={() => window.confirm(`View this invoice as ${inv.client.name}? You will be signed in as the client until you return to the admin area.`) && viewAsClient.mutate()}
+                    onClick={() => ask(`View this invoice as ${inv.client.name}? You will be signed in as the client until you return to the admin area.`, () => viewAsClient.mutate())}
                 >
                     <Eye size={14} /> View as Client
                 </Button>
@@ -140,8 +141,8 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
                 <Button variant="ghost" className="h-9" onClick={() => printInvoice(inv, brand, true)}><Download size={14} /> Download</Button>
                 {(editable || inv.payments.length === 0) && (
                     <Dropdown label="More invoice actions" buttonClassName="ui-btn ui-btn-secondary h-9" button={<>More <ChevronDown size={14} /></>} menuClassName="w-48 py-1 text-sm">
-                        {editable && <button type="button" role="menuitem" disabled={cancel.isPending} onClick={() => window.confirm(`Cancel invoice #${inv.number}?`) && cancel.mutate()} className={menuItem}><Ban size={14} className="text-slate-400" /> Cancel Invoice</button>}
-                        <button type="button" role="menuitem" disabled={remove.isPending} onClick={() => window.confirm(`Delete invoice #${inv.number}?`) && remove.mutate()} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</button>
+                        {editable && <button type="button" role="menuitem" disabled={cancel.isPending} onClick={() => ask(`Cancel invoice #${inv.number}?`, () => cancel.mutate())} className={menuItem}><Ban size={14} className="text-slate-400" /> Cancel Invoice</button>}
+                        <button type="button" role="menuitem" disabled={remove.isPending} onClick={() => ask(`Delete invoice #${inv.number}?`, () => remove.mutate())} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</button>
                     </Dropdown>
                 )}
             </ViewHeader>
@@ -328,7 +329,7 @@ function CreditTab({ inv, onSaved }: { inv: InvoiceFull; onSaved: (d: InvoiceFul
                             <Button disabled={change.isPending || available <= 0}><Wallet size={14} /> Apply Credit</Button>
                         </form>
                         {Number(inv.credit_applied) > 0 && (
-                            <Button type="button" variant="ghost" disabled={change.isPending} onClick={() => window.confirm(`Take ${money(inv.credit_applied, inv.currency)} of credit off this invoice and give it back to the client?`) && change.mutate('remove')}>
+                            <Button type="button" variant="ghost" disabled={change.isPending} onClick={() => ask(`Take ${money(inv.credit_applied, inv.currency)} of credit off this invoice and give it back to the client?`, () => change.mutate('remove'))}>
                                 <RotateCcw size={14} /> Remove Applied Credit
                             </Button>
                         )}
@@ -361,7 +362,7 @@ function RefundTab({ inv, onSaved }: { inv: InvoiceFull; onSaved: (d: InvoiceFul
 
     return (
         <Card title="Refund">
-            <form onSubmit={(e) => { e.preventDefault(); if (window.confirm(`Record a ${money(amount, inv.currency)} refund?`)) refund.mutate(); }} className="space-y-4 p-4">
+            <form onSubmit={(e) => { e.preventDefault(); ask(`Record a ${money(amount, inv.currency)} refund?`, () => refund.mutate()); }} className="space-y-4 p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Transaction">
                         <select className="ui-input" value={paymentId} onChange={(e) => { const id = Number(e.target.value); setPaymentId(id); setAmount(refundable.find((p) => p.id === id)?.left.toFixed(2) ?? ''); }}>

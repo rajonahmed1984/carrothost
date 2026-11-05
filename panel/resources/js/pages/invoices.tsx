@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, money } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, QueryState, Status } from '../ui';
+import { ask } from '../dialog';
 
 type Invoice = { id: number; number: string; status: string; currency: string; total: string; due_date: string; client: { id: number; name: string; email?: string } };
 type Detail = Invoice & {
@@ -67,7 +68,7 @@ function InvoiceModal({ id, onClose }: { id: number; onClose: () => void }) {
                                 <p className="text-xs text-slate-500">Paying in full activates the order and starts provisioning.</p>
                                 <ErrorNote error={pay.error ?? cancel.error} />
                                 <div className="flex flex-wrap justify-between gap-2">
-                                    {inv.payments.length === 0 && <Button type="button" variant="danger" disabled={cancel.isPending} onClick={() => { if (window.confirm(`Cancel ${inv.number}?`)) cancel.mutate(); }}>Cancel invoice</Button>}
+                                    {inv.payments.length === 0 && <Button type="button" variant="danger" disabled={cancel.isPending} onClick={() => { ask(`Cancel ${inv.number}?`, () => cancel.mutate()); }}>Cancel invoice</Button>}
                                     <Button className="ml-auto" disabled={pay.isPending}>{pay.isPending ? 'Recording...' : 'Record payment'}</Button>
                                 </div>
                             </form>

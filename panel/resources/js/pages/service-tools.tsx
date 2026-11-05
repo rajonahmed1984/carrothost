@@ -3,6 +3,7 @@ import { ArrowRightLeft, Check, KeyRound, RefreshCw, Search } from 'lucide-react
 import { useEffect, useState } from 'react';
 import { api, money } from '../api';
 import { Button, ErrorNote, Field, Modal, QueryState } from '../ui';
+import { ask } from '../dialog';
 
 /* Dialogs opened from a service's More menu and module commands. Each posts to the service and hands back the fresh record. */
 
@@ -104,7 +105,7 @@ export function TransferModal<T>({ serviceId, currentClientId, onClose, onDone }
 
     return (
         <Modal title="Transfer Ownership" onClose={onClose}>
-            <form onSubmit={(e) => { e.preventDefault(); if (window.confirm(`Move this service to client #${clientId}?`)) transfer.mutate(); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); ask(`Move this service to client #${clientId}?`, () => transfer.mutate()); }} className="space-y-4">
                 <p className="text-sm text-slate-600">Moves this service to another client. Its existing invoices stay with the current client.</p>
                 <div className="flex items-end gap-2">
                     <Field label="Client ID"><input className="ui-input w-36" inputMode="numeric" required value={clientId} onChange={(e) => setClientId(e.target.value.replace(/\D/g, ''))} /></Field>

@@ -58,8 +58,8 @@ const navSections: { title: string; items: NavItem[] }[] = [
     {
         title: 'Products/Services',
         items: [
-            { to: '/admin/products', label: 'Products' },
-            { to: '/admin/tlds', label: 'Domain Pricing' },
+            { to: '/admin/products-pricing', label: 'Products' },
+            { to: '/admin/domain-pricing', label: 'Domain Pricing' },
         ],
     },
     {
@@ -238,10 +238,12 @@ function Shell({ name }: { name: string }) {
                         <Route path="/admin/domain-registrations/:id" element={<DomainDetailPage />} />
                         <Route path="/admin/domains" element={<Navigate to="/admin/domain-registrations" replace />} />
                         <Route path="/admin/domains/:id" element={<DomainDetailPage />} />
-                        <Route path="/admin/products" element={<ProductsPage />} />
-                        <Route path="/admin/products/new" element={<ProductEditPage />} />
-                        <Route path="/admin/products/:id" element={<ProductEditPage />} />
-                        <Route path="/admin/tlds" element={<TldsPage />} />
+                        <Route path="/admin/products-pricing" element={<ProductsPage />} />
+                        <Route path="/admin/products-pricing/new" element={<ProductEditPage />} />
+                        <Route path="/admin/products-pricing/:id" element={<ProductEditPage />} />
+                        <Route path="/admin/domain-pricing" element={<TldsPage />} />
+                        <Route path="/admin/products/*" element={<MovedTo from="/admin/products" to="/admin/products-pricing" />} />
+                        <Route path="/admin/tlds" element={<MovedTo from="/admin/tlds" to="/admin/domain-pricing" />} />
                         <Route path="/admin/tickets" element={<TicketsPage />} />
                         <Route path="/admin/tickets/:id" element={<TicketDetailPage />} />
                         <Route path="/admin/chats" element={<ChatsPage />} />
@@ -277,9 +279,9 @@ function Shell({ name }: { name: string }) {
                         <Route path="/services" element={<Navigate to="/admin/products-services" replace />} />
                         <Route path="/domain-registrations" element={<Navigate to="/admin/domain-registrations" replace />} />
                         <Route path="/domains" element={<Navigate to="/admin/domain-registrations" replace />} />
-                        <Route path="/products" element={<Navigate to="/admin/products" replace />} />
-                        <Route path="/products/new" element={<Navigate to="/admin/products/new" replace />} />
-                        <Route path="/tlds" element={<Navigate to="/admin/tlds" replace />} />
+                        <Route path="/products" element={<Navigate to="/admin/products-pricing" replace />} />
+                        <Route path="/products/new" element={<Navigate to="/admin/products-pricing/new" replace />} />
+                        <Route path="/tlds" element={<Navigate to="/admin/domain-pricing" replace />} />
                         <Route path="/tickets" element={<Navigate to="/admin/tickets" replace />} />
                         <Route path="/chats" element={<Navigate to="/admin/chats" replace />} />
                         <Route path="/activity" element={<Navigate to="/admin/activity" replace />} />
@@ -372,6 +374,13 @@ function App() {
     if (new URLSearchParams(search).has('payment')) return <Navigate to={`/login?redirect=${from}`} replace />;
 
     return <Navigate to={`/admin/login?redirect=${from}`} replace />;
+}
+
+/** Old admin URLs keep working: swaps the path prefix, keeping the rest and the query string. */
+function MovedTo({ from, to }: { from: string; to: string }) {
+    const { pathname, search } = useLocation();
+
+    return <Navigate to={to + pathname.slice(from.length) + search} replace />;
 }
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: false } } });
