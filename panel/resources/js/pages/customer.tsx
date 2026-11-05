@@ -11,6 +11,7 @@ import { ContactsPage, EmailPage, EmailsPage, MyDetailsPage, SessionsPage, Suppo
 import { AddFundsPage, CreditHistoryPage } from './credits';
 import { clientCan, ClientPasswordPage, ClientSecurityPage, type ClientProfile } from './security';
 import { ClientChatPage, ClientNewTicketPage, ClientTicketPage, ClientTicketsPage } from './support';
+import { VpsPanel } from './vps-panel';
 
 type Overview = {
     services: { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; product: { name: string } }[];
@@ -175,7 +176,7 @@ type ClientService = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string;
     product: { name: string; type: string; module: string | null; group: string | null }; username: string | null; panel_url: string | null;
 };
-type ServiceDetail = ClientService & { description: string | null; has_password: boolean; nameservers: string[]; server_ip: string | null; invoices: Overview['invoices'] };
+type ServiceDetail = ClientService & { description: string | null; has_password: boolean; is_vps?: boolean; nameservers: string[]; server_ip: string | null; invoices: Overview['invoices'] };
 
 const typeTabs = [
     { key: 'all', label: 'All Services', icon: <LayoutList size={15} /> },
@@ -401,6 +402,8 @@ function ServicePage() {
                             <div><h2 className="text-xl font-bold text-slate-900">{s.product.name}</h2><div className="text-sm text-slate-500">{s.domain ?? 'No domain'}</div></div>
                         </div>
                     </div>
+
+                    {s.is_vps && <VpsPanel base={`/client/services/${s.id}`} />}
 
                     <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
                         <Card title="Service details">

@@ -91,6 +91,7 @@ class BillingService
             }
 
             $invoice = $this->createInvoice($client, $items, now()->addDays((int) config('billing.invoice_due_days')), $order);
+            $order->update(['amount' => $invoice->total]);
 
             // Set up before payment: the service runs from now and falls due with the first
             // invoice, so overdue suspension catches it if that invoice is never paid.
@@ -116,6 +117,7 @@ class BillingService
             $total = array_reduce($items, fn (string $sum, array $item) => bcadd($sum, (string) $item['amount'], 2), '0');
 
             $invoice = Invoice::create([
+                'number' => Invoice::nextNumber(),
                 'client_id' => $client->id,
                 'order_id' => $order?->id,
                 'currency' => config('billing.currency'),
@@ -123,7 +125,6 @@ class BillingService
                 'due_date' => $dueDate->toDateString(),
             ]);
 
-            $invoice->update(['number' => 'INV-'.str_pad((string) $invoice->id, 6, '0', STR_PAD_LEFT)]);
             $invoice->items()->createMany($items);
             DB::afterCommit(function () use ($invoice) {
                 $this->mailer->invoiceCreated($invoice);

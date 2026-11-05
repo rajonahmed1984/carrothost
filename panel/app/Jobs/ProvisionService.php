@@ -21,7 +21,8 @@ class ProvisionService implements ShouldQueue
 
     public int $timeout = 180;
 
-    public function __construct(public int $serviceId, public string $action) {}
+    /** $welcome: email the login details after a create. */
+    public function __construct(public int $serviceId, public string $action, public bool $welcome = true) {}
 
     public function handle(): void
     {
@@ -63,7 +64,7 @@ class ProvisionService implements ShouldQueue
             $service->update([...$changes, 'provision_status' => 'done']);
             ActivityLog::record("service.{$this->action}", $service);
 
-            if ($this->action === 'create') {
+            if ($this->action === 'create' && $this->welcome) {
                 app(CustomerMailer::class)->serviceWelcome($service);
             }
         } catch (Throwable $e) {

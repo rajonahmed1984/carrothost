@@ -2,16 +2,21 @@
 
 namespace App\Provisioning;
 
-use Illuminate\Support\Str;
-
+/** Lets a module use the username and password an admin set on the order, else make its own. */
 trait GeneratesUsername
 {
-    /** Starts with a letter, lowercase alphanumeric, at most 16 characters, unique per service. */
     private function usernameFor(string $domain, int $serviceId): string
     {
-        $base = preg_replace('/[^a-z0-9]/', '', strtolower(Str::before($domain, '.')));
-        $base = ltrim((string) $base, '0123456789') ?: 'ch';
+        return AccountCredentials::username($domain, $serviceId);
+    }
 
-        return substr($base, 0, 8).$serviceId;
+    /** @return array{0: string, 1: string} username and password for a new account */
+    private function credentialsFor(\App\Models\Service $service): array
+    {
+        $given = $service->credentials;
+        $username = is_string($given['username'] ?? null) && $given['username'] !== '' ? $given['username'] : $this->usernameFor((string) $service->domain, $service->id);
+        $password = is_string($given['password'] ?? null) && $given['password'] !== '' ? $given['password'] : AccountCredentials::password();
+
+        return [$username, $password];
     }
 }

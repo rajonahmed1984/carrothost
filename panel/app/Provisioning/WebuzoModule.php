@@ -33,8 +33,8 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule
 
     public function create(Service $service): array
     {
-        $username = $this->usernameFor((string) $service->domain, $service->id);
-        $password = Str::password(20, symbols: false);
+        // The username and password set on the order when it was accepted, else new ones.
+        [$username, $password] = $this->credentialsFor($service);
 
         $result = $this->call('add_user', [
             'create_user' => 1,

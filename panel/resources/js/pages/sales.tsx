@@ -237,6 +237,10 @@ type Order = {
     invoices: { id: number; number: string; status: string; total: string }[];
 };
 
+/** The order's saved total, or its invoices' when it was never saved (older panel orders). */
+const orderAmount = (o: { amount?: string | null; invoices: { total: string }[] }) =>
+    Number(o.amount) > 0 ? String(o.amount) : String(o.invoices.reduce((sum, i) => sum + Number(i.total), 0));
+
 function formatOrderDate(iso: string) {
     const d = new Date(iso);
     const day = String(d.getDate()).padStart(2, '0');
@@ -258,9 +262,7 @@ function formatPaymentMethod(method?: string | null) {
 }
 
 function formatOrderTotal(order: Order) {
-    const raw = order.amount !== undefined && order.amount !== null && order.amount !== ''
-        ? order.amount
-        : (order.invoices[0]?.total ?? '0');
+    const raw = orderAmount(order);
     const num = Number(raw) || 0;
     return `৳${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}BDT`;
 }
@@ -400,12 +402,18 @@ export function OrdersPage({ mode = 'active' }: { mode?: 'active' | 'cancelled' 
                         ),
                     },
                     {
+                        header: 'Invoice',
+                        cell: (o) => o.invoices.length
+                            ? <span className="flex flex-wrap gap-x-2">{o.invoices.map((i) => <Link key={i.id} className="table-action-link font-mono" to={`/admin/paid-invoices/${i.id}`}>#{i.number}</Link>)}</span>
+                            : <span className="text-slate-400">-</span>,
+                    },
+                    {
                         header: 'Payment Method',
                         cell: (o) => formatPaymentMethod(o.payment_method),
                     },
                     {
                         header: 'Total',
-                        cell: (o) => money(o.amount !== undefined && o.amount !== null && o.amount !== '' ? o.amount : (o.invoices[0]?.total ?? '0')),
+                        cell: (o) => money(orderAmount(o)),
                         align: 'right',
                     },
                     {

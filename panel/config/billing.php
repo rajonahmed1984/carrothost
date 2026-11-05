@@ -4,6 +4,7 @@ use App\Payments\BkashDriver;
 use App\Payments\PayPalDriver;
 use App\Payments\SslCommerzDriver;
 use App\Provisioning\CpanelModule;
+use App\Provisioning\WebdockModule;
 use App\Provisioning\WebuzoModule;
 
 return [
@@ -18,6 +19,10 @@ return [
 
     // Days after the order that its first invoice falls due.
     'invoice_due_days' => 0,
+
+    // Invoices made in the panel are numbered from here on (plain numbers, like WHMCS's).
+    // Imported WHMCS invoices keep their WHMCS id as the number, so this sits well above it.
+    'invoice_number_start' => (int) env('INVOICE_NUMBER_START', 10001),
 
     'cycles' => [
         'monthly' => 1,
@@ -72,8 +77,11 @@ return [
     'provisioning_modules' => [
         'cpanel' => ['name' => 'cPanel / WHM', 'class' => CpanelModule::class],
         'webuzo' => ['name' => 'Webuzo', 'class' => WebuzoModule::class],
-        'webdock' => ['name' => 'Webdock', 'class' => null],
+        'webdock' => ['name' => 'Webdock', 'class' => WebdockModule::class],
     ],
+
+    // Webdock: the OS new VPSes get. Blank picks the newest plain Ubuntu image Webdock offers.
+    'webdock' => ['default_image' => env('WEBDOCK_DEFAULT_IMAGE')],
 
     'registrars' => [
         'resellcube' => ['name' => 'ResellCube', 'class' => \App\Services\LogicBoxesClient::class],

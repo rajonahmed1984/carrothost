@@ -11,6 +11,7 @@ use App\Models\Server;
 use App\Models\Service;
 use App\Models\Client;
 use App\Services\ServiceTools;
+use App\Services\VpsTools;
 use App\Support\PaymentMethods;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class ServiceController extends Controller
             'server_id' => 'sometimes|nullable|integer|exists:servers,id',
             'domain' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:'.Domain::NAME_PATTERN],
             'dedicated_ip' => 'sometimes|nullable|ip',
+            // Links the record to the account on the server (a Webdock server slug, a cPanel username).
+            'remote_id' => ['sometimes', 'nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/'],
             'username' => 'sometimes|nullable|string|max:64',
             'password' => 'sometimes|nullable|string|max:255',
             'status' => ['sometimes', Rule::in(self::STATUSES)],
@@ -192,6 +195,37 @@ class ServiceController extends Controller
         return response()->noContent();
     }
 
+    /* ---------- VPS (Webdock) ---------- */
+
+    public function vps(Service $service, VpsTools $vps)
+    {
+        return $vps->overview($service, admin: true);
+    }
+
+    public function vpsImages(Service $service, VpsTools $vps)
+    {
+        return $vps->images($service);
+    }
+
+    public function vpsProfiles(Service $service, VpsTools $vps)
+    {
+        return $vps->resizeOptions($service);
+    }
+
+    public function vpsAction(Request $request, Service $service, string $action, VpsTools $vps)
+    {
+        $request->merge(['action' => $action]);
+        $input = $request->validate([
+            'image' => 'required_if:action,reinstall|nullable|string|max:120',
+            'password' => ['required_if:action,password', 'nullable', 'string', 'min:8', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'snapshot_id' => 'required_if:action,restore|nullable|string|max:64',
+            'name' => 'nullable|string|max:60',
+            'profile' => 'required_if:action,resize|nullable|string|max:120',
+        ], ['password.regex' => 'Use letters, digits, dot, dash and underscore only.']);
+
+        return $vps->act($service, $action, $input, 'admin');
+    }
+
     private function detail(Service $service): array
     {
         $service->load(['client:id,name,email', 'product:id,name,module,type', 'server:id,name,hostname,max_accounts', 'order:id,order_number']);
@@ -203,6 +237,7 @@ class ServiceController extends Controller
             'has_password' => filled($service->credentials['password'] ?? null),
             'panel_url' => $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
             'has_tools' => ServiceTools::hasTools($service),
+            'is_vps' => VpsTools::supports($service),
             'pending_upgrade' => app(ServiceTools::class)->pendingUpgrade($service),
             'client_services' => $service->client->services()->with('product:id,name')->orderByDesc('id')->get(['id', 'product_id', 'domain', 'status'])
                 ->map(fn (Service $s) => ['id' => $s->id, 'name' => $s->product->name.($s->domain ? " - {$s->domain}" : ''), 'status' => $s->status]),

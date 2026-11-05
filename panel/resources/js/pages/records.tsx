@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, FileText, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, money } from '../api';
+import { api, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Status, Table } from '../ui';
 import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
@@ -75,9 +75,11 @@ type OrderDetail = {
         status: string;
         provision_status: string;
         remote_id: string | null;
-        product: { id: number; name: string; type: string };
+        product: { id: number; name: string; type: string; module: string | null };
         server: { id: number; name: string } | null;
     }[];
+    /** Suggested login per service id, for accounts not created yet. */
+    setup?: Record<number, { username: string; password: string; server_id: number | null; module: string | null }>;
     domains: {
         id: number;
         name: string;
@@ -95,6 +97,20 @@ type OrderDetail = {
         due_date: string;
     }[];
 };
+
+/** Same rules as the server's: upper, lower, digit and a URL-safe symbol, 14 characters. */
+function randomPassword(length = 14) {
+    const sets = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#%^*-_+='];
+    const pick = (set: string) => set[crypto.getRandomValues(new Uint32Array(1))[0] % set.length];
+    const chars = sets.map(pick);
+    while (chars.length < length) chars.push(pick(sets.join('')));
+    for (let i = chars.length - 1; i > 0; i--) {
+        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+
+    return chars.join('');
+}
 
 function formatOrderDateTime(iso: string | null | undefined) {
     if (!iso) return '-';
@@ -153,20 +169,31 @@ export function OrderDetailPage() {
     const [serviceServers, setServiceServers] = useState<Record<number, number>>({});
 
     const serversQuery = useQuery({
-        queryKey: ['/servers'],
-        queryFn: async () => (await api.get<{ id: number; name: string }[]>('/servers')).data,
+        queryKey: ['servers'],
+        queryFn: async () => (await api.get<{ id: number; name: string; module: string; is_active: boolean; services_count: number; max_accounts: number }[]>('/servers')).data,
     });
     const servers = serversQuery.data ?? [];
+    // What the admin typed, else the panel's suggestion for that service.
+    const login = (id: number) => ({
+        username: serviceUsernames[id] ?? o?.setup?.[id]?.username ?? '',
+        password: servicePasswords[id] ?? o?.setup?.[id]?.password ?? '',
+        server_id: serviceServers[id] ?? o?.setup?.[id]?.server_id ?? null,
+    });
 
     const accept = useMutation({
         mutationFn: async () => (await api.post<OrderDetail>(`/orders/${o?.id}/accept`, {
             run_module_create: runModuleCreate,
             send_welcome_email: sendWelcomeEmail,
+            services: Object.keys(o?.setup ?? {}).map((id) => ({ id: Number(id), ...login(Number(id)) })),
         })).data,
         onSuccess: (fresh) => {
             qc.setQueryData(['/orders', String(fresh.id)], fresh);
             qc.invalidateQueries({ queryKey: ['/orders'] });
+            setServiceUsernames({});
+            setServicePasswords({});
+            setServiceServers({});
         },
+        onError: (e) => alertDialog(errorMessage(e)),
     });
 
     const cancel = useMutation({
@@ -192,6 +219,7 @@ export function OrderDetailPage() {
 
     const deleteMutation = useMutation({
         mutationFn: async () => (await api.delete(`/orders/${o?.id}`)).data,
+        onError: (e) => alertDialog(errorMessage(e)),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['/orders'] });
             navigate('/admin/pending-orders');
@@ -207,7 +235,7 @@ export function OrderDetailPage() {
     });
 
     const isPaid = o?.invoices[0]?.status === 'paid';
-    const totalAmount = o ? (o.amount || o.invoices[0]?.total || '0') : '0';
+    const totalAmount = o ? (Number(o.amount) > 0 ? o.amount! : o.invoices.reduce((sum, i) => sum + Number(i.total), 0)) : 0;
 
     return (
         <QueryState query={query}>
@@ -260,7 +288,7 @@ export function OrderDetailPage() {
                                 variant="danger"
                                 disabled={deleteMutation.isPending}
                                 onClick={() => {
-                                    ask(`Are you sure you want to delete Order #${o.id}?`, () => deleteMutation.mutate());
+                                    ask(`Delete Order #${o.id}? Its services, domains and unpaid invoices are deleted too, so they disappear from the client area. This cannot be undone.`, () => deleteMutation.mutate());
                                 }}
                             >
                                 <Trash2 size={14} className="mr-1" /> Delete
@@ -412,34 +440,51 @@ export function OrderDetailPage() {
                                                         <Status value={isPaid ? 'paid' : 'unpaid'} />
                                                     </td>
                                                 </tr>
+                                                {o.setup?.[s.id] ? (() => {
+                                                    const l = login(s.id);
+                                                    const choices = servers.filter((srv) => !s.product.module || srv.module === s.product.module);
+
+                                                    return (
                                                 <tr className="bg-slate-50/60 border-b border-slate-200">
                                                     <td colSpan={6} className="px-4 py-3">
                                                         <div className="flex flex-wrap items-center gap-3 text-xs">
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-slate-600 font-medium">Username:</span>
                                                                 <input
-                                                                    value={serviceUsernames[s.id] ?? s.remote_id ?? 'borhanud'}
-                                                                    onChange={(e) => setServiceUsernames({ ...serviceUsernames, [s.id]: e.target.value })}
+                                                                    value={l.username}
+                                                                    maxLength={16}
+                                                                    spellCheck={false}
+                                                                    autoComplete="off"
+                                                                    onChange={(e) => setServiceUsernames({ ...serviceUsernames, [s.id]: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
                                                                     className="ui-input py-1 px-2 text-xs w-28 font-mono"
                                                                 />
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-slate-600 font-medium">Password:</span>
                                                                 <input
-                                                                    value={servicePasswords[s.id] ?? '0sTVh45@*9Qlxl'}
+                                                                    value={l.password}
+                                                                    spellCheck={false}
+                                                                    autoComplete="new-password"
+                                                                    data-lpignore="true"
                                                                     onChange={(e) => setServicePasswords({ ...servicePasswords, [s.id]: e.target.value })}
                                                                     className="ui-input py-1 px-2 text-xs w-36 font-mono"
                                                                 />
+                                                                <button type="button" title="New random password" aria-label="New random password" className="cursor-pointer rounded p-1 text-slate-400 hover:text-slate-700" onClick={() => setServicePasswords({ ...servicePasswords, [s.id]: randomPassword() })}>
+                                                                    <RefreshCw size={13} />
+                                                                </button>
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-slate-600 font-medium">Server:</span>
                                                                 <select
-                                                                    value={serviceServers[s.id] ?? s.server?.id ?? 1}
+                                                                    value={l.server_id ?? ''}
                                                                     onChange={(e) => setServiceServers({ ...serviceServers, [s.id]: Number(e.target.value) })}
                                                                     className="ui-input py-1 px-2 text-xs min-w-[170px]"
                                                                 >
-                                                                    {servers.map((srv) => (
-                                                                        <option key={srv.id} value={srv.id}>{srv.name} (36/70)</option>
+                                                                    <option value="">Auto (least full)</option>
+                                                                    {choices.map((srv) => (
+                                                                        <option key={srv.id} value={srv.id} disabled={!srv.is_active}>
+                                                                            {srv.name} ({srv.services_count}{srv.max_accounts ? `/${srv.max_accounts}` : ''}){srv.is_active ? '' : ' - inactive'}
+                                                                        </option>
                                                                     ))}
                                                                 </select>
                                                             </div>
@@ -450,7 +495,7 @@ export function OrderDetailPage() {
                                                                     onChange={(e) => setRunModuleCreate(e.target.checked)}
                                                                     className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                                                 />
-                                                                <span>Run Module Create</span>
+                                                                <span title="Unticked: the account is only marked active, for one you set up by hand">Run Module Create</span>
                                                             </label>
                                                             <label className="flex items-center gap-1.5 text-slate-700 cursor-pointer select-none">
                                                                 <input
@@ -464,6 +509,14 @@ export function OrderDetailPage() {
                                                         </div>
                                                     </td>
                                                 </tr>
+                                                    );
+                                                })() : s.remote_id ? (
+                                                <tr className="bg-slate-50/60 border-b border-slate-200">
+                                                    <td colSpan={6} className="px-4 py-2 text-xs text-slate-600">
+                                                        Username: <span className="font-mono text-slate-900">{s.remote_id}</span>{s.server ? <> on {s.server.name}</> : null}
+                                                    </td>
+                                                </tr>
+                                                ) : null}
                                             </tr>
                                         );
                                     })}
@@ -583,7 +636,7 @@ export function OrderDetailPage() {
                             variant="danger"
                             disabled={deleteMutation.isPending}
                             onClick={() => {
-                                ask(`Are you sure you want to delete Order #${o.id}?`, () => deleteMutation.mutate());
+                                ask(`Delete Order #${o.id}? Its services, domains and unpaid invoices are deleted too, so they disappear from the client area. This cannot be undone.`, () => deleteMutation.mutate());
                             }}
                         >
                             <Trash2 size={14} className="mr-1" /> Delete Order

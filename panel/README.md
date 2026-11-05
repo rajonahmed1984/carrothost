@@ -66,7 +66,7 @@ customer without a password. Never deploy with those values.
 
 | Area | Connected | Not connected yet (falls back to manual) |
 | --- | --- | --- |
-| Provisioning | cPanel/WHM, Webuzo | Webdock |
+| Provisioning | cPanel/WHM, Webuzo, Webdock (VPS: power, reinstall, root password, WebSSH console, snapshots, resize) | |
 | Registrars | ResellCube, StarGate/UK2 (LogicBoxes API): TLD list and cost sync, admin lookup, sync to panel, EPP code, nameservers, lock, ID protection, contacts, register, transfer, renew, delete, .uk release | Automatic registration and renewal when an order or renewal invoice is paid (still waits for an admin) |
 | Gateways | Manual/Bank, bKash, SSLCommerz, PayPal | Stripe |
 

@@ -612,7 +612,8 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
     const setNs = (i: number, change: { host?: string; ip?: string }) => setForm((f) => ({ ...f, nameservers: f.nameservers.map((ns, j) => (j === i ? { ...ns, ...change } : ns)) }));
     const currentCost = server ? Number(server.this_month.cost).toFixed(2) : '';
     const [showSecret, setShowSecret] = useState(false);
-    const secretLabel = form.module === 'webuzo' ? 'Access Hash' : form.auth_type === 'password' ? 'Password' : 'API token';
+    const secretLabel = form.module === 'webuzo' ? 'Access Hash' : form.module === 'webdock' ? 'API token' : form.auth_type === 'password' ? 'Password' : 'API token';
+    const webdock = form.module === 'webdock';
     const probe = useMutation({
         mutationFn: async () => (await api.post<{ ok: boolean; message: string }>('/servers/probe', { ...form, server_id: server?.id, port: form.port || null, max_accounts: Number(form.max_accounts) })).data,
     });
@@ -644,15 +645,15 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                             {meta.data?.modules.map((m) => <option key={m.code} value={m.code}>{m.connected ? m.name : `${m.name} (not connected yet)`}</option>)}
                         </Select>
                     </Field>
-                    <Field label="Hostname"><Input required placeholder="server1.carrothost.com" value={form.hostname} onChange={(e) => setForm({ ...form, hostname: e.target.value })} /></Field>
-                    <Field label="Port" hint="Blank uses the default (WHM 2087, Webuzo 2005)"><Input type="number" min="1" max="65535" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} /></Field>
-                    <Field label="API username"><Input value={form.username} autoComplete="off" onChange={(e) => setForm({ ...form, username: e.target.value })} /></Field>
+                    <Field label="Hostname" hint={webdock ? 'The Webdock account: use api.webdock.io' : undefined}><Input required placeholder={webdock ? 'api.webdock.io' : 'server1.carrothost.com'} value={form.hostname} onChange={(e) => setForm({ ...form, hostname: e.target.value })} /></Field>
+                    {!webdock && <Field label="Port" hint="Blank uses the default (WHM 2087, Webuzo 2005)"><Input type="number" min="1" max="65535" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} /></Field>}
+                    {!webdock && <Field label="API username"><Input value={form.username} autoComplete="off" onChange={(e) => setForm({ ...form, username: e.target.value })} /></Field>}
                     {form.module === 'cpanel' && (
                         <Field label="Login type">
                             <Select value={form.auth_type} onChange={(e) => setForm({ ...form, auth_type: e.target.value })}><option value="token">API token</option><option value="password">Password</option></Select>
                         </Field>
                     )}
-                    <Field label={secretLabel} hint={server?.has_credentials ? `A ${secretLabel.toLowerCase()} is saved. Leave blank to keep it, or type a new one.` : server ? `No ${secretLabel.toLowerCase()} saved yet` : 'Stored encrypted'}>
+                    <Field label={secretLabel} hint={server?.has_credentials ? `A ${secretLabel.toLowerCase()} is saved. Leave blank to keep it, or type a new one.` : webdock ? 'Webdock > Account > API & Integrations: create a token with server read, write, execute and provisioning access' : server ? `No ${secretLabel.toLowerCase()} saved yet` : 'Stored encrypted'}>
                         <div className="relative">
                             {/* A random name and no autocomplete keep the browser from filling in the panel's own login password. */}
                             <input

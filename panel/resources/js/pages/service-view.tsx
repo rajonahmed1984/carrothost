@@ -8,6 +8,7 @@ import { Row, Section, Toggle } from './domain-view';
 import { SendMessage } from './sales';
 import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tools';
 import { alertDialog, ask } from '../dialog';
+import { VpsPanel } from './vps-panel';
 
 type Option = { code: string; name: string };
 
@@ -22,7 +23,7 @@ export type ServiceFull = {
     product: { id: number; name: string; module: string | null; type: string };
     server: { id: number; name: string; hostname: string } | null;
     order: { id: number; order_number: string | null } | null;
-    username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean;
+    username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean; is_vps?: boolean;
     usage_metrics: { key: string; label: string; used: string; limit: string | null; percent: number | null }[] | null;
     pending_upgrade: { id: number; invoice_id: number | null; new_cycle: string; amount_due: string; new_product: { id: number; name: string } | null } | null;
     client_services: { id: number; name: string; status: string }[];
@@ -34,7 +35,7 @@ export type ServiceFull = {
 };
 
 type Form = {
-    product_id: number; server_id: string; domain: string; dedicated_ip: string; username: string; password: string; status: string;
+    product_id: number; server_id: string; domain: string; dedicated_ip: string; remote_id: string; username: string; password: string; status: string;
     registered_at: string; quantity: number; first_payment_amount: string; recurring_amount: string; recalculate: boolean;
     next_due_date: string; termination_date: string; cycle: string; payment_method: string; subscription_id: string;
     override: boolean; override_suspend_until: string; terminate_end_of_cycle: boolean; terminate_reason: string; admin_notes: string;
@@ -45,6 +46,7 @@ const toForm = (s: ServiceFull): Form => ({
     server_id: s.server_id ? String(s.server_id) : '',
     domain: s.domain ?? '',
     dedicated_ip: s.dedicated_ip ?? '',
+    remote_id: s.remote_id ?? '',
     username: s.username ?? '',
     password: '',
     status: s.status,
@@ -145,6 +147,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 server_id: server_id ? Number(server_id) : null,
                 domain: rest.domain || null,
                 dedicated_ip: rest.dedicated_ip || null,
+                remote_id: rest.remote_id.trim() || null,
                 username: rest.username || null,
                 registered_at: rest.registered_at || null,
                 next_due_date: rest.next_due_date || null,
@@ -319,6 +322,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         </Row>
                         <Row label="Domain" htmlFor="sv-domain"><input id="sv-domain" className="ui-input" value={form.domain} onChange={(e) => set('domain', e.target.value)} /></Row>
                         <Row label="Dedicated IP" htmlFor="sv-ip"><input id="sv-ip" className="ui-input" placeholder="None" value={form.dedicated_ip} onChange={(e) => set('dedicated_ip', e.target.value)} /></Row>
+                        <Row label={s.product.module === 'webdock' ? 'Webdock server slug' : 'Account ID'} htmlFor="sv-remote">
+                            <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder={s.product.module === 'webdock' ? 'e.g. acnabin (from the Webdock URL)' : 'The account username on the server'} value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />
+                        </Row>
                         <Row label="Username" htmlFor="sv-user"><input id="sv-user" className="ui-input font-mono" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} /></Row>
                         <Row label="Password" htmlFor="sv-pass">
                             <div className="flex gap-2">
@@ -409,7 +415,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 </Section>
             </div>
 
-            {s.has_tools && (
+            {s.is_vps && <VpsPanel base={`/services/${s.id}`} admin />}
+
+            {s.has_tools && !s.is_vps && (
                 <Section
                     title="Control Panel"
                     icon={<MonitorSmartphone size={16} />}
