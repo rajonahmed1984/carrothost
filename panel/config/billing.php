@@ -76,8 +76,8 @@ return [
     ],
 
     'registrars' => [
-        'resellcube' => ['name' => 'ResellCube', 'class' => null],
-        'stargate' => ['name' => 'StarGate / UK2', 'class' => null],
+        'resellcube' => ['name' => 'ResellCube', 'class' => \App\Services\LogicBoxesClient::class],
+        'stargate' => ['name' => 'StarGate / UK2', 'class' => \App\Services\LogicBoxesClient::class],
     ],
 
     'gateways' => [

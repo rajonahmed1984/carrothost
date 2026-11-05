@@ -66,6 +66,10 @@ export function Card({ title, action, children }: { title?: string; action?: Rea
 
 const tones: Record<string, string> = {
     active: 'bg-emerald-100 text-emerald-700',
+    connected: 'bg-emerald-100 text-emerald-700',
+    not_connected: 'bg-rose-100 text-rose-700',
+    checking: 'bg-amber-100 text-amber-800',
+    not_checked: 'bg-slate-100 text-slate-600',
     paid: 'bg-emerald-100 text-emerald-700',
     done: 'bg-emerald-100 text-emerald-700',
     pending: 'bg-amber-100 text-amber-800',

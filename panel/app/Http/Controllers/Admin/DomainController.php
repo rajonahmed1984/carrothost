@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Domain;
+use App\Models\Registrar;
 use App\Services\BillingService;
+use App\Services\DomainRegistrar;
 use App\Support\PaymentMethods;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class DomainController extends Controller
 {
@@ -36,14 +39,57 @@ class DomainController extends Controller
         return $this->detail($domain);
     }
 
-    public function epp(Domain $domain)
+    /** ?source=registrar fetches the current code from the registrar (and keeps it); otherwise the stored one. */
+    public function epp(Request $request, Domain $domain, DomainRegistrar $registrar)
     {
+        if ($request->query('source') === 'registrar') {
+            $code = $this->atRegistrar(fn () => $registrar->eppCode($domain));
+            ActivityLog::record('domain.epp.viewed', $domain, ['source' => 'registrar']);
+
+            return ['epp_code' => $code, 'source' => 'registrar'];
+        }
+
         ActivityLog::record('domain.epp.viewed', $domain);
 
-        return ['epp_code' => $domain->epp_code];
+        return ['epp_code' => $domain->epp_code, 'source' => 'panel'];
     }
 
-    public function update(Request $request, Domain $domain, BillingService $billing)
+    /** What the registrar holds for the domain. Read-only. */
+    public function registrarInfo(Domain $domain, DomainRegistrar $registrar)
+    {
+        return [
+            ...$this->atRegistrar(fn () => $registrar->info($domain)),
+            'contact_defaults' => $this->contactDefaults($domain),
+        ];
+    }
+
+    /** Copies expiry, nameservers, lock, privacy and the EPP code from the registrar into the panel. */
+    public function registrarSync(Domain $domain, DomainRegistrar $registrar)
+    {
+        $info = $this->atRegistrar(fn () => $registrar->syncToPanel($domain));
+
+        return ['message' => 'Synced from the registrar.'.($info['expires_at'] ? " Expires {$info['expires_at']}." : ''), 'domain' => $this->detail($domain->refresh())];
+    }
+
+    /** register, transfer, renew, contacts, delete, release, privacy, lock. */
+    public function registrarCommand(Request $request, Domain $domain, string $command, DomainRegistrar $registrar)
+    {
+        $message = match ($command) {
+            'register' => $this->atRegistrar(fn () => $registrar->register($domain, $this->contact($request), $request->validate(['years' => 'required|integer|min:1|max:10'])['years']))['message'],
+            'transfer' => $this->atRegistrar(fn () => $registrar->transfer($domain, $this->contact($request), $request->validate(['auth_code' => 'required|string|max:255'])['auth_code']))['message'],
+            'renew' => $this->atRegistrar(fn () => $registrar->renew($domain, $request->validate(['years' => 'required|integer|min:1|max:10'])['years']))['message'],
+            'contacts' => $this->atRegistrar(fn () => $registrar->setContacts($domain, $this->contact($request))) ?? 'Contact details updated at the registrar. Some TLDs email the registrant to approve an owner change.',
+            'delete' => $this->atRegistrar(fn () => $registrar->requestDelete($domain)) ?? 'Delete requested at the registrar.',
+            'release' => $this->atRegistrar(fn () => $registrar->releaseUk($domain, $request->validate(['tag' => 'required|string|max:32|alpha_dash'])['tag'])) ?? 'Released to the new tag.',
+            'privacy' => $this->toggle($request, $domain, 'id_protection', fn (bool $on) => $registrar->setPrivacy($domain, $on), 'ID protection'),
+            'lock' => $this->toggle($request, $domain, 'registrar_lock', fn (bool $on) => $registrar->setLock($domain, $on), 'Registrar lock'),
+            default => abort(404),
+        };
+
+        return ['message' => $message, 'domain' => $this->detail($domain->refresh())];
+    }
+
+    public function update(Request $request, Domain $domain, BillingService $billing, DomainRegistrar $registrar)
     {
         $data = $request->validate([
             'auto_renew' => 'required|boolean',
@@ -88,7 +134,14 @@ class DomainController extends Controller
             $changes['recurring_amount'] = bcmul($tld->renew_price, (string) ($changes['years'] ?? $domain->years), 2);
         }
 
-        $domain->update($changes);
+        $this->pushToRegistrar($domain, $changes, $registrar);
+
+        // A different name or registrar means a different registrar order.
+        if ((isset($changes['name']) && $changes['name'] !== $domain->name) || (array_key_exists('registrar', $changes) && $changes['registrar'] !== $domain->registrar)) {
+            $changes += ['registrar_order_id' => null, 'registrar_synced_at' => null];
+        }
+
+        $domain->forceFill($changes)->save();
         ActivityLog::record('domain.updated', $domain);
 
         return $this->detail($domain->refresh());
@@ -109,6 +162,99 @@ class DomainController extends Controller
         return $domain;
     }
 
+    /**
+     * For a domain linked to its registrar order, nameserver, lock and privacy changes are made there
+     * first; if the registrar refuses, nothing is saved. Unlinked domains change in the panel only.
+     */
+    private function pushToRegistrar(Domain $domain, array $changes, DomainRegistrar $registrar): void
+    {
+        if (! $domain->registrar_order_id || (array_key_exists('registrar', $changes) && $changes['registrar'] !== $domain->registrar)) {
+            return;
+        }
+
+        $nameservers = $changes['nameservers'] ?? [];
+        if ($nameservers && $nameservers !== array_values(array_filter($domain->nameservers ?? []))) {
+            $this->atRegistrar(fn () => $registrar->setNameservers($domain, $nameservers), 'nameservers');
+        }
+        if (isset($changes['registrar_lock']) && (bool) $changes['registrar_lock'] !== $domain->registrar_lock) {
+            $this->atRegistrar(fn () => $registrar->setLock($domain, (bool) $changes['registrar_lock']), 'registrar_lock');
+        }
+        if (isset($changes['id_protection']) && (bool) $changes['id_protection'] !== $domain->id_protection) {
+            $this->atRegistrar(fn () => $registrar->setPrivacy($domain, (bool) $changes['id_protection']), 'id_protection');
+        }
+    }
+
+    private function toggle(Request $request, Domain $domain, string $field, callable $send, string $name): string
+    {
+        $on = (bool) $request->validate(['on' => 'required|boolean'])['on'];
+        $this->atRegistrar(fn () => $send($on));
+        $domain->forceFill([$field => $on])->save();
+
+        return "{$name} turned ".($on ? 'on' : 'off').' at the registrar.';
+    }
+
+    /** Runs a registrar call and turns its failure into a form error. */
+    private function atRegistrar(callable $call, string $field = 'registrar'): mixed
+    {
+        try {
+            return $call();
+        } catch (RuntimeException $e) {
+            throw ValidationException::withMessages([$field => $e->getMessage()]);
+        }
+    }
+
+    private function contact(Request $request): array
+    {
+        $data = $request->validate([
+            'contact.name' => 'required|string|max:255',
+            'contact.company' => 'nullable|string|max:255',
+            'contact.email' => 'required|email|max:255',
+            'contact.address' => 'required|string|max:64',
+            'contact.city' => 'required|string|max:64',
+            'contact.state' => 'required|string|max:64',
+            'contact.country' => 'required|string|size:2',
+            'contact.zipcode' => 'required|string|max:16',
+            'contact.phone_cc' => 'required|digits_between:1,3',
+            'contact.phone' => 'required|string|max:20',
+        ])['contact'];
+
+        $data['phone'] = preg_replace('/\D/', '', $data['phone']);
+        if (strlen($data['phone']) < 4) {
+            throw ValidationException::withMessages(['contact.phone' => 'Enter the phone number without the country code.']);
+        }
+
+        return [...$data, 'company' => trim((string) ($data['company'] ?? '')) ?: 'N/A', 'country' => strtoupper($data['country'])];
+    }
+
+    /** The client's profile in the shape the registrar wants, for the admin to check and complete. */
+    private function contactDefaults(Domain $domain): array
+    {
+        $client = $domain->client;
+        $country = strtoupper((string) ($client->country ?: 'BD'));
+        $raw = trim((string) $client->phone);
+        $codes = ['BD' => '880', 'IN' => '91', 'PK' => '92', 'AE' => '971', 'SA' => '966', 'US' => '1', 'CA' => '1', 'GB' => '44', 'AU' => '61', 'MY' => '60', 'SG' => '65', 'NP' => '977'];
+
+        if (preg_match('/^\+(\d{1,3})[.\s-]?(.*)$/', $raw, $m)) {
+            [$cc, $phone] = [$m[1], $m[2]];
+        } else {
+            [$cc, $phone] = [$codes[$country] ?? '', $raw];
+        }
+        $phone = ltrim(preg_replace('/\D/', '', $phone), '0');
+
+        return [
+            'name' => (string) $client->name,
+            'company' => (string) ($client->company ?? ''),
+            'email' => (string) $client->email,
+            'address' => (string) ($client->address ?? ''),
+            'city' => (string) ($client->city ?? ''),
+            'state' => (string) ($client->city ?? ''),
+            'country' => $country,
+            'zipcode' => '',
+            'phone_cc' => $cc,
+            'phone' => $phone,
+        ];
+    }
+
     private function detail(Domain $domain): array
     {
         $domain->load(['client:id,name,email', 'order:id,order_number']);
@@ -116,10 +262,12 @@ class DomainController extends Controller
         return [
             ...$domain->toArray(),
             'has_epp_code' => $domain->epp_code !== null,
+            'linked' => $domain->registrar_order_id !== null,
+            'registrar_synced_at' => $domain->registrar_synced_at?->toISOString(),
             'client_domains' => $domain->client->domains()->orderBy('name')->get(['id', 'name', 'status']),
             'reminders' => $domain->reminders()->orderByDesc('sent_on')->orderByDesc('id')->get(),
             'options' => [
-                'registrars' => collect(config('billing.registrars'))->map(fn ($r, $code) => ['code' => $code, 'name' => $r['name'], 'connected' => $r['class'] !== null])->values(),
+                'registrars' => collect(config('billing.registrars'))->map(fn ($r, $code) => ['code' => $code, 'name' => $r['name'], 'connected' => $r['class'] !== null && Registrar::where('code', $code)->whereNotNull('api_key')->exists()])->values(),
                 'payment_methods' => PaymentMethods::options($domain->payment_method),
                 'statuses' => self::STATUSES,
                 'default_nameservers' => Domain::defaultNameservers(),

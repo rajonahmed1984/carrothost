@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, FolderPlus, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table, type Column } from '../ui';
@@ -475,6 +475,9 @@ function TldTable({ data }: { data: Tld[] }) {
     const byId = new Map(data.map((t) => [t.id, t]));
     const dirty = JSON.stringify(rows) !== JSON.stringify(data.map(({ id, tld, registrar, is_active, is_spotlight, epp_required }) => ({ id, tld, registrar, is_active, is_spotlight, epp_required })));
     const spotlight = rows.filter((r) => r.is_spotlight);
+    const [search, setSearch] = useState('');
+    const term = search.trim().toLowerCase().replace(/^\.?/, '.');
+    const shown = search.trim() ? rows.filter((r) => r.tld.includes(term)) : rows;
 
     const patch = (id: number, change: Partial<TldRow>) => setRows(rows.map((r) => (r.id === id ? { ...r, ...change } : r)));
     const move = (i: number, by: number) => {
@@ -504,7 +507,7 @@ function TldTable({ data }: { data: Tld[] }) {
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1fr_18rem]">
-                <Card title="Domain pricing" action={<Button onClick={() => setPricing('new')}><Plus size={14} /> Add TLD</Button>}>
+                <Card title={`Domain pricing (${rows.length})`} action={<div className="flex items-center gap-2"><input className="ui-input h-9 w-40" placeholder="Search TLD" aria-label="Search TLDs" value={search} onChange={(e) => setSearch(e.target.value)} /><Button onClick={() => setPricing('new')}><Plus size={14} /> Add TLD</Button></div>}>
                     {rows.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">No TLDs yet. Add one to sell domains.</p> : (
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[46rem] text-left text-sm">
@@ -521,7 +524,9 @@ function TldTable({ data }: { data: Tld[] }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((r, i) => {
+                                    {shown.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-sm text-slate-500">No TLD matches "{search}".</td></tr>}
+                                    {shown.map((r) => {
+                                        const i = rows.indexOf(r);
                                         const t = byId.get(r.id);
                                         const full = !r.is_spotlight && spotlight.length >= SPOTLIGHT_LIMIT;
 
@@ -545,8 +550,8 @@ function TldTable({ data }: { data: Tld[] }) {
                                                 <td className="px-3 py-2 text-center"><input type="checkbox" aria-label={`${r.tld} on sale`} checked={r.is_active} onChange={(e) => patch(r.id, { is_active: e.target.checked })} /></td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center justify-end gap-1 text-slate-400">
-                                                        <button type="button" aria-label={`Move ${r.tld} up`} disabled={i === 0} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, -1)}><ArrowUp size={14} /></button>
-                                                        <button type="button" aria-label={`Move ${r.tld} down`} disabled={i === rows.length - 1} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, 1)}><ArrowDown size={14} /></button>
+                                                        <button type="button" aria-label={`Move ${r.tld} up`} disabled={i === 0 || shown !== rows} title={shown !== rows ? 'Clear the search to reorder' : undefined} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, -1)}><ArrowUp size={14} /></button>
+                                                        <button type="button" aria-label={`Move ${r.tld} down`} disabled={i === rows.length - 1 || shown !== rows} title={shown !== rows ? 'Clear the search to reorder' : undefined} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:opacity-30" onClick={() => move(i, 1)}><ArrowDown size={14} /></button>
                                                         <button type="button" aria-label={`Delete ${r.tld}`} disabled={remove.isPending} className="cursor-pointer rounded p-1 hover:text-rose-600" onClick={() => ask(`Delete ${r.tld}? Customers can no longer order it.`, () => remove.mutate(r.id))}><MinusCircle size={14} /></button>
                                                     </div>
                                                 </td>
@@ -585,7 +590,7 @@ export function TldsPage() {
     return <QueryState query={query}>{query.data && <TldTable key={query.dataUpdatedAt} data={query.data} />}</QueryState>;
 }
 
-type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; services_count: number; this_month: Cell };
+type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; connection_ok?: boolean | null; connection_error?: string | null; connection_checked_at?: string | null; services_count: number; this_month: Cell };
 
 function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: () => void }) {
     const qc = useQueryClient();
@@ -647,20 +652,56 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
     );
 }
 
-function TestButton({ id }: { id: number }) {
+type TestResult = { ok: boolean; message: string };
+
+const testServer = async (id: number) => (await api.post<TestResult>(`/servers/${id}/test`)).data;
+
+/** A saved result older than this is re-checked quietly when the page opens. */
+const RECHECK_AFTER_MS = 10 * 60 * 1000;
+
+function ConnectionStatus({ server, checking }: { server: ServerRow; checking: boolean }) {
+    if (checking) return <Status value="checking" />;
+    if (server.connection_ok === null || server.connection_ok === undefined) return <Status value="not_checked" />;
+
+    const when = server.connection_checked_at ? `Checked ${new Date(server.connection_checked_at).toLocaleString()}` : '';
+    const title = server.connection_ok ? when : [server.connection_error, when].filter(Boolean).join('\n\n');
+
+    return <span title={title} className="cursor-help"><Status value={server.connection_ok ? 'connected' : 'not_connected'} /></span>;
+}
+
+function TestButton({ id, onDone }: { id: number; onDone: () => void }) {
     const test = useMutation({
-        mutationFn: async () => (await api.post<{ ok: boolean; message: string }>(`/servers/${id}/test`)).data,
+        mutationFn: () => testServer(id),
         onSuccess: (r) => alertDialog(r.message),
         onError: (e) => alertDialog(errorMessage(e)),
+        onSettled: onDone,
     });
 
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;
 }
 
 export function ServersPage() {
+    const qc = useQueryClient();
     const query = useQuery({ queryKey: ['servers'], queryFn: async () => (await api.get<ServerRow[]>('/servers')).data });
     const [editing, setEditing] = useState<ServerRow | 'new' | null>(null);
     const [costs, setCosts] = useState<ServerRow | null>(null);
+    const [checking, setChecking] = useState<number[]>([]);
+    const checked = useRef(new Set<number>());
+    const refresh = () => qc.invalidateQueries({ queryKey: ['servers'] });
+
+    // Check each server once per visit when it was never tested or the last test is stale.
+    useEffect(() => {
+        const due = (query.data ?? []).filter((s) => !checked.current.has(s.id)
+            && (!s.connection_checked_at || Date.now() - new Date(s.connection_checked_at).getTime() > RECHECK_AFTER_MS));
+
+        if (!due.length) return;
+        due.forEach((s) => checked.current.add(s.id));
+        setChecking((ids) => [...ids, ...due.map((s) => s.id)]);
+        Promise.allSettled(due.map((s) => testServer(s.id))).finally(() => {
+            setChecking((ids) => ids.filter((id) => !due.some((s) => s.id === id)));
+            refresh();
+        });
+    }, [query.data]);
 
     return (
         <div className="space-y-4">
@@ -677,8 +718,9 @@ export function ServersPage() {
                             { header: 'Monthly Cost', cell: (s) => <button type="button" className="table-action-link tabular-nums" onClick={() => setCosts(s)}>{Number(s.this_month.cost) > 0 ? money(s.this_month.cost) : 'Set cost'}</button>, align: 'right' },
                             { header: 'Sales This Month', cell: (s) => <span className="tabular-nums">{money(s.this_month.sales)}</span>, align: 'right' },
                             { header: 'Profit This Month', cell: (s) => <Profit value={s.this_month.profit} />, align: 'right' },
+                            { header: 'Connection', cell: (s) => <ConnectionStatus server={s} checking={checking.includes(s.id)} /> },
                             { header: 'Status', cell: (s) => <Status value={s.is_active ? 'active' : 'cancelled'} /> },
-                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} /><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
+                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} onDone={refresh} /><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
                         ]}
                     />
                 </QueryState>

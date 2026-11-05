@@ -28,6 +28,7 @@ class Domain extends Model
             'registered_at' => 'date:Y-m-d',
             'next_due_date' => 'date:Y-m-d',
             'renewal_invoiced_for' => 'date:Y-m-d',
+            'registrar_synced_at' => 'datetime',
         ];
     }
 

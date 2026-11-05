@@ -194,6 +194,13 @@ h1, h2, h3 {
         cursor: pointer;
     }
 
+    /* Keep an icon on the same line as its label (Tailwind makes svg a block). */
+    .table-action-link > svg {
+        display: inline-block;
+        vertical-align: -2px;
+        margin-right: 3px;
+    }
+
     .table-action-link:hover:not(:disabled) {
         text-decoration: underline;
     }

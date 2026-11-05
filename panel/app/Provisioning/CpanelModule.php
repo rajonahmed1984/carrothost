@@ -4,6 +4,8 @@ namespace App\Provisioning;
 
 use App\Models\Server;
 use App\Models\Service;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -17,7 +19,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
 
     public function testConnection(): void
     {
-        $this->call('version');
+        $this->call('version', timeout: 20);
     }
 
     public function packages(): array
@@ -109,32 +111,75 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
         $this->call('changepackage', ['user' => $service->remote_id, 'pkg' => $package]);
     }
 
-    private function call(string $function, array $params = []): array
+    private function call(string $function, array $params = [], int $timeout = 120): array
     {
         $port = $this->server->port ?: 2087;
+        // Pasted values often carry a scheme, a path or stray whitespace, and any of those breaks the login.
+        $host = preg_replace('#^\w+://|[:/].*$#', '', trim((string) $this->server->hostname));
+        $username = trim((string) $this->server->username);
+        $secret = trim((string) $this->server->credentials);
+
+        if ($username === '' || $secret === '') {
+            throw new RuntimeException('Save the WHM username and '.($this->server->auth_type === 'password' ? 'password' : 'API token').' first.');
+        }
 
         $request = $this->server->auth_type === 'password'
-            ? Http::withBasicAuth((string) $this->server->username, (string) $this->server->credentials)
-            : Http::withHeaders(['Authorization' => "whm {$this->server->username}:{$this->server->credentials}"]);
+            ? Http::withBasicAuth($username, $secret)
+            : Http::withHeaders(['Authorization' => "whm {$username}:{$secret}"]);
 
-        $response = $request
-            ->withOptions(['verify' => $this->server->verify_tls])
-            ->timeout(120)
-            ->get("https://{$this->server->hostname}:{$port}/json-api/{$function}", [
-                'api.version' => 1,
-                ...$params,
-            ]);
+        try {
+            $response = $request
+                ->acceptJson()
+                ->withOptions(['verify' => $this->server->verify_tls])
+                ->connectTimeout(15)
+                ->timeout($timeout)
+                ->get("https://{$host}:{$port}/json-api/{$function}", [
+                    'api.version' => 1,
+                    ...$params,
+                ]);
+        } catch (ConnectionException $e) {
+            throw new RuntimeException("Could not reach {$host}:{$port}. ".$e->getMessage());
+        }
 
         if (! $response->successful()) {
-            throw new RuntimeException("WHM {$function} returned HTTP {$response->status()}");
+            throw new RuntimeException($this->httpError($function, $response));
         }
 
         $result = $response->json();
+
+        if (! is_array($result)) {
+            throw new RuntimeException("WHM {$function} did not return JSON. Check the hostname and port (WHM is usually 2087).");
+        }
 
         if ((int) data_get($result, 'metadata.result') !== 1) {
             throw new RuntimeException("WHM {$function} failed: ".data_get($result, 'metadata.reason', 'unknown error'));
         }
 
         return $result;
+    }
+
+    /** Turns a refused request into something the admin can act on, using WHM's own reason when it gives one. */
+    private function httpError(string $function, Response $response): string
+    {
+        $status = $response->status();
+        $json = $response->json();
+        $reason = is_array($json)
+            ? (data_get($json, 'metadata.reason') ?? data_get($json, 'cpanelresult.error') ?? data_get($json, 'error') ?? data_get($json, 'message'))
+            : null;
+
+        if (! $reason) {
+            $text = trim(preg_replace('/\s+/', ' ', strip_tags(preg_replace('#<(script|style|head)\b.*?</\1>#is', '', $response->body()))));
+            $reason = $text !== '' ? Str::limit($text, 200) : null;
+        }
+
+        $message = "WHM {$function} returned HTTP {$status}".($reason ? ": {$reason}" : '.');
+
+        if (in_array($status, [401, 403], true)) {
+            $message .= $this->server->auth_type === 'password'
+                ? ' WHM refused the login. Check the username and password, that the account has no two-factor login, and that this panel\'s IP is not blocked by cPHulk or the host firewall. An API token is more reliable than a password.'
+                : ' WHM refused the API token. Check that the username is the WHM/reseller login that created the token, the token was copied in full and has not expired, and that the token\'s IP whitelist (if set) includes this panel\'s server IP.';
+        }
+
+        return $message;
     }
 }

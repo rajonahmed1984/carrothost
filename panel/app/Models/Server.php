@@ -13,7 +13,7 @@ class Server extends Model
 
     protected function casts(): array
     {
-        return ['credentials' => 'encrypted', 'verify_tls' => 'boolean', 'is_active' => 'boolean'];
+        return ['credentials' => 'encrypted', 'verify_tls' => 'boolean', 'is_active' => 'boolean', 'connection_ok' => 'boolean', 'connection_checked_at' => 'datetime'];
     }
 
     public function costs(): HasMany

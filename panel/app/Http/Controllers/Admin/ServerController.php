@@ -95,7 +95,14 @@ class ServerController extends Controller
             unset($data['credentials']);
         }
 
-        $server->update($data);
+        $server->fill($data);
+
+        // New login details: the last test no longer says anything about this server.
+        if ($server->isDirty(['module', 'hostname', 'port', 'username', 'auth_type', 'credentials', 'verify_tls'])) {
+            $server->forceFill(['connection_ok' => null, 'connection_error' => null, 'connection_checked_at' => null]);
+        }
+
+        $server->save();
         ActivityLog::record('server.saved', $server);
 
         return $server;
@@ -123,11 +130,18 @@ class ServerController extends Controller
 
         try {
             (new $class($server))->testConnection();
-
-            return ['ok' => true, 'message' => 'Connection succeeded.'];
+            $result = ['ok' => true, 'message' => 'Connection succeeded.'];
         } catch (Throwable $e) {
-            return ['ok' => false, 'message' => $e->getMessage()];
+            $result = ['ok' => false, 'message' => $e->getMessage()];
         }
+
+        $server->forceFill([
+            'connection_ok' => $result['ok'],
+            'connection_error' => $result['ok'] ? null : mb_substr($result['message'], 0, 500),
+            'connection_checked_at' => now(),
+        ])->save();
+
+        return [...$result, 'checked_at' => $server->connection_checked_at];
     }
 
     private function validated(Request $request): array

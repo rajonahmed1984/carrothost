@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BellRing, ChevronDown, ExternalLink, FileText, Globe, KeyRound, Lock, Server, ShieldCheck, Undo2, User, Wrench } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { api, money } from '../api';
-import { Button, Dropdown, ErrorNote, Modal, QueryState, Status } from '../ui';
+import { api, errorMessage, money } from '../api';
+import { Button, Dropdown, ErrorNote, QueryState, Status } from '../ui';
 import { day } from './client-tabs';
+import { CommandModal, EppModal, RegistrarStatus, useRegistrarCommand, useRegistrarInfo, type CommandForm } from './domain-registrar';
+import { alertDialog, confirmDialog } from '../dialog';
 
 type Option = { code: string; name: string };
 
@@ -17,6 +19,8 @@ export type DomainFull = {
     client: { id: number; name: string; email: string };
     order: { id: number; order_number: string | null } | null;
     has_epp_code: boolean;
+    linked: boolean;
+    registrar_synced_at: string | null;
     client_domains: { id: number; name: string; status: string }[];
     reminders: { id: number; type: number; recipients: string; days_before_expiry: number; sent_on: string }[];
     options: { registrars: (Option & { connected: boolean })[]; payment_methods: Option[]; statuses: string[]; default_nameservers: string[] };
@@ -92,19 +96,6 @@ export function Section({ title, icon, children, action }: { title: string; icon
     );
 }
 
-function EppModal({ id, onClose }: { id: number; onClose: () => void }) {
-    const q = useQuery({ queryKey: ['/domains/epp', id], queryFn: async () => (await api.get<{ epp_code: string | null }>(`/domains/${id}/epp`)).data, gcTime: 0 });
-
-    return (
-        <Modal title="EPP code" onClose={onClose}>
-            <QueryState query={q}>
-                <p className="rounded-xl bg-slate-50 px-4 py-3 font-mono text-lg break-all text-slate-900">{q.data?.epp_code ?? 'No EPP code stored for this domain.'}</p>
-                <p className="mt-3 text-xs text-slate-500">This is the code stored in the panel. Viewing it is recorded in the activity log.</p>
-            </QueryState>
-        </Modal>
-    );
-}
-
 /**
  * The admin's full view of one domain: billing, dates, nameservers, registrar tools and reminders.
  * Used on its own page and inside the client profile's Domains tab.
@@ -143,12 +134,37 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
         },
     });
 
-    const registrar = d.options.registrars.find((r) => r.code === (form.registrar || d.registrar));
-    const notConnected = registrar ? `Needs the ${registrar.name} registrar module, which is not connected yet.` : 'Choose a registrar first.';
-    const commands: { label: string; onClick?: () => void; icon?: ReactNode }[] = [
-        { label: 'Register' }, { label: 'Transfer' }, { label: 'Renew' }, { label: 'Modify Contact Details' },
+    // Commands act on the saved registrar, so a changed but unsaved choice waits for Save.
+    const registrar = d.options.registrars.find((r) => r.code === d.registrar);
+    const live = Boolean(registrar?.connected) && form.registrar === (d.registrar ?? '');
+    const info = useRegistrarInfo(d.id, live);
+    const found = info.data?.found === true;
+    const missing = info.data?.found === false;
+    const run = useRegistrarCommand(d.id);
+    const [modal, setModal] = useState<CommandForm | null>(null);
+    const why = !d.registrar ? 'Choose a registrar and save first.'
+        : form.registrar !== (d.registrar ?? '') ? 'Save the registrar change first.'
+        : !registrar?.connected ? `Save the ${registrar?.name} API key in Settings > Domain Registrars first.`
+        : info.isLoading ? 'Checking the registrar...'
+        : info.isError ? errorMessage(info.error)
+        : null;
+    const confirmThen = async (message: string, command: string, body?: object) => {
+        if (await confirmDialog(message)) run.mutate({ command, body }, { onError: (e) => alertDialog(errorMessage(e)) });
+    };
+    const privacyOn = info.data?.privacy ?? d.id_protection;
+    const commands: { label: string; onClick?: () => void; icon?: ReactNode; off?: string }[] = [
+        { label: 'Register', onClick: () => setModal('register'), off: found ? 'Already registered in this account.' : undefined },
+        { label: 'Transfer', onClick: () => setModal('transfer'), off: found ? 'Already in this account.' : undefined },
+        { label: 'Renew', onClick: () => setModal('renew'), off: missing ? 'Not in this account.' : undefined },
+        { label: 'Modify Contact Details', onClick: () => setModal('contacts'), off: missing ? 'Not in this account.' : undefined },
         { label: 'Get EPP Code', onClick: () => setEpp(true), icon: <KeyRound size={14} /> },
-        { label: 'Request Delete' }, { label: 'Release Domain' }, { label: 'Enable ID Protection' },
+        { label: 'Request Delete', onClick: () => void confirmThen(`Ask ${registrar?.name} to delete ${d.name}? Inside the add grace period this may refund the registration; after it, the domain is simply deleted. This cannot be undone.`, 'delete'), off: missing ? 'Not in this account.' : undefined },
+        { label: 'Release Domain', onClick: () => setModal('release'), off: !d.name.endsWith('.uk') ? 'Only for .uk domains.' : missing ? 'Not in this account.' : undefined },
+        {
+            label: privacyOn ? 'Disable ID Protection' : 'Enable ID Protection',
+            onClick: () => void confirmThen(`${privacyOn ? 'Turn off' : 'Turn on'} ID protection for ${d.name} at ${registrar?.name}?`, 'privacy', { on: !privacyOn }),
+            off: missing ? 'Not in this account.' : info.data && !info.data.privacy_allowed ? 'This TLD does not allow ID protection.' : undefined,
+        },
     ];
 
     return (
@@ -250,23 +266,29 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
                         <Toggle checked={form.reset_nameservers} onChange={(v) => set('reset_nameservers', v)} hint={d.options.default_nameservers.length ? d.options.default_nameservers.join(', ') : 'No defaults set in Settings > Domains'}>
                             Reset to default nameservers
                         </Toggle>
-                        <p className="text-xs text-slate-500">Saved in the panel. Change them at the registrar too until the registrar module is connected.</p>
+                        <p className="text-xs text-slate-500">{d.linked && live ? `Saving changes them at ${registrar?.name} too.` : live ? 'Saved in the panel only until this domain is found at the registrar.' : 'Saved in the panel only.'}</p>
                     </div>
                 </Section>
 
                 <Section title="Registrar & Management" icon={<Wrench size={16} />}>
                     <div className="space-y-4 p-4">
-                        <Toggle checked={form.registrar_lock} onChange={(v) => set('registrar_lock', v)} hint="Blocks transfers away while on">Registrar Lock</Toggle>
+                        {live && registrar && <RegistrarStatus id={d.id} name={registrar.name} info={info} />}
+                        <Toggle checked={form.registrar_lock} onChange={(v) => set('registrar_lock', v)} hint={d.linked && live ? `Blocks transfers away while on. Saving sets it at ${registrar?.name} too.` : 'Blocks transfers away while on'}>Registrar Lock</Toggle>
                         <div>
                             <div className="mb-2 text-xs font-semibold text-slate-600">Registrar Commands</div>
                             <div className="flex flex-wrap gap-2">
-                                {commands.map((c) => (
-                                    <button key={c.label} type="button" disabled={!c.onClick} title={c.onClick ? undefined : notConnected} onClick={c.onClick} className="ui-btn ui-btn-secondary h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50">
-                                        {c.icon}{c.label}
-                                    </button>
-                                ))}
+                                {commands.map((c) => {
+                                    // The EPP code stored in the panel can always be shown; everything else needs the registrar.
+                                    const blocked = c.label === 'Get EPP Code' ? null : why ?? c.off ?? null;
+
+                                    return (
+                                        <button key={c.label} type="button" disabled={Boolean(blocked) || run.isPending} title={blocked ?? undefined} onClick={c.onClick} className="ui-btn ui-btn-secondary h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                                            {c.icon}{c.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            {!registrar?.connected && <p className="mt-2 text-xs text-slate-500">{notConnected} Do registrar work in its own control panel for now.</p>}
+                            {why && <p className="mt-2 text-xs text-slate-500">{why}</p>}
                         </div>
                         <div>
                             <div className="mb-2 text-xs font-semibold text-slate-600">Management Tools</div>
@@ -316,7 +338,10 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
                 </div>
             </div>
 
-            {epp && <EppModal id={d.id} onClose={() => setEpp(false)} />}
+            {epp && <EppModal id={d.id} canFetch={live && found} onClose={() => setEpp(false)} />}
+            {modal && registrar && info.data && (
+                <CommandModal id={d.id} kind={modal} domain={d.name} registrar={registrar.name} years={d.years} eppCode={d.has_epp_code} defaults={info.data.contact_defaults} onClose={() => setModal(null)} />
+            )}
         </form>
     );
 }

@@ -230,6 +230,10 @@ Route::prefix('api')->group(function () {
         Route::get('domains/{domain}', [Admin\DomainController::class, 'show']);
         Route::put('domains/{domain}', [Admin\DomainController::class, 'update']);
         Route::get('domains/{domain}/epp', [Admin\DomainController::class, 'epp']);
+        Route::get('domains/{domain}/registrar', [Admin\DomainController::class, 'registrarInfo']);
+        Route::post('domains/{domain}/registrar/sync', [Admin\DomainController::class, 'registrarSync']);
+        Route::post('domains/{domain}/registrar/{command}', [Admin\DomainController::class, 'registrarCommand'])
+            ->whereIn('command', ['register', 'transfer', 'renew', 'contacts', 'delete', 'release', 'privacy', 'lock']);
         Route::post('domains/{domain}/complete', [Admin\DomainController::class, 'complete']);
 
         Route::get('gateways', [Admin\GatewayController::class, 'index']);

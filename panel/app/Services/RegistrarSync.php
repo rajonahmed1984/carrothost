@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\Registrar;
 use App\Models\RegistrarCharge;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -19,7 +20,7 @@ class RegistrarSync
 {
     private const MAX_PAGES = 40;
 
-    /** @return array{added: int, skipped_receipts: int} */
+    /** @return array{fetched: int, added: int, skipped_receipts: int, unreadable: int, sample_fields: string, since: ?string} */
     public function sync(Registrar $registrar): array
     {
         if (! $registrar->api_key || ! $registrar->reseller_id) {
@@ -28,18 +29,32 @@ class RegistrarSync
 
         $client = new LogicBoxesClient($registrar);
         // Overlap a week so late-posted transactions are not missed; known ids are skipped.
-        $since = $registrar->last_synced_at?->subDays(7)->timestamp;
+        // Until a sync has stored anything, read the whole history: an earlier run that found
+        // nothing must not hide everything older than a week from every later run.
+        $hasSynced = RegistrarCharge::where('registrar_code', $registrar->code)->where('source', 'sync')->exists();
+        $sinceAt = $hasSynced ? $registrar->last_synced_at?->subDays(7) : null;
+        $since = $sinceAt?->timestamp;
+        $fetched = 0;
         $added = 0;
         $receipts = 0;
+        $unreadable = 0;
+        $sampleFields = '';
 
         try {
             for ($page = 1; $page <= self::MAX_PAGES; $page++) {
                 $result = $client->transactions($page, 250, $since);
                 $rows = collect($result)->filter(fn ($row, $key) => is_array($row) && is_numeric($key));
 
+                $fetched += $rows->count();
+
                 foreach ($rows as $row) {
                     $parsed = $this->parse($row);
                     if (! $parsed) {
+                        if ($unreadable++ === 0) {
+                            $sampleFields = implode(', ', array_slice(array_keys($row), 0, 12));
+                            Log::warning('Registrar sync: unreadable transaction row', ['registrar' => $registrar->code, 'row' => $row]);
+                        }
+
                         continue;
                     }
                     if ($parsed['type'] === 'receipt') {
@@ -62,14 +77,23 @@ class RegistrarSync
             }
         } catch (Throwable $e) {
             $registrar->update(['sync_error' => $e->getMessage()]);
+            $registrar->markConnection(false, $e->getMessage());
 
             throw $e instanceof RuntimeException ? $e : new RuntimeException($e->getMessage());
         }
 
         $registrar->update(['last_synced_at' => now(), 'sync_error' => null]);
-        ActivityLog::record('registrar.synced', $registrar, ['added' => $added]);
+        $registrar->markConnection(true);
+        ActivityLog::record('registrar.synced', $registrar, ['fetched' => $fetched, 'added' => $added, 'unreadable' => $unreadable]);
 
-        return ['added' => $added, 'skipped_receipts' => $receipts];
+        return [
+            'fetched' => $fetched,
+            'added' => $added,
+            'skipped_receipts' => $receipts,
+            'unreadable' => $unreadable,
+            'sample_fields' => $sampleFields,
+            'since' => $sinceAt?->toDateString(),
+        ];
     }
 
     /**
@@ -94,9 +118,9 @@ class RegistrarSync
             return null;
         };
 
-        $id = $pick(['transactionid', 'transaction-id', 'transid', 'id']);
-        $amount = $pick(['sellingamount', 'amount', 'transactionamount', 'resellerselling', 'accountingamount']);
-        $date = $pick(['transactiondate', 'transaction-date', 'creationdt', 'date']);
+        $id = $pick(['transactionid', 'transaction-id', 'transid', 'transactionkey', 'transkey', 'id']);
+        $amount = $pick(['sellingamount', 'sellingcurrencyamount', 'amount', 'transactionamount', 'resellerselling', 'accountingamount', 'accountingcurrencyamount']);
+        $date = $pick(['transactiondate', 'transaction-date', 'transactiondt', 'creationdt', 'creationdate', 'date']);
         if ($id === null || ! is_numeric($amount) || $date === null) {
             return null;
         }

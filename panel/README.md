@@ -67,7 +67,7 @@ customer without a password. Never deploy with those values.
 | Area | Connected | Not connected yet (falls back to manual) |
 | --- | --- | --- |
 | Provisioning | cPanel/WHM, Webuzo | Webdock |
-| Registrars | Connection test only (LogicBoxes API) | Register, renew and transfer for ResellCube, StarGate/UK2 |
+| Registrars | ResellCube, StarGate/UK2 (LogicBoxes API): admin lookup, sync to panel, EPP code, nameservers, lock, ID protection, contacts, register, transfer, renew, delete, .uk release | Automatic registration and renewal when an order or renewal invoice is paid (still waits for an admin) |
 | Gateways | Manual/Bank, bKash, SSLCommerz, PayPal | Stripe |
 
 To connect a provisioning module, implement `App\Provisioning\ProvisioningModule` and set

@@ -30,6 +30,9 @@ class RegistrarController extends Controller
             'currency' => $saved->get($code)?->currency ?? 'USD',
             'last_synced_at' => $saved->get($code)?->last_synced_at?->toISOString(),
             'sync_error' => $saved->get($code)?->sync_error,
+            'connection_ok' => $saved->get($code)?->connection_ok,
+            'connection_error' => $saved->get($code)?->connection_error,
+            'connection_checked_at' => $saved->get($code)?->connection_checked_at?->toISOString(),
             'wallet' => $ledger->ledger($code)['wallet'],
         ])->values();
     }
@@ -141,7 +144,18 @@ class RegistrarController extends Controller
             throw ValidationException::withMessages(['registrar' => $e->getMessage()]);
         }
 
-        return ['message' => "Synced: {$result['added']} new charge(s).".($result['skipped_receipts'] ? " {$result['skipped_receipts']} top-up(s) skipped; record those as deposits with their BDT cost." : '')];
+        $message = $result['fetched'] === 0
+            ? 'Connected, but the registrar returned no transactions for this account'.($result['since'] ? ' since '.$result['since'] : '').'.'
+            : "Synced: {$result['fetched']} transaction(s) read, {$result['added']} new charge(s) added.";
+
+        if ($result['skipped_receipts']) {
+            $message .= " {$result['skipped_receipts']} top-up(s) skipped; record those as deposits with their BDT cost.";
+        }
+        if ($result['unreadable']) {
+            $message .= " {$result['unreadable']} row(s) could not be read (fields: {$result['sample_fields']}). They were written to the log.";
+        }
+
+        return ['message' => $message];
     }
 
     private function chargeFields(Request $request, bool $money): array
@@ -178,7 +192,14 @@ class RegistrarController extends Controller
             unset($data['api_key']);
         }
 
-        $registrar = Registrar::updateOrCreate(['code' => $code], $data);
+        $registrar = Registrar::firstOrNew(['code' => $code])->fill($data);
+
+        // New login details: the last test no longer says anything about this account.
+        if ($registrar->isDirty(['reseller_id', 'api_key'])) {
+            $registrar->forceFill(['connection_ok' => null, 'connection_error' => null, 'connection_checked_at' => null]);
+        }
+
+        $registrar->save();
         ActivityLog::record('registrar.updated', $registrar);
 
         return ['ok' => true];
@@ -194,9 +215,12 @@ class RegistrarController extends Controller
 
         try {
             (new LogicBoxesClient($registrar))->balance();
+            $registrar->markConnection(true);
 
             return ['ok' => true, 'message' => 'Connection succeeded.'];
         } catch (Throwable $e) {
+            $registrar->markConnection(false, $e->getMessage());
+
             return ['ok' => false, 'message' => $e->getMessage()];
         }
     }

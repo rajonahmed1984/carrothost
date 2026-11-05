@@ -100,7 +100,23 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule
             throw new RuntimeException('Webuzo did not return a login link.');
         }
 
-        return $url;
+        return $this->onHostname($url);
+    }
+
+    /**
+     * Webuzo builds the SSO link on the server's IP, and the certificate only covers the hostname,
+     * so browsers refuse it (and silently fail inside the preview frame). Point it at the saved hostname.
+     */
+    private function onHostname(string $url): string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $hostname = preg_replace('#^\w+://|[:/].*$#', '', trim((string) $this->server->hostname));
+
+        if (! $host || $hostname === '' || ! filter_var($host, FILTER_VALIDATE_IP) || filter_var($hostname, FILTER_VALIDATE_IP)) {
+            return $url;
+        }
+
+        return preg_replace('#^(https?://)'.preg_quote($host, '#').'(?=[:/?]|$)#i', '${1}'.$hostname, $url, 1);
     }
 
     public function changePassword(Service $service, string $password): void

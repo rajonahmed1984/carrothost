@@ -1,9 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDown, ArrowUp, Check, Globe, Percent, ReceiptText, RefreshCw, Search, Trash2, TrendingUp, Wallet } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Table } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table } from '../ui';
 import { StatCards } from './client-tabs';
 import { monthLabel, Profit, shiftMonth, thisMonth } from './server-profit';
 import { alertDialog, ask } from '../dialog';
@@ -14,7 +14,7 @@ type WalletInfo = {
     code: string; currency: string; deposits: number; sent_bdt: number; fees_bdt: number; credited: number; spent: number; returned: number;
     balance: number; balance_bdt: number; unfunded: number; average_rate: number | null;
 };
-type Registrar = { code: string; name: string; reseller_id: string | null; has_api_key: boolean; currency: string; last_synced_at: string | null; sync_error: string | null; wallet: WalletInfo };
+type Registrar = { code: string; name: string; reseller_id: string | null; has_api_key: boolean; currency: string; last_synced_at: string | null; sync_error: string | null; connection_ok: boolean | null; connection_error: string | null; connection_checked_at: string | null; wallet: WalletInfo };
 type Deposit = { id: number; paid_on: string; method: string; amount_bdt: string; fee_bdt: string; credited: string; reference: string | null; note: string | null; rate: number };
 type Charge = {
     id: number; type: 'debit' | 'credit'; charged_at: string; description: string | null; amount: string; action: string; source: 'sync' | 'manual';
@@ -78,11 +78,29 @@ function RegistrarForm({ registrar, onClose }: { registrar: Registrar; onClose: 
     );
 }
 
+const testRegistrar = async (code: string) => (await api.post<{ ok: boolean; message: string }>(`/registrars/${code}/test`)).data;
+
+/** A saved result older than this is re-checked quietly when the page opens. */
+const RECHECK_AFTER_MS = 10 * 60 * 1000;
+
+function ConnectionStatus({ registrar, checking }: { registrar: Registrar; checking: boolean }) {
+    if (checking) return <Status value="checking" />;
+    if (!registrar.has_api_key) return <span title="Save the reseller ID and API key first."><Status value="not_connected" /></span>;
+    if (registrar.connection_ok === null) return <Status value="not_checked" />;
+
+    const when = registrar.connection_checked_at ? `Checked ${new Date(registrar.connection_checked_at).toLocaleString()}` : '';
+    const title = registrar.connection_ok ? when : [registrar.connection_error, when].filter(Boolean).join('\n\n');
+
+    return <span title={title} className="cursor-help"><Status value={registrar.connection_ok ? 'connected' : 'not_connected'} /></span>;
+}
+
 function TestButton({ code }: { code: string }) {
+    const qc = useQueryClient();
     const test = useMutation({
-        mutationFn: async () => (await api.post<{ message: string }>(`/registrars/${code}/test`)).data,
+        mutationFn: () => testRegistrar(code),
         onSuccess: (r) => alertDialog(r.message),
         onError: (e) => alertDialog(errorMessage(e)),
+        onSettled: () => qc.invalidateQueries({ queryKey: ['registrars'] }),
     });
 
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;
@@ -486,6 +504,23 @@ export function RegistrarsPage() {
     const query = useQuery({ queryKey: ['registrars'], queryFn: async () => (await api.get<Registrar[]>('/registrars')).data });
     const [editing, setEditing] = useState<Registrar | null>(null);
     const [wallet, setWallet] = useState<Registrar | null>(null);
+    const qc = useQueryClient();
+    const [checking, setChecking] = useState<string[]>([]);
+    const checked = useRef(new Set<string>());
+
+    // Check each registrar once per visit when it was never tested or the last test is stale.
+    useEffect(() => {
+        const due = (query.data ?? []).filter((r) => r.has_api_key && !checked.current.has(r.code)
+            && (!r.connection_checked_at || Date.now() - new Date(r.connection_checked_at).getTime() > RECHECK_AFTER_MS));
+
+        if (!due.length) return;
+        due.forEach((r) => checked.current.add(r.code));
+        setChecking((codes) => [...codes, ...due.map((r) => r.code)]);
+        Promise.allSettled(due.map((r) => testRegistrar(r.code))).finally(() => {
+            setChecking((codes) => codes.filter((c) => !due.some((r) => r.code === c)));
+            qc.invalidateQueries({ queryKey: ['registrars'] });
+        });
+    }, [query.data]);
 
     return (
         <div className="space-y-4">
@@ -498,6 +533,7 @@ export function RegistrarsPage() {
                             { header: 'Registrar', cell: (r) => <span className="font-medium">{r.name}</span> },
                             { header: 'Reseller ID', cell: (r) => r.reseller_id ?? '-' },
                             { header: 'Currency', cell: (r) => r.currency },
+                            { header: 'Connection', cell: (r) => <ConnectionStatus registrar={r} checking={checking.includes(r.code)} /> },
                             { header: 'Wallet Balance', cell: (r) => <button type="button" className="table-action-link text-right tabular-nums" onClick={() => setWallet(r)}>{inCurrency(r.wallet.balance, r.currency)}<span className="block text-[11px] text-slate-500">worth {money(r.wallet.balance_bdt)}</span></button>, align: 'right' },
                             {
                                 header: 'Last Sync',
