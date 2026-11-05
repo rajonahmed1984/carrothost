@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\CustomerNotice;
 use App\Models\Client;
+use App\Models\Domain;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Service;
@@ -101,6 +102,45 @@ class CustomerMailer
                 ."\nYour password is shown on the service page in the client area, where you can also sign in to the control panel in one click.",
             url: url("services/{$service->id}"),
             button: 'Open your service',
+        ));
+    }
+
+    /** $daysLeft is negative once the domain has expired. */
+    public function domainExpiry(Domain $domain, int $daysLeft): void
+    {
+        $domain->loadMissing('client');
+        $when = $daysLeft > 0 ? "expires in {$daysLeft} day".($daysLeft === 1 ? '' : 's')." ({$domain->expires_at->format('d M Y')})"
+            : ($daysLeft === 0 ? 'expires today' : 'expired on '.$domain->expires_at->format('d M Y'));
+        $invoice = Invoice::where('client_id', $domain->client_id)->where('status', 'unpaid')
+            ->whereHas('items', fn ($q) => $q->where('domain_id', $domain->id))->latest('id')->first();
+
+        $this->send($domain->client->email, new CustomerNotice(
+            sender: MailFrom::BILLING,
+            subjectLine: $daysLeft >= 0 ? "Domain renewal reminder: {$domain->name}" : "Domain expired: {$domain->name}",
+            heading: $daysLeft >= 0 ? 'Your domain is expiring' : 'Your domain has expired',
+            body: "Hello {$domain->client->name},\n\nYour domain {$domain->name} {$when}.\n\n"
+                .($invoice ? "Pay invoice {$invoice->number} to renew it." : 'Renew it from your client area to keep your website and email working.')
+                .($daysLeft < 0 ? "\n\nAn expired domain stops working and may be lost if it is not renewed soon." : ''),
+            url: $invoice ? url("invoices/{$invoice->id}") : url("domains/{$domain->id}"),
+            button: $invoice ? 'Pay invoice' : 'View domain',
+        ));
+    }
+
+    public function serviceSuspended(Service $service): void
+    {
+        $service->loadMissing('client', 'product');
+        $invoice = Invoice::where('client_id', $service->client_id)->where('status', 'unpaid')
+            ->whereHas('items', fn ($q) => $q->where('service_id', $service->id))->latest('id')->first();
+
+        $this->send($service->client->email, new CustomerNotice(
+            sender: MailFrom::BILLING,
+            subjectLine: "Service suspended: {$service->product->name}".($service->domain ? " - {$service->domain}" : ''),
+            heading: 'Your service is suspended',
+            body: "Hello {$service->client->name},\n\nYour {$service->product->name} service".($service->domain ? " for {$service->domain}" : '')
+                .' has been suspended because a payment is overdue.'
+                .($invoice ? "\n\nPay invoice {$invoice->number} and the service is turned back on automatically." : "\n\nPlease pay the overdue invoice or contact us."),
+            url: $invoice ? url("invoices/{$invoice->id}") : url('invoices'),
+            button: $invoice ? 'Pay invoice' : 'View invoices',
         ));
     }
 

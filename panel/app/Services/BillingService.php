@@ -342,6 +342,8 @@ class BillingService
             'expires_at' => $expires,
             'next_due_date' => $expires,
             'provision_status' => 'manual_required',
+            // Paid: an expired or grace domain is live again once renewed at the registrar.
+            ...in_array($domain->status, ['expired', 'grace'], true) ? ['status' => 'active'] : [],
         ]);
     }
 

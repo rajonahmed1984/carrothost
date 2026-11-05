@@ -28,9 +28,48 @@ type Values = {
     nameserver_4: string | null; nameserver_5: string | null; recaptcha_enabled: boolean; recaptcha_site_key: string | null;
     recaptcha_project_id: string | null; recaptcha_score_threshold: number | string | null; mail_host: string | null; mail_port: number | string | null;
     mail_scheme: string | null; mail_username: string | null; mail_from_address: string | null; mail_from_name: string | null;
+    termination_enabled: boolean; terminate_after_days: number; reminder_before_due_days: number; overdue_notice_1: number; overdue_notice_2: number;
+    overdue_notice_3: number; domain_reminder_days: string; usage_update_enabled: boolean; domain_sync_enabled: boolean;
 };
+type Automation = { heartbeat: string | null; runs: Record<string, { at: string; count: number | null }> };
 type Secrets = { recaptcha_secret_key: boolean; recaptcha_api_key: boolean; mail_password: boolean };
-type SettingsResponse = { settings: Values; secrets: Secrets; branding: Branding; custom_logo: boolean; mailer: string; time_zones: string[] };
+type SettingsResponse = { settings: Values; secrets: Secrets; branding: Branding; custom_logo: boolean; mailer: string; time_zones: string[]; automation?: Automation };
+
+const TASKS: [string, string][] = [
+    ['renewals', 'Renewal invoices'], ['suspensions', 'Suspend overdue'], ['terminations', 'Terminate'], ['invoice_reminders', 'Payment reminders'],
+    ['domain_reminders', 'Domain reminders'], ['domain_expiry', 'Expire domains'], ['domain_sync', 'Domain sync'], ['usage', 'Usage update'],
+    ['ticket_auto_close', 'Close tickets'],
+];
+
+/** Whether cron is running the scheduler, and when each daily job last ran. */
+function CronStatus({ automation }: { automation?: Automation }) {
+    if (!automation) return null;
+    const beat = automation.heartbeat ? new Date(automation.heartbeat) : null;
+    const minutes = beat ? Math.round((Date.now() - beat.getTime()) / 60000) : null;
+    const ok = minutes !== null && minutes <= 10;
+
+    return (
+        <Section title="Cron Status">
+            <p className={`rounded-xl border px-3 py-2 text-sm ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
+                {ok ? `Cron is running. The scheduler last ran ${minutes === 0 ? 'less than a minute' : `${minutes} min`} ago.`
+                    : beat ? `Cron looks stopped: the scheduler last ran ${beat.toLocaleString()}. Nothing below runs until it is fixed.`
+                    : 'Cron has not run yet. Add the cron job below on the server, or nothing below runs.'}
+            </p>
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                {TASKS.map(([key, label]) => {
+                    const run = automation.runs[key];
+
+                    return (
+                        <div key={key} className="rounded-xl border border-slate-200 px-3 py-2">
+                            <div className="text-xs text-slate-500">{label}</div>
+                            <div className="text-slate-800">{run ? `${new Date(run.at).toLocaleString()}${run.count !== null ? ` · ${run.count}` : ''}` : <span className="text-slate-400">Not run yet</span>}</div>
+                        </div>
+                    );
+                })}
+            </div>
+        </Section>
+    );
+}
 
 function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
     return (
@@ -230,6 +269,31 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                                 <Input type="number" min="0" max="365" required {...text('suspend_after_days')} />
                             </Field>
                             <Check checked={values.unsuspension_enabled} onChange={set('unsuspension_enabled')} label="Unsuspend automatically once paid" />
+                            <div />
+                            <Check checked={values.termination_enabled} onChange={set('termination_enabled')} label="Terminate services left suspended for unpaid bills" />
+                            <Field label="Terminate after days" hint="Days past the due date. Deletes the account on the server: off by default.">
+                                <Input type="number" min="1" max="365" required disabled={!values.termination_enabled} {...text('terminate_after_days')} />
+                            </Field>
+                            <p className="text-xs text-slate-500 md:col-span-2">Services marked "Terminate at end of cycle" are always terminated on their due date.</p>
+                        </div>
+                    </Section>
+                    <Section title="Billing Reminders">
+                        <div className="grid gap-4 md:grid-cols-4">
+                            <Field label="Reminder before due" hint="Days before. 0 = off"><Input type="number" min="0" max="60" required {...text('reminder_before_due_days')} /></Field>
+                            <Field label="1st overdue notice" hint="Days after. 0 = off"><Input type="number" min="0" max="365" required {...text('overdue_notice_1')} /></Field>
+                            <Field label="2nd overdue notice" hint="Days after. 0 = off"><Input type="number" min="0" max="365" required {...text('overdue_notice_2')} /></Field>
+                            <Field label="3rd overdue notice" hint="Days after. 0 = off"><Input type="number" min="0" max="365" required {...text('overdue_notice_3')} /></Field>
+                        </div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <Field label="Domain expiry reminders" hint="Days before expiry, comma separated; a negative number is days after. e.g. 30,14,7,3,1,-3">
+                                <Input placeholder="30,14,7,3,1,-3" {...text('domain_reminder_days')} />
+                            </Field>
+                        </div>
+                    </Section>
+                    <Section title="Daily Sync">
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <Check checked={values.usage_update_enabled} onChange={set('usage_update_enabled')} label="Update disk and bandwidth usage from the servers" />
+                            <Check checked={values.domain_sync_enabled} onChange={set('domain_sync_enabled')} label="Sync domain expiry and status from the registrars" />
                         </div>
                     </Section>
                     <Section title="Support Ticket Automation">
@@ -237,7 +301,11 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             <Input type="number" min="0" max="365" required {...text('ticket_auto_close_days')} />
                         </Field>
                     </Section>
-                    <p className="text-xs text-slate-500">These run from the daily scheduler, so the server needs a cron job calling <code className="rounded bg-slate-100 px-1">php artisan schedule:run</code> every minute.</p>
+                    <CronStatus automation={data.automation} />
+                    <p className="text-xs text-slate-500">
+                        These run from the scheduler, so the server needs one cron job every minute (cPanel &gt; Cron Jobs):{' '}
+                        <code className="rounded bg-slate-100 px-1 break-all">* * * * * cd /path/to/panel &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
+                    </p>
                 </div>
 
                 <div className={tab.key === 'email' ? 'space-y-4' : 'hidden'}>

@@ -67,6 +67,10 @@ class ProvisionService implements ShouldQueue
             if ($this->action === 'create' && $this->welcome) {
                 app(CustomerMailer::class)->serviceWelcome($service);
             }
+            // Billing suspensions tell the client why and how to get it back.
+            if ($this->action === 'suspend' && ($changes['auto_suspended'] ?? false)) {
+                app(CustomerMailer::class)->serviceSuspended($service->refresh());
+            }
         } catch (Throwable $e) {
             $service->update(['provision_status' => 'failed', 'provision_error' => $e->getMessage()]);
             ActivityLog::record("service.{$this->action}.failed", $service, ['error' => $e->getMessage()]);

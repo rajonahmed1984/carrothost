@@ -43,6 +43,23 @@ return [
     // Whether paying lifts a suspension that billing applied.
     'unsuspension_enabled' => true,
 
+    // Terminate services left suspended for unpaid bills this many days past due. Off by default.
+    'termination_enabled' => false,
+    'terminate_after_days' => 30,
+
+    // Automatic emails. before_due_days: one reminder this many days before the due date (0 = none).
+    // overdue_days: up to three overdue notices, days after the due date (0 = none).
+    // domain_days: expiry reminders, days before expiry; a negative number is days after it.
+    'reminders' => [
+        'before_due_days' => 3,
+        'overdue_days' => [1, 3, 7],
+        'domain_days' => '30,14,7,3,1,-3',
+    ],
+
+    // Daily: refresh disk and bandwidth from the servers, and expiry and status from the registrars.
+    'usage_update_enabled' => true,
+    'domain_sync_enabled' => true,
+
     // Add Funds limits, in the billing currency. Admin > Settings overrides these.
     'credit' => [
         'min_deposit' => '100.00',

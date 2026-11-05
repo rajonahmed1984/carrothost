@@ -35,6 +35,15 @@ class Settings
         'suspend_after_days' => 'billing.suspend_after_days',
         'unsuspension_enabled' => 'billing.unsuspension_enabled',
         'ticket_auto_close_days' => 'billing.ticket_auto_close_days',
+        'termination_enabled' => 'billing.termination_enabled',
+        'terminate_after_days' => 'billing.terminate_after_days',
+        'reminder_before_due_days' => 'billing.reminders.before_due_days',
+        'overdue_notice_1' => 'billing.reminders.overdue_days.0',
+        'overdue_notice_2' => 'billing.reminders.overdue_days.1',
+        'overdue_notice_3' => 'billing.reminders.overdue_days.2',
+        'domain_reminder_days' => 'billing.reminders.domain_days',
+        'usage_update_enabled' => 'billing.usage_update_enabled',
+        'domain_sync_enabled' => 'billing.domain_sync_enabled',
         'domain_allow_register' => 'billing.domains.allow_register',
         'domain_allow_transfer' => 'billing.domains.allow_transfer',
         'domain_allow_own' => 'billing.domains.allow_own',
@@ -65,11 +74,11 @@ class Settings
     public const SECRETS = ['recaptcha_secret_key', 'recaptcha_api_key', 'mail_password'];
 
     public const BOOLEANS = [
-        'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled',
+        'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled', 'termination_enabled', 'usage_update_enabled', 'domain_sync_enabled',
         'domain_allow_register', 'domain_allow_transfer', 'domain_allow_own', 'domain_auto_renew', 'domain_premium_enabled',
     ];
 
-    public const INTEGERS = ['invoice_due_days', 'renewal_notice_days', 'suspend_after_days', 'ticket_auto_close_days', 'mail_port'];
+    public const INTEGERS = ['invoice_due_days', 'renewal_notice_days', 'suspend_after_days', 'ticket_auto_close_days', 'mail_port', 'terminate_after_days', 'reminder_before_due_days', 'overdue_notice_1', 'overdue_notice_2', 'overdue_notice_3'];
 
     public static function apply(): void
     {

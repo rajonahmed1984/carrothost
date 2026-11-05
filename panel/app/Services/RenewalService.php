@@ -84,6 +84,7 @@ class RenewalService
             } else {
                 // Nothing on a server to suspend (manual product): flag it for an admin.
                 $service->update(['status' => 'suspended', 'auto_suspended' => true, 'provision_status' => 'manual_required']);
+                app(CustomerMailer::class)->serviceSuspended($service);
             }
         }
 

@@ -7,7 +7,9 @@ use App\Models\ActivityLog;
 use App\Models\Domain;
 use App\Support\Branding;
 use App\Support\MailFrom;
+use App\Services\AutomationService;
 use App\Support\Settings;
+use Illuminate\Support\Facades\Cache;
 use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -37,6 +39,13 @@ class SettingController extends Controller
                 'suspend_after_days' => (int) config('billing.suspend_after_days'),
                 'unsuspension_enabled' => (bool) config('billing.unsuspension_enabled'),
                 'ticket_auto_close_days' => (int) config('billing.ticket_auto_close_days'),
+                'termination_enabled' => (bool) config('billing.termination_enabled'),
+                'terminate_after_days' => (int) config('billing.terminate_after_days'),
+                'reminder_before_due_days' => (int) config('billing.reminders.before_due_days'),
+                ...collect([1, 2, 3])->mapWithKeys(fn ($n) => ["overdue_notice_{$n}" => (int) (config('billing.reminders.overdue_days')[$n - 1] ?? 0)]),
+                'domain_reminder_days' => (string) config('billing.reminders.domain_days'),
+                'usage_update_enabled' => (bool) config('billing.usage_update_enabled'),
+                'domain_sync_enabled' => (bool) config('billing.domain_sync_enabled'),
                 'domain_allow_register' => (bool) config('billing.domains.allow_register'),
                 'domain_allow_transfer' => (bool) config('billing.domains.allow_transfer'),
                 'domain_allow_own' => (bool) config('billing.domains.allow_own'),
@@ -63,6 +72,11 @@ class SettingController extends Controller
             'custom_logo' => ! empty(config('billing.logo_path')),
             'mailer' => config('mail.default'),
             'time_zones' => DateTimeZone::listIdentifiers(),
+            // Whether cron is calling the scheduler, and when each daily task last ran.
+            'automation' => [
+                'heartbeat' => Cache::get('scheduler.heartbeat'),
+                'runs' => AutomationService::lastRuns(),
+            ],
         ];
     }
 
@@ -89,6 +103,15 @@ class SettingController extends Controller
             'suspend_after_days' => 'required|integer|between:0,365',
             'unsuspension_enabled' => 'boolean',
             'ticket_auto_close_days' => 'required|integer|between:0,365',
+            'termination_enabled' => 'boolean',
+            'terminate_after_days' => 'sometimes|integer|between:1,365',
+            'reminder_before_due_days' => 'sometimes|integer|between:0,60',
+            'overdue_notice_1' => 'sometimes|integer|between:0,365',
+            'overdue_notice_2' => 'sometimes|integer|between:0,365',
+            'overdue_notice_3' => 'sometimes|integer|between:0,365',
+            'domain_reminder_days' => ['sometimes', 'nullable', 'string', 'max:60', 'regex:/^\s*-?\d{1,3}(\s*,\s*-?\d{1,3})*\s*$/'],
+            'usage_update_enabled' => 'boolean',
+            'domain_sync_enabled' => 'boolean',
             'domain_allow_register' => 'boolean',
             'domain_allow_transfer' => 'boolean',
             'domain_allow_own' => 'boolean',

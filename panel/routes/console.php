@@ -122,7 +122,33 @@ Artisan::command('registrars:sync', function (App\Services\RegistrarSync $sync) 
     }
 })->purpose('Copy registrar account transactions so domain costs and profit stay current');
 
+// The WHMCS-style daily jobs. Each records its run for Settings > Automation.
+$daily = [
+    'billing:invoice-reminders' => ['invoiceReminders', 'invoice_reminders', 'Email payment reminders and overdue notices'],
+    'billing:domain-reminders' => ['domainReminders', 'domain_reminders', 'Email domain expiry reminders'],
+    'billing:expire-domains' => ['expireDomains', 'domain_expiry', 'Mark domains past their expiry date as expired'],
+    'billing:terminate' => ['terminate', 'terminations', 'Terminate end-of-cycle and long-overdue services'],
+    'billing:update-usage' => ['updateUsage', 'usage', 'Refresh disk and bandwidth usage from the servers'],
+    'domains:sync' => ['syncDomains', 'domain_sync', 'Copy expiry and status from the registrars'],
+];
+foreach ($daily as $name => [$method, $task, $purpose]) {
+    Artisan::command($name, function (App\Services\AutomationService $automation) use ($method, $task) {
+        $count = $automation->{$method}();
+        ActivityLog::record('automation.run', context: ['task' => $task, 'count' => $count]);
+        $this->info("{$task}: {$count}");
+    })->purpose($purpose);
+}
+
+// Proves cron is calling the scheduler; Settings > Automation warns when this goes stale.
+Schedule::call(fn () => Illuminate\Support\Facades\Cache::put('scheduler.heartbeat', now()->toISOString(), now()->addDay()))->everyMinute()->name('scheduler-heartbeat');
+
 Schedule::command('billing:renewals')->dailyAt('01:00');
+Schedule::command('billing:expire-domains')->dailyAt('01:15');
+Schedule::command('billing:terminate')->dailyAt('02:30');
+Schedule::command('billing:invoice-reminders')->dailyAt('09:00');
+Schedule::command('billing:domain-reminders')->dailyAt('09:15');
+Schedule::command('domains:sync')->dailyAt('04:30')->withoutOverlapping();
+Schedule::command('billing:update-usage')->dailyAt('05:00')->withoutOverlapping();
 Schedule::command('registrars:sync')->dailyAt('04:00');
 Schedule::command('billing:suspend-overdue')->dailyAt('02:00');
 Schedule::command('tickets:auto-close')->dailyAt('03:00');
