@@ -170,6 +170,7 @@ Route::prefix('api')->group(function () {
         Route::get('servers/{server}/costs', [Admin\ServerController::class, 'costs']);
         Route::post('servers/{server}/costs', [Admin\ServerController::class, 'storeCost']);
         Route::delete('servers/{server}/costs/{cost}', [Admin\ServerController::class, 'destroyCost']);
+        Route::post('servers/probe', [Admin\ServerController::class, 'probe']);
         Route::apiResource('servers', Admin\ServerController::class)->except('show');
         Route::post('servers/{server}/test', [Admin\ServerController::class, 'test']);
 

@@ -15,6 +15,9 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
 {
     use GeneratesUsername;
 
+    /** @var array{token: string, cookie: string}|null the WHM session when signing in with a password */
+    private ?array $session = null;
+
     public function __construct(private Server $server) {}
 
     public function testConnection(): void
@@ -117,15 +120,23 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
         // Pasted values often carry a scheme, a path or stray whitespace, and any of those breaks the login.
         $host = preg_replace('#^\w+://|[:/].*$#', '', trim((string) $this->server->hostname));
         $username = trim((string) $this->server->username);
-        $secret = trim((string) $this->server->credentials);
+        // A token never has spaces; a password is used exactly as saved.
+        $secret = $this->server->auth_type === 'password' ? (string) $this->server->credentials : trim((string) $this->server->credentials);
 
         if ($username === '' || $secret === '') {
             throw new RuntimeException('Save the WHM username and '.($this->server->auth_type === 'password' ? 'password' : 'API token').' first.');
         }
 
-        $request = $this->server->auth_type === 'password'
-            ? Http::withBasicAuth($username, $secret)
-            : Http::withHeaders(['Authorization' => "whm {$username}:{$secret}"]);
+        // A password signs in like the browser does and uses that session: many WHM servers refuse
+        // HTTP Basic auth ("Access denied") even with the right password.
+        if ($this->server->auth_type === 'password') {
+            $session = $this->session ??= $this->login($host, $port, $username, $secret);
+            $request = Http::withHeaders(['Cookie' => $session['cookie']]);
+            $base = "https://{$host}:{$port}{$session['token']}";
+        } else {
+            $request = Http::withHeaders(['Authorization' => "whm {$username}:{$secret}"]);
+            $base = "https://{$host}:{$port}";
+        }
 
         try {
             $response = $request
@@ -133,7 +144,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
                 ->withOptions(['verify' => $this->server->verify_tls])
                 ->connectTimeout(15)
                 ->timeout($timeout)
-                ->get("https://{$host}:{$port}/json-api/{$function}", [
+                ->get("{$base}/json-api/{$function}", [
                     'api.version' => 1,
                     ...$params,
                 ]);
@@ -156,6 +167,44 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
         }
 
         return $result;
+    }
+
+    /**
+     * Signs in to WHM with the password, as the login page does.
+     *
+     * @return array{token: string, cookie: string} the /cpsessNNN path prefix and the session cookie
+     */
+    private function login(string $host, int|string $port, string $username, string $password): array
+    {
+        try {
+            $response = Http::asForm()
+                ->acceptJson()
+                ->withOptions(['verify' => $this->server->verify_tls])
+                ->connectTimeout(15)
+                ->timeout(30)
+                ->post("https://{$host}:{$port}/login/?login_only=1", ['user' => $username, 'pass' => $password]);
+        } catch (ConnectionException $e) {
+            throw new RuntimeException("Could not reach {$host}:{$port}. ".$e->getMessage());
+        }
+
+        $json = $response->json();
+        $token = is_array($json) ? (string) ($json['security_token'] ?? '') : '';
+        $cookie = collect($response->toPsrResponse()->getHeader('Set-Cookie'))
+            ->map(fn ($c) => trim(explode(';', $c, 2)[0]))
+            ->filter(fn ($c) => str_starts_with($c, 'whostmgrsession='))
+            ->first();
+
+        if ($token === '' || ! $cookie || (int) ($json['status'] ?? 0) !== 1) {
+            $reason = is_array($json) ? ($json['message'] ?? null) : null;
+            $reason = match ($reason) {
+                'invalid_login', null => 'the username or password is wrong',
+                default => str_replace('_', ' ', (string) $reason),
+            };
+
+            throw new RuntimeException("WHM login failed (HTTP {$response->status()}): {$reason}. Check the username and password, that the account has no two-factor login, and that cPHulk has not blocked this panel's IP after failed tries. An API token avoids all of this.");
+        }
+
+        return ['token' => '/'.ltrim($token, '/'), 'cookie' => $cookie];
     }
 
     /** Turns a refused request into something the admin can act on, using WHM's own reason when it gives one. */

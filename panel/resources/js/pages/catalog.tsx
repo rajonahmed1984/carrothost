@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, FolderPlus, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Eye, EyeOff, FolderPlus, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
@@ -590,7 +590,7 @@ export function TldsPage() {
     return <QueryState query={query}>{query.data && <TldTable key={query.dataUpdatedAt} data={query.data} />}</QueryState>;
 }
 
-type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; connection_ok?: boolean | null; connection_error?: string | null; connection_checked_at?: string | null; services_count: number; this_month: Cell };
+type ServerRow = { id: number; name: string; module: string; hostname: string; port: number | null; username: string | null; auth_type: string; verify_tls: boolean; max_accounts: number; is_active: boolean; has_credentials?: boolean; connection_ok?: boolean | null; connection_error?: string | null; connection_checked_at?: string | null; services_count: number; this_month: Cell };
 
 function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: () => void }) {
     const qc = useQueryClient();
@@ -600,6 +600,11 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
         username: server?.username ?? '', auth_type: server?.auth_type ?? 'token', credentials: '', verify_tls: server?.verify_tls ?? true, max_accounts: String(server?.max_accounts ?? 0), is_active: server?.is_active ?? true,
     });
     const currentCost = server ? Number(server.this_month.cost).toFixed(2) : '';
+    const [showSecret, setShowSecret] = useState(false);
+    const secretLabel = form.module === 'webuzo' ? 'Access Hash' : form.auth_type === 'password' ? 'Password' : 'API token';
+    const probe = useMutation({
+        mutationFn: async () => (await api.post<{ ok: boolean; message: string }>('/servers/probe', { ...form, server_id: server?.id, port: form.port || null, max_accounts: Number(form.max_accounts) })).data,
+    });
     const [cost, setCost] = useState({ amount: currentCost, starts_on: thisMonth() });
     const save = useMutation({
         mutationFn: async () => {
@@ -636,7 +641,26 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                             <Select value={form.auth_type} onChange={(e) => setForm({ ...form, auth_type: e.target.value })}><option value="token">API token</option><option value="password">Password</option></Select>
                         </Field>
                     )}
-                    <Field label={form.module === 'webuzo' ? 'Access Hash' : form.auth_type === 'password' ? 'Password' : 'API token'} hint={server ? 'Leave blank to keep the current value' : 'Stored encrypted'}><Input type="password" autoComplete="new-password" value={form.credentials} onChange={(e) => setForm({ ...form, credentials: e.target.value })} /></Field>
+                    <Field label={secretLabel} hint={server?.has_credentials ? `A ${secretLabel.toLowerCase()} is saved. Leave blank to keep it, or type a new one.` : server ? `No ${secretLabel.toLowerCase()} saved yet` : 'Stored encrypted'}>
+                        <div className="relative">
+                            {/* A random name and no autocomplete keep the browser from filling in the panel's own login password. */}
+                            <input
+                                className="ui-input pr-10"
+                                type={showSecret ? 'text' : 'password'}
+                                name={`server-secret-${server?.id ?? 'new'}`}
+                                autoComplete="new-password"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                spellCheck={false}
+                                placeholder={server?.has_credentials ? 'Saved (hidden)' : ''}
+                                value={form.credentials}
+                                onChange={(e) => { setForm({ ...form, credentials: e.target.value }); probe.reset(); }}
+                            />
+                            <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer p-1 text-slate-400 hover:text-slate-700" aria-label={showSecret ? 'Hide' : 'Show'} onClick={() => setShowSecret(!showSecret)}>
+                                {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                        </div>
+                    </Field>
                     <Field label="Max accounts" hint="0 means no limit"><Input type="number" min="0" value={form.max_accounts} onChange={(e) => setForm({ ...form, max_accounts: e.target.value })} /></Field>
                 </div>
                 <div className="grid gap-3 rounded-xl border border-slate-200 p-3 sm:grid-cols-2">
@@ -645,8 +669,17 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                 </div>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.verify_tls} onChange={(e) => setForm({ ...form, verify_tls: e.target.checked })} /> Verify the TLS certificate</label>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Use for new accounts</label>
-                <ErrorNote error={save.error} />
-                <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save server</Button></div>
+                {probe.data && (
+                    <p role="status" className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-xs ${probe.data.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+                        {probe.data.ok ? <CheckCircle2 size={14} className="mt-0.5 shrink-0" /> : <XCircle size={14} className="mt-0.5 shrink-0" />} {probe.data.message}
+                    </p>
+                )}
+                <ErrorNote error={save.error ?? probe.error} />
+                <div className="flex flex-wrap justify-end gap-2">
+                    <Button type="button" variant="ghost" className="mr-auto" disabled={probe.isPending} onClick={() => probe.mutate()} title="Try these details without saving"><PlugZap size={14} /> {probe.isPending ? 'Testing...' : 'Test connection'}</Button>
+                    <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button disabled={save.isPending}>Save server</Button>
+                </div>
             </form>
         </Modal>
     );

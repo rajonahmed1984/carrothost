@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo('/login');
         // Gateways post here from their own servers and carry no CSRF token.
         $middleware->validateCsrfTokens(except: ['pay/*']);
+        // A password or token is kept exactly as typed; spaces can be part of it.
+        $middleware->trimStrings(except: ['credentials', 'api_key']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(fn ($request) => $request->is('api/*'));

@@ -23,6 +23,7 @@ class ServerController extends Controller
 
         return $servers->map(fn (Server $s) => [
             ...$s->toArray(),
+            'has_credentials' => $s->credentials !== null && $s->credentials !== '',
             'this_month' => $report[$s->id]['months'][$month->format('Y-m')] ?? ['cost' => '0.00', 'sales' => '0.00', 'profit' => '0.00'],
         ]);
     }
@@ -142,6 +143,33 @@ class ServerController extends Controller
         ])->save();
 
         return [...$result, 'checked_at' => $server->connection_checked_at];
+    }
+
+    /**
+     * Tests the values in the form without saving them. A blank secret on an existing
+     * server uses the saved one. The saved connection status is left alone.
+     */
+    public function probe(Request $request)
+    {
+        $data = $this->validated($request);
+        $saved = $request->filled('server_id') ? Server::findOrFail($request->integer('server_id')) : null;
+        $server = ($saved?->replicate() ?? new Server)->forceFill(collect($data)->except(empty($data['credentials']) ? ['credentials'] : [])->all());
+        $class = config("billing.provisioning_modules.{$server->module}.class");
+
+        if (! $class) {
+            return ['ok' => false, 'message' => 'This module is not connected yet.'];
+        }
+        if (! $server->credentials) {
+            return ['ok' => false, 'message' => 'Enter the password or token to test.'];
+        }
+
+        try {
+            (new $class($server))->testConnection();
+
+            return ['ok' => true, 'message' => 'Connection succeeded with these details. Save to keep them.'];
+        } catch (Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
     }
 
     private function validated(Request $request): array
