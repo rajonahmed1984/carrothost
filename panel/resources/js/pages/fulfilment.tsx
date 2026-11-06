@@ -1,9 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status } from '../ui';
 import { alertDialog, ask } from '../dialog';
+
+/** The status tab, kept in the URL (?status=) so dashboard cards can link straight to a filtered list. */
+function useStatusParam(): [string, (value: string) => void] {
+    const [params, setParams] = useSearchParams();
+    const status = params.get('status') ?? '';
+    const set = (value: string) => {
+        const next = new URLSearchParams(params);
+        if (value) next.set('status', value); else next.delete('status');
+        setParams(next, { replace: true });
+    };
+
+    return [status, set];
+}
 
 export type Service = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; provision_status: string;
@@ -58,7 +71,7 @@ export function ServiceActions({ service }: { service: Service }) {
 }
 
 export function ServicesPage() {
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useStatusParam();
     const [search, setSearch] = useState('');
     const [group, setGroup] = useState('');
     const groups = useQuery({ queryKey: ['product-groups'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/product-groups')).data });
@@ -94,6 +107,7 @@ export function ServicesPage() {
                         { key: 'suspended', label: 'Suspended' },
                         { key: 'terminated', label: 'Terminated' },
                         { key: 'cancelled', label: 'Cancelled' },
+                        { key: 'needs_action', label: 'Needs Action' },
                     ],
                 }}
                 params={params}
@@ -172,7 +186,7 @@ function CompleteDomain({ domain, onClose }: { domain: Domain; onClose: () => vo
 
 export function DomainsPage() {
     const [completing, setCompleting] = useState<Domain | null>(null);
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useStatusParam();
     const [search, setSearch] = useState('');
 
     const params: Record<string, string> = {
@@ -196,6 +210,7 @@ export function DomainsPage() {
                         { key: 'expired', label: 'Expired' },
                         { key: 'cancelled', label: 'Cancelled' },
                         { key: 'fraud', label: 'Fraud' },
+                        { key: 'needs_action', label: 'Needs Action' },
                     ],
                 }}
                 params={params}

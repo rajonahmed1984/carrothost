@@ -17,6 +17,7 @@ export type Dashboard = {
     pending_orders: number;
     suspended_services: number;
     pending_module_actions: number;
+    pending_module_actions_split?: { services: number; domains: number };
     billing: { today: string; month: string; year: string; all_time: string };
     charts: Record<Range, ChartRow[]>;
     automation: { renewal_invoices: number; suspensions: number; provisioned: number; domains_expiring: number; last_run_human: string | null };
@@ -358,8 +359,15 @@ export function DashboardPage() {
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <Tile to="/admin/pending-orders" value={d.pending_orders} label="Pending Orders" Icon={ShoppingCart} color="#17733f" />
                         <Tile to="/admin/overdue-invoices" value={d.overdue_invoices} label="Overdue Invoices" Icon={FileWarning} color="#be123c" />
-                        <Tile to="/admin/products-services" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
-                        <Tile to="/admin/products-services" value={d.pending_module_actions} label="Pending Module Actions" Icon={Wrench} color="#0f2233" />
+                        <Tile to="/admin/products-services?status=suspended" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
+                        {/* Services waiting on an admin first; the domain list when only domains wait. */}
+                        <Tile
+                            to={d.pending_module_actions_split && d.pending_module_actions_split.services === 0 && d.pending_module_actions_split.domains > 0 ? '/admin/domain-registrations?status=needs_action' : '/admin/products-services?status=needs_action'}
+                            value={d.pending_module_actions}
+                            label="Pending Module Actions"
+                            Icon={Wrench}
+                            color="#0f2233"
+                        />
                     </div>
 
                     <div className="grid items-start gap-4 xl:grid-cols-3">

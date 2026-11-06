@@ -162,7 +162,9 @@ export function OrderDetailPage() {
     const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
     const [sendToRegistrar, setSendToRegistrar] = useState(true);
     const [sendConfirmationEmail, setSendConfirmationEmail] = useState(true);
-    const [domainRegistrar, setDomainRegistrar] = useState('resellcube');
+    // Per domain: the registrar chosen here, else the domain's own ('' = none).
+    const [domainRegistrars, setDomainRegistrars] = useState<Record<number, string>>({});
+    const registrarOf = (d: { id: number; registrar: string | null }) => domainRegistrars[d.id] ?? d.registrar ?? '';
 
     const [serviceUsernames, setServiceUsernames] = useState<Record<number, string>>({});
     const [servicePasswords, setServicePasswords] = useState<Record<number, string>>({});
@@ -185,6 +187,7 @@ export function OrderDetailPage() {
             run_module_create: runModuleCreate,
             send_welcome_email: sendWelcomeEmail,
             services: Object.keys(o?.setup ?? {}).map((id) => ({ id: Number(id), ...login(Number(id)) })),
+            domains: (o?.domains ?? []).map((d) => ({ id: d.id, registrar: registrarOf(d) || null })),
         })).data,
         onSuccess: (fresh) => {
             qc.setQueryData(['/orders', String(fresh.id)], fresh);
@@ -192,6 +195,7 @@ export function OrderDetailPage() {
             setServiceUsernames({});
             setServicePasswords({});
             setServiceServers({});
+            setDomainRegistrars({});
         },
         onError: (e) => alertDialog(errorMessage(e)),
     });
@@ -550,13 +554,13 @@ export function OrderDetailPage() {
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="text-slate-600 font-medium">Registrar:</span>
                                                             <select
-                                                                value={domainRegistrar}
-                                                                onChange={(e) => setDomainRegistrar(e.target.value)}
+                                                                value={registrarOf(d)}
+                                                                onChange={(e) => setDomainRegistrars({ ...domainRegistrars, [d.id]: e.target.value })}
                                                                 className="ui-input py-1 px-2 text-xs min-w-[180px]"
                                                             >
                                                                 <option value="resellcube">ResellCube</option>
                                                                 <option value="stargate">StarGate / UK2</option>
-                                                                <option value="manual">Manual / Email</option>
+                                                                <option value="">None</option>
                                                             </select>
                                                         </div>
                                                         <label className="flex items-center gap-1.5 text-slate-700 cursor-pointer select-none">

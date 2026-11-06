@@ -327,7 +327,30 @@ type Tld = {
     id: number; tld: string; registrar: string | null; register_price: string; renew_price: string; transfer_price: string;
     register_price_usd?: string | null; renew_price_usd?: string | null; transfer_price_usd?: string | null;
     is_active: boolean; is_spotlight: boolean; epp_required: boolean;
+    /** What it costs at its auto-registration registrar; the _bdt amounts are null without a rate. */
+    cost?: { currency: string; register: string | null; renew: string | null; transfer: string | null; register_bdt: string | null; renew_bdt: string | null; transfer_bdt: string | null } | null;
 };
+
+/** Registrar cost beside our price, in BDT; the registrar's own currency on hover. Red when we sell below cost. */
+function RegistrarCost({ t }: { t: Tld | undefined }) {
+    const c = t?.cost;
+    if (!t || !c || (c.register === null && c.renew === null)) {
+        return <span className="text-xs text-slate-300" title={t?.registrar ? 'Not synced: press Sync in the Registrar TLD list' : 'No auto-registration registrar'}>-</span>;
+    }
+    if (c.currency !== 'BDT' && c.register_bdt === null) {
+        return <span className="text-xs text-slate-500" title="Set the USD rate in Settings > Currencies to see it in BDT">{c.register !== null ? money(c.register, c.currency) : '-'} reg</span>;
+    }
+    const below = (price: string, cost: string | null) => cost !== null && Number(price) < Number(cost);
+    const original = c.currency !== 'BDT' ? `${c.currency}: ${c.register ?? '-'} register, ${c.renew ?? '-'} renew, ${c.transfer ?? '-'} transfer` : undefined;
+
+    return (
+        <span className="text-xs whitespace-nowrap text-slate-600" title={original}>
+            <span className={below(t.register_price, c.register_bdt) ? 'font-semibold text-rose-600' : ''}>{c.register_bdt !== null ? money(c.register_bdt) : '-'}</span> <span className="text-slate-400">reg</span>
+            {' · '}
+            <span className={below(t.renew_price, c.renew_bdt) ? 'font-semibold text-rose-600' : ''}>{c.renew_bdt !== null ? money(c.renew_bdt) : '-'}</span> <span className="text-slate-400">renew</span>
+        </span>
+    );
+}
 
 function TldForm({ tld, preset, onClose }: { tld: Tld | null; preset?: TldPreset; onClose: () => void }) {
     const qc = useQueryClient();
@@ -623,12 +646,13 @@ function TldTable({ data }: { data: Tld[] }) {
                 <Card title={`Domain pricing (${rows.length})`} action={<div className="flex items-center gap-2"><input className="ui-input h-9 w-40" placeholder="Search TLD" aria-label="Search TLDs" value={search} onChange={(e) => setSearch(e.target.value)} /><Button variant="ghost" onClick={() => setBulkAdd('new')}><Layers size={14} /> Bulk Add</Button><Button onClick={() => setPricing('new')}><Plus size={14} /> Add TLD</Button></div>}>
                     {rows.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">No TLDs yet. Add one to sell domains.</p> : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[46rem] text-left text-sm">
+                            <table className="w-full min-w-[56rem] text-left text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-200 text-[11px] text-slate-500 uppercase">
                                         <th className="w-8 px-3 py-3"><input type="checkbox" aria-label="Tick all" checked={allTicked} onChange={() => setSelected(allTicked ? [] : rows.map((r) => r.id))} /></th>
                                         <th className="px-3 py-3 font-semibold">TLD</th>
-                                        <th className="px-3 py-3 font-semibold">Pricing / yr</th>
+                                        <th className="px-3 py-3 font-semibold" title="What the auto-registration registrar charges you, per year, in BDT">Registrar cost / yr</th>
+                                        <th className="px-3 py-3 font-semibold">Your price / yr</th>
                                         <th className="px-3 py-3 text-center font-semibold">Spotlight</th>
                                         <th className="px-3 py-3 text-center font-semibold">EPP Code</th>
                                         <th className="px-3 py-3 font-semibold">Auto Registration</th>
@@ -637,7 +661,7 @@ function TldTable({ data }: { data: Tld[] }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {shown.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-sm text-slate-500">No TLD matches "{search}".</td></tr>}
+                                    {shown.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-sm text-slate-500">No TLD matches "{search}".</td></tr>}
                                     {shown.map((r) => {
                                         const i = rows.indexOf(r);
                                         const t = byId.get(r.id);
@@ -647,6 +671,7 @@ function TldTable({ data }: { data: Tld[] }) {
                                             <tr key={r.id} className={`border-b border-slate-100 last:border-0 ${selected.includes(r.id) ? 'bg-sky-50/60' : 'hover:bg-slate-50/70'}`}>
                                                 <td className="px-3 py-2"><input type="checkbox" aria-label={`Tick ${r.tld}`} checked={selected.includes(r.id)} onChange={(e) => setSelected(e.target.checked ? [...selected, r.id] : selected.filter((x) => x !== r.id))} /></td>
                                                 <td className="px-3 py-2 font-semibold text-slate-900">{r.tld}</td>
+                                                <td className="px-3 py-2"><RegistrarCost t={t} /></td>
                                                 <td className="px-3 py-2">
                                                     <button type="button" className="cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1 text-left text-xs text-slate-600 hover:border-[var(--accent)]" onClick={() => t && setPricing(t)}>
                                                         {t ? <>{money(t.register_price)} <span className="text-slate-400">reg</span> · {money(t.renew_price)} <span className="text-slate-400">renew</span></> : 'Pricing'}

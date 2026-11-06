@@ -21,6 +21,8 @@ class DashboardController extends Controller
             'pending_orders' => Order::where('status', 'pending')->count(),
             'suspended_services' => Service::where('status', 'suspended')->count(),
             'pending_module_actions' => $dashboard->pendingModuleActions(),
+            // Where the tile goes: services first, the domain list when only domains wait.
+            'pending_module_actions_split' => $dashboard->pendingModuleActionsSplit(),
             'billing' => $dashboard->billing(),
             'charts' => [
                 'today' => $dashboard->chart('today'),

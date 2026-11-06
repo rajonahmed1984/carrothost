@@ -21,7 +21,10 @@ class DomainController extends Controller
     public function index(Request $request)
     {
         return Domain::with('client:id,name,email')
-            ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            // "needs_action" is the dashboard's Pending Module Actions: failed or waiting for an admin.
+            ->when($request->query('status'), fn ($q, $status) => $status === 'needs_action'
+                ? $q->whereIn('provision_status', \App\Services\DashboardService::DOMAIN_ACTIONS)
+                : $q->where('status', $status))
             ->when($request->query('q'), function ($q, $search) {
                 $q->where(function ($w) use ($search) {
                     $w->where('id', 'like', "%{$search}%")

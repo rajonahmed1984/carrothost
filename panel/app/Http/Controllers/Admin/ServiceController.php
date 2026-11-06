@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Server;
 use App\Models\Service;
 use App\Models\Client;
+use App\Services\DashboardService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
 use App\Support\PaymentMethods;
@@ -22,7 +23,10 @@ class ServiceController extends Controller
     public function index(Request $request)
     {
         return Service::with(['client:id,name,email', 'product:id,name,module,product_group_id', 'product.group:id,name', 'server:id,name'])
-            ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            // "needs_action" is the dashboard's Pending Module Actions: failed, set up by hand, or awaiting accept.
+            ->when($request->query('status'), fn ($q, $status) => $status === 'needs_action'
+                ? $q->whereIn('provision_status', DashboardService::SERVICE_ACTIONS)
+                : $q->where('status', $status))
             ->when($request->query('group'), fn ($q, $group) => $q->whereHas('product', fn ($p) => $group === 'none'
                 ? $p->whereNull('product_group_id')
                 : $p->where('product_group_id', (int) $group)))

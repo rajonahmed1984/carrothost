@@ -108,6 +108,47 @@ class ProductModuleTest extends TestCase
         $this->postJson("/api/orders/{$order->id}/accept")->assertJsonValidationErrors('order');
     }
 
+    public function test_an_imported_order_offers_its_planned_username_and_creates_the_account(): void
+    {
+        Queue::fake();
+        [$order, $service] = $this->orderFor('accept');
+        // As imported from WHMCS: pending, waiting for accept, with the username WHMCS planned.
+        $service->update(['provision_status' => 'awaiting_accept', 'remote_id' => 'borhanud']);
+        $domain = \App\Models\Domain::create(['client_id' => $service->client_id, 'order_id' => $order->id, 'name' => 'borhan.com', 'action' => 'register', 'registrar' => 'resellcube', 'recurring_amount' => 1600]);
+
+        $setup = $this->actingAs($this->admin())->getJson("/api/orders/{$order->id}")->assertOk()->json("setup.{$service->id}");
+        $this->assertSame('borhanud', $setup['username']);
+        $this->assertNotEmpty($setup['password']);
+
+        $this->postJson("/api/orders/{$order->id}/accept", [
+            'run_module_create' => true,
+            'services' => [['id' => $service->id, 'username' => 'borhan1', 'password' => 'Str0ng-Pass!x']],
+            'domains' => [['id' => $domain->id, 'registrar' => null]],
+        ])->assertOk();
+
+        $service->refresh();
+        // Cleared, or the create job would think the account already exists and skip it.
+        $this->assertNull($service->remote_id);
+        $this->assertSame(['queued', 'borhan1'], [$service->provision_status, $service->credentials['username']]);
+        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->serviceId === $service->id && $job->action === 'create');
+        $this->assertNull($domain->refresh()->registrar, 'None was chosen.');
+    }
+
+    public function test_dashboard_cards_lead_to_matching_lists(): void
+    {
+        [, $waiting] = $this->orderFor('accept');
+        $waiting->update(['provision_status' => 'awaiting_accept']);
+        $suspended = \App\Models\Service::create(['client_id' => $waiting->client_id, 'product_id' => $waiting->product_id, 'cycle' => 'monthly', 'recurring_amount' => '300.00', 'status' => 'suspended', 'provision_status' => 'done']);
+        $this->actingAs($this->admin());
+
+        $dashboard = $this->getJson('/api/dashboard')->assertOk();
+        $dashboard->assertJsonPath('suspended_services', 1)->assertJsonPath('pending_module_actions_split.services', 1);
+
+        $this->assertSame([$suspended->id], array_column($this->getJson('/api/services?status=suspended')->json('data'), 'id'));
+        $this->assertSame([$waiting->id], array_column($this->getJson('/api/services?status=needs_action')->json('data'), 'id'));
+        $this->getJson('/api/domains?status=needs_action')->assertOk()->assertJsonPath('total', 0);
+    }
+
     public function test_manual_mode_never_provisions(): void
     {
         Queue::fake();

@@ -61,8 +61,10 @@ class OrderController extends Controller
             // Orders placed before the amount was saved fall back to their invoices.
             'amount' => (float) $order->amount > 0 ? $order->amount : number_format((float) $order->invoices->sum('total'), 2, '.', ''),
             // A fresh, unique username and a strong password for each account not yet created, as WHMCS offers.
-            'setup' => $order->services->filter(fn (Service $s) => ! $s->remote_id)->mapWithKeys(function (Service $s) use (&$used) {
-                $username = $s->credentials['username'] ?? null;
+            // A service waiting for accept was never created, even when it has a username: orders
+            // imported from WHMCS carry the one WHMCS planned to use, so it is offered for editing.
+            'setup' => $order->services->filter(fn (Service $s) => ! $s->remote_id || $s->provision_status === 'awaiting_accept')->mapWithKeys(function (Service $s) use (&$used) {
+                $username = $s->credentials['username'] ?? ($s->provision_status === 'awaiting_accept' ? $s->remote_id : null);
                 if (! $username) {
                     $username = AccountCredentials::username((string) ($s->domain ?: $s->product->name), $s->id);
                     // Two accounts in one order must not get the same name.
@@ -95,6 +97,10 @@ class OrderController extends Controller
             'services.*.id' => 'required|integer',
             'services.*.username' => ['nullable', 'string', 'max:16', 'regex:'.AccountCredentials::USERNAME_PATTERN],
             'services.*.password' => 'nullable|string|min:8|max:64',
+            // The registrar each domain goes to; null means none (handled by hand).
+            'domains' => 'array',
+            'domains.*.id' => 'required|integer',
+            'domains.*.registrar' => ['nullable', Rule::in(array_keys(config('billing.registrars')))],
             'services.*.server_id' => 'nullable|integer|exists:servers,id',
         ], ['services.*.username.regex' => 'A username starts with a letter and has only lowercase letters and digits.']);
         $runModule = $request->boolean('run_module_create', true);
@@ -118,7 +124,8 @@ class OrderController extends Controller
 
         foreach ($waiting as $service) {
             $pick = $chosen[$service->id] ?? [];
-            $credentials = array_filter(['username' => $pick['username'] ?? null, 'password' => $pick['password'] ?? null]);
+            // A username carried over from WHMCS is only a plan until the account is created.
+            $credentials = array_filter(['username' => $pick['username'] ?? $service->remote_id, 'password' => $pick['password'] ?? null]);
             $changes = ['status' => 'active'];
             if ($credentials) {
                 $changes['credentials'] = $credentials;
@@ -128,7 +135,8 @@ class OrderController extends Controller
             }
 
             if ($runModule) {
-                $service->update([...$changes, 'provision_status' => 'queued']);
+                // Cleared so the create job runs: it skips accounts that already have a remote id.
+                $service->update([...$changes, 'remote_id' => null, 'provision_status' => 'queued']);
                 ProvisionService::dispatch($service->id, 'create', $welcome);
             } else {
                 // Set up by hand: keep the login given here as the account's.
@@ -139,8 +147,12 @@ class OrderController extends Controller
             }
         }
 
+        $registrars = collect($data['domains'] ?? [])->keyBy('id');
         foreach ($order->domains as $domain) {
-            $domain->update(['status' => 'active']);
+            $domain->update([
+                'status' => 'active',
+                ...$registrars->has($domain->id) ? ['registrar' => $registrars[$domain->id]['registrar'] ?? null] : [],
+            ]);
         }
 
         ActivityLog::record('order.accepted', $order);

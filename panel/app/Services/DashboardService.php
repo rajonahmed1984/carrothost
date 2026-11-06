@@ -161,10 +161,23 @@ class DashboardService
             ->all();
     }
 
+    /** Provision states that wait on an admin, counted as Pending Module Actions. */
+    public const SERVICE_ACTIONS = ['failed', 'manual_required', 'awaiting_accept'];
+
+    public const DOMAIN_ACTIONS = ['failed', 'manual_required'];
+
     public function pendingModuleActions(): int
     {
-        return Service::whereIn('provision_status', ['failed', 'manual_required', 'awaiting_accept'])->count()
-            + Domain::whereIn('provision_status', ['failed', 'manual_required'])->count();
+        return array_sum($this->pendingModuleActionsSplit());
+    }
+
+    /** @return array{services: int, domains: int} */
+    public function pendingModuleActionsSplit(): array
+    {
+        return [
+            'services' => Service::whereIn('provision_status', self::SERVICE_ACTIONS)->count(),
+            'domains' => Domain::whereIn('provision_status', self::DOMAIN_ACTIONS)->count(),
+        ];
     }
 
     private function state(bool $ok, string $failLevel, string $okMessage, string $failMessage): array

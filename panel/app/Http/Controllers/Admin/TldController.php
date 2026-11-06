@@ -9,6 +9,7 @@ use App\Models\RegistrarTld;
 use App\Services\RegistrarTldSync;
 use RuntimeException;
 use App\Models\Tld;
+use App\Support\Currency;
 use App\Support\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -18,9 +19,27 @@ use Illuminate\Validation\ValidationException;
 
 class TldController extends Controller
 {
+    /** Our TLDs, each with what it costs at its auto-registration registrar (from the synced cost list). */
     public function index()
     {
-        return Tld::orderBy('sort_order')->orderBy('tld')->get();
+        $tlds = Tld::orderBy('sort_order')->orderBy('tld')->get();
+        $costs = RegistrarTld::whereIn('tld', $tlds->pluck('tld'))->get()->groupBy('registrar_code')->map->keyBy('tld');
+
+        return $tlds->map(function (Tld $t) use ($costs) {
+            $c = $t->registrar ? $costs->get($t->registrar)?->get($t->tld) : null;
+            $rate = $c ? Currency::bdtRate($c->currency) : null;
+            $bdt = fn ($v) => $v !== null && $rate ? Currency::fmt((float) $v * $rate) : null;
+
+            return [
+                ...$t->toArray(),
+                // In BDT, like our prices, so the two compare directly; null when not synced or no rate.
+                'cost' => $c ? [
+                    'currency' => $c->currency,
+                    'register' => $c->register_cost, 'renew' => $c->renew_cost, 'transfer' => $c->transfer_cost,
+                    'register_bdt' => $bdt($c->register_cost), 'renew_bdt' => $bdt($c->renew_cost), 'transfer_bdt' => $bdt($c->transfer_cost),
+                ] : null,
+            ];
+        })->values();
     }
 
     public function lookup()

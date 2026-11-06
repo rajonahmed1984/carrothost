@@ -57,6 +57,21 @@ class TldBulkAddTest extends TestCase
         $this->assertFalse(Tld::where('tld', '.io')->exists());
     }
 
+    public function test_the_pricing_list_shows_each_tlds_registrar_cost_in_bdt(): void
+    {
+        Settings::save(['usd_rate' => '120']);
+        Tld::create(['tld' => '.net', 'registrar' => 'stargate', 'register_price' => 1500, 'renew_price' => 1800, 'transfer_price' => 1500]);
+        Tld::create(['tld' => '.org', 'register_price' => 1500, 'renew_price' => 1800, 'transfer_price' => 1500]);
+        RegistrarTld::create(['registrar_code' => 'stargate', 'tld' => '.net', 'currency' => 'USD', 'register_cost' => '10.00', 'renew_cost' => '12.50', 'transfer_cost' => null]);
+        RegistrarTld::create(['registrar_code' => 'resellcube', 'tld' => '.net', 'currency' => 'BDT', 'register_cost' => '999.00', 'renew_cost' => '999.00', 'transfer_cost' => null]);
+
+        $rows = collect($this->getJson('/api/tlds')->assertOk()->json())->keyBy('tld');
+
+        // Only the TLD's own registrar counts.
+        $this->assertSame(['USD', '10.00', '1200.00', '1500.00', null], [$rows['.net']['cost']['currency'], $rows['.net']['cost']['register'], $rows['.net']['cost']['register_bdt'], $rows['.net']['cost']['renew_bdt'], $rows['.net']['cost']['transfer_bdt']]);
+        $this->assertNull($rows['.org']['cost'], 'No registrar, no cost.');
+    }
+
     public function test_a_whole_registrar_list_fits_in_one_go(): void
     {
         $tlds = array_map(fn ($i) => ".t{$i}", range(1, 600));
