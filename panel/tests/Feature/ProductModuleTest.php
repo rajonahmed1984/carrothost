@@ -36,6 +36,26 @@ class ProductModuleTest extends TestCase
         return [$order, $order->services()->sole(), $order->invoices()->sole()];
     }
 
+    public function test_accepting_an_unpaid_order_sets_it_up_now_like_whmcs(): void
+    {
+        Queue::fake();
+        Server::create(['name' => 'Webuzo 1', 'module' => 'webuzo', 'hostname' => 'wz.test', 'username' => 'admin', 'credentials' => 'key']);
+        [$order, $service, $invoice] = $this->orderFor('payment');
+
+        $this->assertMatchesRegularExpression('/^\d{10}$/', (string) $order->order_number, 'A WHMCS-style number, not the ID.');
+        $this->assertNotSame((string) $order->id, $order->order_number);
+        $this->assertSame('unpaid', $invoice->status);
+
+        $this->actingAs($this->admin())->postJson("/api/orders/{$order->id}/accept", ['run_module_create' => true])->assertOk();
+        $this->assertSame('queued', $service->refresh()->provision_status);
+        Queue::assertPushed(ProvisionService::class, 1);
+
+        // Nothing is left to accept, and paying later does not create it again.
+        $this->postJson("/api/orders/{$order->id}/accept")->assertJsonValidationErrors('order');
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'TX-1', '300.00');
+        Queue::assertPushed(ProvisionService::class, 1);
+    }
+
     public function test_plans_are_loaded_live_from_the_server(): void
     {
         Http::fake(['*' => Http::response(['plans' => [

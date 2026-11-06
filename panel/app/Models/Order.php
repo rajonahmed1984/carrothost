@@ -10,6 +10,23 @@ class Order extends Model
 {
     protected $guarded = ['id'];
 
+    protected static function booted(): void
+    {
+        // A random 10-digit number like WHMCS's, so it is not the same as the ID and does not reveal the order count.
+        static::creating(function (Order $order) {
+            $order->order_number ??= self::newNumber();
+        });
+    }
+
+    public static function newNumber(): string
+    {
+        do {
+            $number = (string) random_int(1000000000, 9999999999);
+        } while (static::where('order_number', $number)->exists());
+
+        return $number;
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);

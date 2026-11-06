@@ -107,10 +107,18 @@ class OrderController extends Controller
         $welcome = $request->boolean('send_welcome_email', true);
         $chosen = collect($data['services'] ?? [])->keyBy('id');
 
-        $waiting = $order->services()->where('provision_status', 'awaiting_accept')->get();
+        // As in WHMCS, accepting sets up everything not set up yet, paid or not: services waiting for
+        // acceptance, and ones still waiting on the first payment or on an admin. Paying later does not
+        // create them twice, since a service already queued or created is skipped then.
+        $waiting = $order->services()
+            ->whereIn('status', ['pending', 'active'])
+            ->where(fn ($q) => $q->where('provision_status', 'awaiting_accept')
+                // An imported WHMCS service may carry its planned username before the account exists.
+                ->orWhere(fn ($q) => $q->whereNull('remote_id')->whereIn('provision_status', ['none', 'manual_required', 'failed'])))
+            ->get();
 
         if ($waiting->isEmpty()) {
-            throw ValidationException::withMessages(['order' => 'Nothing in this order is waiting to be accepted.']);
+            throw ValidationException::withMessages(['order' => 'Everything in this order is already set up or being set up.']);
         }
 
         foreach ($waiting as $service) {
