@@ -3,19 +3,22 @@ import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, Mail, Minus
 import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, money, type Page } from '../api';
-import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, type Tab } from '../ui';
+import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, useBranding, type Tab } from '../ui';
 import { confirmDialog } from '../dialog';
 
 const RichEditor = lazy(() => import('../editor'));
 
-export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
+export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; currency?: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
 
 export function ClientForm({ client, onClose }: { client: Client | null; onClose: () => void }) {
     const qc = useQueryClient();
+    const branding = useBranding();
     const [form, setForm] = useState({
         name: client?.name ?? '', company: client?.company ?? '', email: client?.email ?? '', phone: client?.phone ?? '',
         address: client?.address ?? '', city: client?.city ?? '', status: client?.status ?? 'active', password: '',
+        currency: client?.currency ?? branding.default_currency ?? 'BDT',
     });
+    const currencyChanged = !!client && (client.currency ?? 'BDT') !== form.currency;
     const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
     const save = useMutation({
         mutationFn: () => (client ? api.put(`/clients/${client.id}`, form) : api.post('/clients', form)),
@@ -41,6 +44,16 @@ export function ClientForm({ client, onClose }: { client: Client | null; onClose
                         <option value="active">Active</option><option value="inactive">Inactive</option><option value="closed">Closed</option>
                     </Select>
                 </Field>
+                <Field label="Currency" hint="The client's prices, invoices, renewals and credit are in this.">
+                    <Select value={form.currency} onChange={set('currency')}>
+                        {(branding.currencies ?? ['BDT', 'USD']).map((c) => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                </Field>
+                {currencyChanged && (
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        Saving converts this client's service and domain renewal amounts and credit balance from {client?.currency ?? 'BDT'} to {form.currency} at the current rate. Unpaid invoices must be paid or cancelled first; past invoices stay as they were.
+                    </p>
+                )}
                 <ErrorNote error={save.error} />
                 <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save client</Button></div>
             </form>
@@ -168,9 +181,15 @@ function NewOrder({ initialClient, onClose }: { initialClient: string; onClose: 
                 <Field label="Client">
                     <Select required value={clientId} onChange={(e) => setClientId(e.target.value)}>
                         <option value="">Select a client</option>
-                        {clients.data?.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
+                        {clients.data?.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.email}){c.currency && c.currency !== 'BDT' ? ` · ${c.currency}` : ''}</option>)}
                     </Select>
                 </Field>
+                {(() => {
+                    const cur = clients.data?.find((c) => String(c.id) === clientId)?.currency;
+                    return cur && cur !== 'BDT'
+                        ? <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">This client is billed in {cur}. Prices below are in BDT; the invoice uses each item's fixed {cur} price, or the BDT price converted at the rate in Settings &gt; Currencies.</p>
+                        : null;
+                })()}
 
                 {services.map((s, i) => {
                     const product = products.data?.find((p) => String(p.id) === s.product_id);

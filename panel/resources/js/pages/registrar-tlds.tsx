@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { Layers, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
@@ -17,9 +17,16 @@ const PAGE = 100;
  * What each registrar sells and what it costs us, beside our own price.
  * Syncing only reads from the registrar; adding a TLD opens the normal pricing form.
  */
-export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { code: string; name: string }[]; onAdd: (preset: TldPreset) => void; onEdit: (id: number) => void }) {
+export function RegistrarTldList({ registrars, onAdd, onBulkAdd, onEdit }: {
+    registrars: { code: string; name: string }[];
+    onAdd: (preset: TldPreset) => void;
+    /** Ticked TLDs not yet in your pricing, to add together. */
+    onBulkAdd: (tlds: string[], registrar: string) => void;
+    onEdit: (id: number) => void;
+}) {
     const qc = useQueryClient();
     const [code, setCode] = useState(registrars[0]?.code ?? '');
+    const [ticked, setTicked] = useState<string[]>([]);
     const [search, setSearch] = useState('');
     const [show, setShow] = useState<'all' | 'missing' | 'ours'>('all');
     const [limit, setLimit] = useState(PAGE);
@@ -40,6 +47,9 @@ export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { 
         .filter((r) => !search.trim() || r.tld.includes(term));
     const info = list.data?.registrar;
     const cost = (value: string | null, currency: string) => (value === null ? <span className="text-slate-300">-</span> : money(value, currency));
+    // Only TLDs not yet in your pricing can be ticked; the shown ones, for "tick all".
+    const tickable = rows.slice(0, limit).filter((r) => !r.ours).map((r) => r.tld);
+    const allTicked = tickable.length > 0 && tickable.every((t) => ticked.includes(t));
 
     return (
         <Card
@@ -56,7 +66,7 @@ export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3">
                 <div className="flex rounded-xl border border-slate-200 p-0.5" role="tablist" aria-label="Registrar">
                     {registrars.map((r) => (
-                        <button key={r.code} type="button" role="tab" aria-selected={code === r.code} onClick={() => { setCode(r.code); setLimit(PAGE); }} className={`cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium ${code === r.code ? 'bg-[var(--accent)] text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                        <button key={r.code} type="button" role="tab" aria-selected={code === r.code} onClick={() => { setCode(r.code); setLimit(PAGE); setTicked([]); }} className={`cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium ${code === r.code ? 'bg-[var(--accent)] text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
                             {r.name}
                         </button>
                     ))}
@@ -68,6 +78,12 @@ export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { 
                 </select>
                 <input className="ui-input h-9 w-40" placeholder="Search TLD" aria-label="Search registrar TLDs" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(PAGE); }} />
                 {list.data && <span className="ml-auto text-xs text-slate-500">{rows.length} of {list.data.rows.length}</span>}
+                {ticked.length > 0 && (
+                    <>
+                        <Button type="button" onClick={() => { onBulkAdd(ticked, code); setTicked([]); }}><Layers size={14} /> Add {ticked.length} selected</Button>
+                        <Button type="button" variant="ghost" onClick={() => setTicked([])}>Clear</Button>
+                    </>
+                )}
             </div>
             <QueryState query={list}>
                 {info && !info.configured && (
@@ -81,6 +97,10 @@ export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { 
                         <table className="w-full min-w-[52rem] text-left text-sm">
                             <thead>
                                 <tr className="border-b border-slate-200 text-[11px] text-slate-500 uppercase">
+                                    <th className="w-8 px-3 py-3">
+                                        <input type="checkbox" aria-label="Tick all shown TLDs not in your pricing" disabled={tickable.length === 0} checked={allTicked}
+                                            onChange={() => setTicked(allTicked ? ticked.filter((t) => !tickable.includes(t)) : [...new Set([...ticked, ...tickable])])} />
+                                    </th>
                                     <th className="px-3 py-3 font-semibold">TLD</th>
                                     <th className="px-3 py-3 text-right font-semibold">Cost: register</th>
                                     <th className="px-3 py-3 text-right font-semibold">Renew</th>
@@ -97,7 +117,10 @@ export function RegistrarTldList({ registrars, onAdd, onEdit }: { registrars: { 
                                     const margin = r.ours && r.currency === 'BDT' && r.renew_cost !== null ? Number(r.ours.renew_price) - Number(r.renew_cost) : null;
 
                                     return (
-                                        <tr key={r.tld} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                                        <tr key={r.tld} className={`border-b border-slate-100 last:border-0 ${ticked.includes(r.tld) ? 'bg-sky-50/60' : 'hover:bg-slate-50/70'}`}>
+                                            <td className="px-3 py-2">
+                                                {!r.ours && <input type="checkbox" aria-label={`Tick ${r.tld}`} checked={ticked.includes(r.tld)} onChange={(e) => setTicked(e.target.checked ? [...ticked, r.tld] : ticked.filter((t) => t !== r.tld))} />}
+                                            </td>
                                             <td className="px-3 py-2 font-semibold text-slate-900">{r.tld}</td>
                                             <td className="px-3 py-2 text-right tabular-nums">{cost(r.register_cost, r.currency)}</td>
                                             <td className="px-3 py-2 text-right tabular-nums">{cost(r.renew_cost, r.currency)}</td>

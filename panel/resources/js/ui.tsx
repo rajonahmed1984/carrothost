@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { api, basePath, errorMessage, type Page } from './api';
 
-export type Branding = { name: string; currency: string; logo_url: string; icon_url: string; custom_icon: boolean };
+/** currency: the admin's base currency. default_currency: what a new client is billed in. */
+export type Branding = { name: string; currency: string; default_currency?: string; currencies?: string[]; logo_url: string; icon_url: string; custom_icon: boolean };
 export type AppConfig = { recaptcha: { enabled: boolean; site_key: string; enterprise: boolean }; google: boolean; branding: Branding };
 
 /** Public config every page needs: sign-in options and the company name, logo and currency. */

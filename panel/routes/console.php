@@ -8,19 +8,37 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('billing:renewals', function (RenewalService $renewals) {
-    $count = $renewals->generateInvoices();
+    try {
+        $count = $renewals->generateInvoices();
+    } catch (Throwable $e) {
+        ActivityLog::record('automation.failed', context: ['task' => 'renewals', 'error' => mb_strimwidth($e->getMessage(), 0, 300, '...')]);
+
+        throw $e;
+    }
     ActivityLog::record('automation.run', context: ['task' => 'renewals', 'count' => $count]);
     $this->info($count.' renewal invoice(s) created.');
 })->purpose('Raise invoices for services and domains coming due');
 
 Artisan::command('billing:suspend-overdue', function (RenewalService $renewals) {
-    $count = $renewals->suspendOverdue();
+    try {
+        $count = $renewals->suspendOverdue();
+    } catch (Throwable $e) {
+        ActivityLog::record('automation.failed', context: ['task' => 'suspensions', 'error' => mb_strimwidth($e->getMessage(), 0, 300, '...')]);
+
+        throw $e;
+    }
     ActivityLog::record('automation.run', context: ['task' => 'suspensions', 'count' => $count]);
     $this->info($count.' service(s) sent for suspension.');
 })->purpose('Suspend services whose invoices are past the grace period');
 
 Artisan::command('tickets:auto-close', function (TicketService $tickets) {
-    $count = $tickets->autoClose();
+    try {
+        $count = $tickets->autoClose();
+    } catch (Throwable $e) {
+        ActivityLog::record('automation.failed', context: ['task' => 'ticket_auto_close', 'error' => mb_strimwidth($e->getMessage(), 0, 300, '...')]);
+
+        throw $e;
+    }
     ActivityLog::record('automation.run', context: ['task' => 'ticket_auto_close', 'count' => $count]);
     $this->info($count.' ticket(s) closed.');
 })->purpose('Close answered tickets the customer has not replied to');
@@ -122,6 +140,20 @@ Artisan::command('registrars:sync', function (App\Services\RegistrarSync $sync) 
     }
 })->purpose('Copy registrar account transactions so domain costs and profit stay current');
 
+Artisan::command('registrars:sync-tlds', function (App\Services\RegistrarTldSync $sync) {
+    foreach (App\Models\Registrar::whereNotNull('api_key')->whereNotNull('reseller_id')->get() as $registrar) {
+        if (! config("billing.registrars.{$registrar->code}")) {
+            continue;
+        }
+        try {
+            $result = $sync->sync($registrar);
+            $this->info("{$registrar->code}: {$result['tlds']} TLDs, {$result['priced']} priced");
+        } catch (Throwable $e) {
+            $this->warn("{$registrar->code}: {$e->getMessage()}");
+        }
+    }
+})->purpose('Refresh what each TLD costs at the registrars; domain profit uses it when no charge was synced');
+
 // The WHMCS-style daily jobs. Each records its run for Settings > Automation.
 $daily = [
     'billing:invoice-reminders' => ['invoiceReminders', 'invoice_reminders', 'Email payment reminders and overdue notices'],
@@ -129,26 +161,61 @@ $daily = [
     'billing:expire-domains' => ['expireDomains', 'domain_expiry', 'Mark domains past their expiry date as expired'],
     'billing:terminate' => ['terminate', 'terminations', 'Terminate end-of-cycle and long-overdue services'],
     'billing:update-usage' => ['updateUsage', 'usage', 'Refresh disk and bandwidth usage from the servers'],
-    'domains:sync' => ['syncDomains', 'domain_sync', 'Copy expiry and status from the registrars'],
 ];
 foreach ($daily as $name => [$method, $task, $purpose]) {
     Artisan::command($name, function (App\Services\AutomationService $automation) use ($method, $task) {
-        $count = $automation->{$method}();
+        try {
+            $count = $automation->{$method}();
+        } catch (Throwable $e) {
+            // The Cron Job Activity report lists failures.
+            ActivityLog::record('automation.failed', context: ['task' => $task, 'error' => mb_strimwidth($e->getMessage(), 0, 300, '...')]);
+
+            throw $e;
+        }
         ActivityLog::record('automation.run', context: ['task' => $task, 'count' => $count]);
         $this->info("{$task}: {$count}");
     })->purpose($purpose);
 }
 
+Artisan::command('domains:sync {--no-report : Do not email the Domain Synchronisation Cron Report}', function (App\Services\AutomationService $automation, App\Services\AdminReports $reports) {
+    try {
+        $report = $automation->syncDomainsReport();
+    } catch (Throwable $e) {
+        ActivityLog::record('automation.failed', context: ['task' => 'domain_sync', 'error' => mb_strimwidth($e->getMessage(), 0, 300, '...')]);
+
+        throw $e;
+    }
+    ActivityLog::record('automation.run', context: ['task' => 'domain_sync', 'count' => count($report['synced'])]);
+    $this->info('domain_sync: '.count($report['synced']).' synced, '.count($report['failed']).' failed, '.count($report['missing']).' not found');
+
+    if ($report['enabled'] && config('billing.reports.domain_sync') && ! $this->option('no-report')) {
+        $this->info($reports->sendDomainSync($report) ? 'Domain sync report emailed.' : 'Domain sync report could not be sent.');
+    }
+})->purpose('Copy expiry and status from the registrars and email the sync report');
+
+Artisan::command('reports:cron-activity {--date= : The day to report on (Y-m-d); default yesterday} {--force : Send even when the report is turned off}', function (App\Services\AdminReports $reports) {
+    if (! config('billing.reports.cron_activity') && ! $this->option('force')) {
+        $this->info('The Cron Job Activity report is turned off in Settings.');
+
+        return;
+    }
+    $day = $this->option('date') ? Illuminate\Support\Carbon::parse($this->option('date')) : null;
+    $this->info($reports->sendCronActivity($day) ? 'Cron Job Activity report emailed.' : 'Cron Job Activity report could not be sent.');
+})->purpose('Email the admins what the daily jobs did, like the WHMCS Cron Job Activity email');
+
 // Proves cron is calling the scheduler; Settings > Automation warns when this goes stale.
 Schedule::call(fn () => Illuminate\Support\Facades\Cache::put('scheduler.heartbeat', now()->toISOString(), now()->addDay()))->everyMinute()->name('scheduler-heartbeat');
 
+// Midnight, like WHMCS: first the report on the day that just ended, then the domain sync and its report.
+Schedule::command('reports:cron-activity')->dailyAt('00:00');
+Schedule::command('domains:sync')->dailyAt('00:00')->withoutOverlapping();
 Schedule::command('billing:renewals')->dailyAt('01:00');
 Schedule::command('billing:expire-domains')->dailyAt('01:15');
 Schedule::command('billing:terminate')->dailyAt('02:30');
 Schedule::command('billing:invoice-reminders')->dailyAt('09:00');
 Schedule::command('billing:domain-reminders')->dailyAt('09:15');
-Schedule::command('domains:sync')->dailyAt('04:30')->withoutOverlapping();
 Schedule::command('billing:update-usage')->dailyAt('05:00')->withoutOverlapping();
+Schedule::command('registrars:sync-tlds')->dailyAt('03:45');
 Schedule::command('registrars:sync')->dailyAt('04:00');
 Schedule::command('billing:suspend-overdue')->dailyAt('02:00');
 Schedule::command('tickets:auto-close')->dailyAt('03:00');

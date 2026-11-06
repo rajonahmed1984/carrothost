@@ -87,6 +87,9 @@ class ProductController extends Controller
             'prices.*.cycle' => ['required', 'distinct', Rule::in(array_keys(config('billing.cycles')))],
             'prices.*.price' => 'required|numeric|min:0',
             'prices.*.setup_fee' => 'nullable|numeric|min:0',
+            // Optional fixed USD prices; blank = the BDT price converted at the current rate.
+            'prices.*.price_usd' => 'nullable|numeric|min:0',
+            'prices.*.setup_fee_usd' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($product, $data) {
@@ -95,7 +98,12 @@ class ProductController extends Controller
 
             $product->fill($data)->save();
             $product->prices()->delete();
-            $product->prices()->createMany(array_map(fn ($p) => [...$p, 'setup_fee' => $p['setup_fee'] ?? 0], $prices));
+            $product->prices()->createMany(array_map(fn ($p) => [
+                ...$p,
+                'setup_fee' => $p['setup_fee'] ?? 0,
+                'price_usd' => ($p['price_usd'] ?? '') === '' ? null : $p['price_usd'],
+                'setup_fee_usd' => ($p['setup_fee_usd'] ?? '') === '' ? null : $p['setup_fee_usd'],
+            ], $prices));
             ActivityLog::record('product.saved', $product);
 
             return $product->load('prices');

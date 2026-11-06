@@ -27,7 +27,10 @@ class BillingService
      */
     public function createOrder(Client $client, array $services, array $domains = []): Order
     {
-        return DB::transaction(function () use ($client, $services, $domains) {
+        // Everything on the order is priced in the client's currency.
+        $currency = $client->currencyCode();
+
+        return DB::transaction(function () use ($client, $services, $domains, $currency) {
             $order = Order::create(['client_id' => $client->id]);
             $items = [];
             $setupOnOrder = [];
@@ -46,7 +49,7 @@ class BillingService
                     'product_id' => $product->id,
                     'domain' => $line['domain'] ?? null,
                     'cycle' => $line['cycle'],
-                    'recurring_amount' => $price->price,
+                    'recurring_amount' => $price->priceIn($currency),
                 ]);
 
                 if ($product->module && $product->setup_mode === 'order') {
@@ -55,7 +58,7 @@ class BillingService
 
                 $items[] = [
                     'description' => "{$product->name} ({$line['cycle']})".($service->domain ? " - {$service->domain}" : ''),
-                    'amount' => bcadd($price->price, $price->setup_fee, 2),
+                    'amount' => bcadd($price->priceIn($currency), $price->setupFeeIn($currency), 2),
                     'kind' => 'new',
                     'service_id' => $service->id,
                 ];
@@ -65,7 +68,7 @@ class BillingService
                 $name = strtolower($line['name']);
                 $tld = $this->tldFor($name);
                 $years = (string) $line['years'];
-                $unit = $line['action'] === 'transfer' ? $tld->transfer_price : $tld->register_price;
+                $unit = $tld->priceIn($line['action'] === 'transfer' ? 'transfer' : 'register', $currency);
 
                 $domain = Domain::create([
                     'client_id' => $client->id,
@@ -77,7 +80,7 @@ class BillingService
                     'years' => $line['years'],
                     'auto_renew' => (bool) config('billing.domains.auto_renew'),
                     'nameservers' => Domain::defaultNameservers() ?: null,
-                    'recurring_amount' => bcmul($tld->renew_price, $years, 2),
+                    'recurring_amount' => bcmul($tld->priceIn('renew', $currency), $years, 2),
                     'first_payment_amount' => bcmul($unit, $years, 2),
                     'payment_method' => $order->payment_method,
                 ]);
@@ -120,7 +123,8 @@ class BillingService
                 'number' => Invoice::nextNumber(),
                 'client_id' => $client->id,
                 'order_id' => $order?->id,
-                'currency' => config('billing.currency'),
+                // Item amounts are already in the client's currency: prices, renewals and credit all are.
+                'currency' => $client->currencyCode(),
                 'total' => $total,
                 'due_date' => $dueDate->toDateString(),
             ]);

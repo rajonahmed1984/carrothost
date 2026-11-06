@@ -26,6 +26,7 @@ class Settings
         'logo_path' => 'billing.logo_path',
         'favicon_path' => 'billing.favicon_path',
         'currency' => 'billing.currency',
+        'usd_rate' => 'billing.exchange_rates.USD',
         'invoice_due_days' => 'billing.invoice_due_days',
         'renewal_notice_days' => 'billing.renewal_notice_days',
         'credit_min_deposit' => 'billing.credit.min_deposit',
@@ -44,6 +45,9 @@ class Settings
         'domain_reminder_days' => 'billing.reminders.domain_days',
         'usage_update_enabled' => 'billing.usage_update_enabled',
         'domain_sync_enabled' => 'billing.domain_sync_enabled',
+        'cron_report_enabled' => 'billing.reports.cron_activity',
+        'domain_sync_report_enabled' => 'billing.reports.domain_sync',
+        'report_recipients' => 'billing.reports.recipients',
         'domain_allow_register' => 'billing.domains.allow_register',
         'domain_allow_transfer' => 'billing.domains.allow_transfer',
         'domain_allow_own' => 'billing.domains.allow_own',
@@ -75,6 +79,7 @@ class Settings
 
     public const BOOLEANS = [
         'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled', 'termination_enabled', 'usage_update_enabled', 'domain_sync_enabled',
+        'cron_report_enabled', 'domain_sync_report_enabled',
         'domain_allow_register', 'domain_allow_transfer', 'domain_allow_own', 'domain_auto_renew', 'domain_premium_enabled',
     ];
 
@@ -87,7 +92,7 @@ class Settings
         foreach ($saved as $key => $value) {
             if (isset(self::MAP[$key]) && $value !== null && $value !== '') {
                 config([self::MAP[$key] => self::cast($key, $value)]);
-            } elseif (str_starts_with($key, 'nameserver_') || $key === 'domain_lookup_provider') {
+            } elseif (str_starts_with($key, 'nameserver_') || in_array($key, ['domain_lookup_provider', 'report_recipients'], true)) {
                 // No .env fallback for these, so a cleared one is simply empty.
                 config([self::MAP[$key] => null]);
             }
@@ -170,7 +175,7 @@ class Settings
         return match (true) {
             in_array($key, self::BOOLEANS, true) => $value === '1',
             in_array($key, self::INTEGERS, true) => (int) $value,
-            $key === 'recaptcha_score_threshold' => (float) $value,
+            $key === 'recaptcha_score_threshold', $key === 'usd_rate' => (float) $value,
             default => $value,
         };
     }

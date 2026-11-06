@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Server;
 use App\Models\ServerCost;
+use App\Support\Currency;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -99,7 +100,7 @@ class ServerProfit
             ->whereIn('services.server_id', $serverIds)
             ->whereIn('invoice_items.kind', self::SALE_KINDS)
             ->where('invoice_items.amount', '>', 0)
-            ->get(['services.server_id', 'services.cycle', 'invoice_items.amount', 'invoice_items.kind', 'invoices.paid_at']);
+            ->get(['services.server_id', 'services.cycle', 'invoice_items.amount', 'invoice_items.kind', 'invoices.paid_at', 'invoices.currency']);
 
         $first = $from->format('Y-m');
         $last = $to->format('Y-m');
@@ -108,7 +109,8 @@ class ServerProfit
         foreach ($lines as $line) {
             $paid = CarbonImmutable::parse($line->paid_at)->startOfMonth();
             $months = $spread && $line->kind !== 'upgrade' ? max(1, (int) config("billing.cycles.{$line->cycle}", 1)) : 1;
-            $share = (float) $line->amount / $months;
+            // In BDT, like server costs: a USD sale counts at the current rate.
+            $share = Currency::toBase($line->amount, $line->currency) / $months;
 
             for ($i = 0; $i < $months; $i++) {
                 $month = $paid->addMonths($i)->format('Y-m');

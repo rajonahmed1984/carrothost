@@ -40,16 +40,24 @@ class SettingsTest extends TestCase
 
     public function test_saved_settings_override_config_and_reach_the_public_branding(): void
     {
-        $this->actingAs($this->admin())->postJson('/api/settings', $this->valid(['currency' => 'USD', 'pay_to_text' => "House 1\nDhaka"]))
+        // USD as the default for new clients needs a USD rate.
+        $this->actingAs($this->admin())->postJson('/api/settings', $this->valid(['currency' => 'USD']))->assertJsonValidationErrors('usd_rate');
+
+        $this->postJson('/api/settings', $this->valid(['currency' => 'USD', 'usd_rate' => '121.5', 'pay_to_text' => "House 1\nDhaka"]))
             ->assertOk()
             ->assertJsonPath('settings.company_name', 'Carrot Cloud')
             ->assertJsonPath('settings.currency', 'USD');
 
         $this->assertSame('Carrot Cloud', config('app.name'));
         $this->assertSame('Carrot Cloud', config('mail.from.name'));
-        $this->getJson('/api/auth/config')->assertJsonPath('branding.name', 'Carrot Cloud')->assertJsonPath('branding.currency', 'USD');
+        $this->assertSame(121.5, config('billing.exchange_rates.USD'));
+        // Admin figures stay in BDT; USD is what a new client starts in.
+        $this->getJson('/api/auth/config')->assertJsonPath('branding.name', 'Carrot Cloud')
+            ->assertJsonPath('branding.currency', 'BDT')->assertJsonPath('branding.default_currency', 'USD');
 
-        $invoice = app(BillingService::class)->createInvoice(Client::create(['name' => 'A', 'email' => 'a@example.com']), [['description' => 'X', 'amount' => '1.00']], now());
+        $client = Client::create(['name' => 'A', 'email' => 'a@example.com']);
+        $this->assertSame('USD', $client->currency);
+        $invoice = app(BillingService::class)->createInvoice($client, [['description' => 'X', 'amount' => '1.00']], now());
         $this->assertSame('USD', $invoice->currency);
     }
 

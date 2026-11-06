@@ -56,7 +56,7 @@ class RegistrarLedgerTest extends TestCase
 
         $this->sale($one, '12000.00', '2026-01-09 10:00:00');
         $report = $this->getJson('/api/registrars/profit?from=2026-01&to=2026-02&registrar=stargate')->assertOk()->json();
-        $this->assertEquals(['sales' => 12000, 'cost' => 11070, 'profit' => 930], $report['totals']['2026-01']);
+        $this->assertEquals(['sales' => 12000, 'cost' => 11070, 'profit' => 930, 'estimated' => 0], $report['totals']['2026-01']);
         $this->assertEquals(-3830, $report['totals']['2026-02']['profit']);
         $this->assertSame('two.com', $report['checks']['done_not_paid'][0]['domain']);
         $this->assertSame([], $report['checks']['paid_not_done']);
@@ -74,10 +74,19 @@ class RegistrarLedgerTest extends TestCase
             '1' => ['reseller_transaction.transactionid' => '901', 'reseller_transaction.transactiontype' => 'invoice', 'reseller_transaction.transactiondate' => (string) now()->subDays(19)->timestamp, 'reseller_transaction.description' => 'Renewal of example.com for 1 year', 'reseller_transaction.sellingamount' => '-11.50'],
             '2' => ['reseller_transaction.transactionid' => '902', 'reseller_transaction.transactiontype' => 'receipt', 'reseller_transaction.transactiondate' => (string) now()->subDays(30)->timestamp, 'reseller_transaction.description' => 'Funds added', 'reseller_transaction.sellingamount' => '200'],
             '3' => ['reseller_transaction.transactionid' => '903', 'reseller_transaction.transactiontype' => 'debit', 'reseller_transaction.transactiondate' => (string) now()->subDays(5)->timestamp, 'reseller_transaction.description' => 'Privacy service', 'reseller_transaction.sellingamount' => '2'],
-        ])]);
+        ]),
+            'httpapi.com/api/billing/reseller-balance.json*' => Http::response(['sellingcurrencybalance' => '42.75', 'lockedbalance' => '0']),
+            'httpapi.com/api/products/category-keys-mapping.json*' => Http::response(['domorder' => [['domcno' => ['com']]]]),
+            'httpapi.com/api/products/reseller-price.json*' => Http::response(['domcno' => [
+                'addnewdomain' => ['1' => '9.00'], 'renewdomain' => ['1' => '10.00'], 'addtransferdomain' => ['1' => '8.00'],
+            ]]),
+        ]);
 
-        $this->postJson('/api/registrars/stargate/sync')->assertOk()->assertJsonPath('message', 'Synced: 2 new charge(s). 1 top-up(s) skipped; record those as deposits with their BDT cost.');
-        $this->postJson('/api/registrars/stargate/sync')->assertOk()->assertJsonPath('message', 'Synced: 0 new charge(s). 1 top-up(s) skipped; record those as deposits with their BDT cost.');
+        $first = $this->postJson('/api/registrars/stargate/sync')->assertOk()->json('message');
+        $this->assertStringStartsWith('Synced: 3 transaction(s) read, 2 new charge(s) added. 1 top-up(s) skipped', $first);
+        $this->assertStringContainsString('TLD cost prices: 1 of 1 TLDs priced.', $first);
+        $this->assertStringStartsWith('Synced: 3 transaction(s) read, 0 new charge(s) added.', $this->postJson('/api/registrars/stargate/sync')->json('message'));
+        $this->assertSame('42.75', Registrar::where('code', 'stargate')->first()->api_balance);
 
         // An "invoice" is a charge even when the registrar signs it negative.
         $renewal = RegistrarCharge::where('external_id', '901')->first();
@@ -86,6 +95,19 @@ class RegistrarLedgerTest extends TestCase
         $checks = $this->getJson('/api/registrars/profit?from='.now()->subMonths(2)->format('Y-m').'&to='.now()->format('Y-m'))->assertOk()->json('checks');
         $this->assertSame(['forgotten.com'], array_column($checks['paid_not_done'], 'domain'));
         $this->assertSame('Privacy service', $checks['unmatched'][0]['description']);
+
+        // forgotten.com has no charge, so it is priced from the .com renew price, once a USD rate is known.
+        $range = '/api/registrars/profit?from='.now()->subMonths(2)->format('Y-m').'&to='.now()->format('Y-m');
+        $report = $this->getJson($range)->json();
+        $this->assertSame([['registrar' => 'stargate', 'tld' => '.com', 'action' => 'renew', 'reason' => 'no_rate']], $report['unpriced']);
+
+        \App\Support\Settings::save(['usd_rate' => '120']);
+        $report = $this->getJson($range)->json();
+        $this->assertSame([], $report['unpriced']);
+        $this->assertEquals(1200, $report['grand']['estimated']);
+        $byDomain = collect($report['domains'])->keyBy('domain');
+        $this->assertEquals([1600, 1200, 400, 'estimated'], [$byDomain['forgotten.com']['sales'], $byDomain['forgotten.com']['cost'], $byDomain['forgotten.com']['profit'], $byDomain['forgotten.com']['cost_source']]);
+        $this->assertSame('actual', $byDomain['example.com']['cost_source'], 'A synced charge replaces the estimate.');
 
         $synced = RegistrarCharge::where('external_id', '903')->first();
         $this->deleteJson("/api/registrars/stargate/charges/{$synced->id}")->assertJsonValidationErrors('charge');

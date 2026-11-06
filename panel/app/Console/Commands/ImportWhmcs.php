@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Support\Currency;
 use App\Models\Server;
 use App\Models\Service;
 use App\Models\Ticket;
@@ -93,7 +94,7 @@ class ImportWhmcs extends Command
 
         $run = function () use ($clients, $services, $domains, $invoices, $currencies, $servers, $currency, &$counts, &$lateDue) {
             foreach ($clients as $row) {
-                $client = $this->client($row);
+                $client = $this->client($row, $currencies->get($row->currency));
                 $counts[$client->wasRecentlyCreated ? 'clients new' : 'clients existing']++;
 
                 foreach ($services->get($row->id, []) as $hosting) {
@@ -156,12 +157,22 @@ class ImportWhmcs extends Command
         return self::SUCCESS;
     }
 
-    private function client(object $row): Client
+    private function client(object $row, ?string $currency = null): Client
     {
         $client = Client::firstOrNew(['email' => strtolower(trim($row->email))]);
+        // WHMCS bills each client in their own currency, and their invoices and service amounts came in it.
+        $currency = in_array(strtoupper((string) $currency), Currency::SUPPORTED, true) ? strtoupper($currency) : null;
 
         if ($client->exists) {
+            if ($currency && $client->currency !== $currency) {
+                $client->forceFill(['currency' => $currency])->save();
+            }
+
             return $client;
+        }
+
+        if ($currency) {
+            $client->currency = $currency;
         }
 
         $client->forceFill([

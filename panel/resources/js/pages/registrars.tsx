@@ -14,14 +14,16 @@ type WalletInfo = {
     code: string; currency: string; deposits: number; sent_bdt: number; fees_bdt: number; credited: number; spent: number; returned: number;
     balance: number; balance_bdt: number; unfunded: number; average_rate: number | null;
 };
-type Registrar = { code: string; name: string; reseller_id: string | null; has_api_key: boolean; currency: string; last_synced_at: string | null; sync_error: string | null; connection_ok: boolean | null; connection_error: string | null; connection_checked_at: string | null; wallet: WalletInfo };
+type Registrar = { code: string; name: string; reseller_id: string | null; has_api_key: boolean; currency: string; last_synced_at: string | null; sync_error: string | null; connection_ok: boolean | null; connection_error: string | null; connection_checked_at: string | null; wallet: WalletInfo;
+    api_balance: string | null; api_balance_at: string | null };
 type Deposit = { id: number; paid_on: string; method: string; amount_bdt: string; fee_bdt: string; credited: string; reference: string | null; note: string | null; rate: number };
 type Charge = {
     id: number; type: 'debit' | 'credit'; charged_at: string; description: string | null; amount: string; action: string; source: 'sync' | 'manual';
     domain_id: number | null; domain: { id: number; name: string; client_id: number } | null; cost_bdt: number; unfunded: boolean;
 };
 type Ledger = { wallet: WalletInfo; deposits: Deposit[]; charges: Charge[] };
-type Cell = { sales: number; cost: number; profit: number };
+type Cell = { sales: number; cost: number; profit: number; estimated?: number };
+type DomainCost = { domain_id: number; domain: string; registrar: string; client_id: number | null; sales: number; cost: number; estimated: number; profit: number; last_paid: string; cost_source: 'actual' | 'estimated' | 'mixed' | 'none' };
 type Report = {
     months: string[];
     registrars: { code: string; name: string; months: Record<string, Cell>; totals: Cell }[];
@@ -37,6 +39,8 @@ type Report = {
         below_cost: { charge_id: number; domain_id: number; domain: string | null; registrar: string; charged_at: string; cost_bdt: number; sale: number; loss: number; client_id: number | null }[];
         unmatched: { id: number; registrar_code: string; description: string | null; amount: string; charged_at: string; cost_bdt: number }[];
     };
+    domains: DomainCost[];
+    unpriced: { registrar: string; tld: string; action: string; reason: 'no_price' | 'no_rate' }[];
 };
 
 const methods = [['bank', 'Bank'], ['card', 'Card'], ['bkash', 'bKash'], ['other', 'Other']] as const;
@@ -71,6 +75,7 @@ function RegistrarForm({ registrar, onClose }: { registrar: Registrar; onClose: 
                 <Field label="Account currency" hint="What the registrar bills and holds your balance in">
                     <Select value={currency} onChange={(e) => setCurrency(e.target.value)}><option value="BDT">BDT</option><option value="USD">USD</option></Select>
                 </Field>
+                {currency !== 'BDT' && <p className="text-xs text-slate-500">The BDT rate for {currency} is set in <Link className="table-action-link" to="/admin/settings?tab=currencies">Settings &gt; Currencies</Link>.</p>}
                 <ErrorNote error={save.error} />
                 <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save registrar</Button></div>
             </form>
@@ -115,6 +120,64 @@ function SyncButton({ code }: { code: string }) {
     });
 
     return <Button variant="link" disabled={sync.isPending} onClick={() => sync.mutate()}><RefreshCw size={12} className={sync.isPending ? 'animate-spin' : ''} /> {sync.isPending ? 'Syncing...' : 'Sync'}</Button>;
+}
+
+/* ---------- Cost of each domain ---------- */
+
+const SOURCE: Record<DomainCost['cost_source'], [string, string]> = {
+    actual: ['Charged', 'bg-emerald-50 text-emerald-700'],
+    estimated: ['TLD price', 'bg-sky-50 text-sky-700'],
+    mixed: ['Charged + TLD price', 'bg-sky-50 text-sky-700'],
+    none: ['No cost', 'bg-slate-100 text-slate-600'],
+};
+
+function DomainCosts({ rows, nameOf, domainUrl }: { rows: DomainCost[]; nameOf: (code: string) => string; domainUrl: (clientId: number | null, id: number) => string }) {
+    const [search, setSearch] = useState('');
+    const [limit, setLimit] = useState(25);
+    const q = search.trim().toLowerCase();
+    const shown = q ? rows.filter((d) => d.domain.toLowerCase().includes(q)) : rows;
+
+    return (
+        <section className="card overflow-hidden">
+            <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
+                <h3 className="mr-auto flex items-center gap-2 font-semibold text-slate-900"><Globe size={16} className="text-[var(--accent)]" /> Cost of Each Domain</h3>
+                <label className="relative w-full sm:w-56">
+                    <span className="sr-only">Search domains</span>
+                    <Search size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                    <input className="ui-input h-9 w-full pl-8" placeholder="Search domain" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </label>
+            </header>
+            {shown.length === 0 ? <p className="px-4 py-6 text-center text-sm text-slate-500">No domains in this range.</p> : (
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[44rem] text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase">
+                            <tr><th className="px-4 py-2">Domain</th><th className="px-4 py-2">Registrar</th><th className="px-4 py-2">Last paid</th><th className="px-4 py-2 text-right">Sales</th><th className="px-4 py-2 text-right">Cost</th><th className="px-4 py-2 text-right">Profit</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {shown.slice(0, limit).map((d) => (
+                                <tr key={d.domain_id} className="hover:bg-slate-50/60">
+                                    <td className="px-4 py-2"><Link className="table-action-link font-medium" to={domainUrl(d.client_id, d.domain_id)}>{d.domain}</Link></td>
+                                    <td className="px-4 py-2 text-slate-600">{nameOf(d.registrar)}</td>
+                                    <td className="px-4 py-2 text-slate-500 tabular-nums">{d.last_paid || '-'}</td>
+                                    <td className="px-4 py-2 text-right tabular-nums">{money(d.sales)}</td>
+                                    <td className="px-4 py-2 text-right tabular-nums">
+                                        {money(d.cost)}
+                                        <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${SOURCE[d.cost_source][1]}`}>{SOURCE[d.cost_source][0]}</span>
+                                    </td>
+                                    <td className="px-4 py-2 text-right"><Profit value={String(d.profit)} /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            {shown.length > limit && (
+                <div className="border-t border-slate-200 px-4 py-2 text-center">
+                    <Button variant="link" onClick={() => setLimit(limit + 50)}>Show more ({shown.length - limit} left)</Button>
+                </div>
+            )}
+        </section>
+    );
 }
 
 /* ---------- Wallet ---------- */
@@ -364,6 +427,10 @@ function DomainProfitReport({ registrars }: { registrars: Registrar[] }) {
     const m = r ? marginOf(r.grand) : null;
     const domainUrl = (clientId: number | null, id: number) => (clientId ? `/admin/clients/${clientId}?tab=domains&view=${id}` : `/admin/domain-registrations/${id}`);
     const untracked = r ? registrars.filter((x) => (!code || x.code === code) && !r.checks.tracked.includes(x.code)) : [];
+    const estimated = r?.grand.estimated ?? 0;
+    const nameOf = (c: string) => registrars.find((x) => x.code === c)?.name ?? c;
+    const noRate = r ? [...new Set(r.unpriced.filter((u) => u.reason === 'no_rate').map((u) => nameOf(u.registrar)))] : [];
+    const noPrice = r ? [...new Set(r.unpriced.filter((u) => u.reason === 'no_price').map((u) => `${u.tld} at ${nameOf(u.registrar)}`))] : [];
 
     return (
         <section className="space-y-4">
@@ -380,16 +447,26 @@ function DomainProfitReport({ registrars }: { registrars: Registrar[] }) {
                 <label className="flex items-center gap-2 text-xs text-slate-600">Up to <input type="month" className="ui-input h-9 w-auto" value={to} max={thisMonth()} onChange={(e) => e.target.value && setTo(e.target.value)} /></label>
             </div>
 
-            {untracked.length > 0 && (
+            {estimated > 0 && (
+                <p className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
+                    <ReceiptText size={16} className="mt-0.5 shrink-0" />
+                    <span>{money(estimated)} of the cost comes from the registrars' TLD cost prices (register, renew or transfer, times years){untracked.length > 0 && <>, as no charges are recorded yet for {untracked.map((x) => x.name).join(' and ')}</>}. A synced or entered charge replaces the estimate for that domain.</span>
+                </p>
+            )}
+            {(noRate.length > 0 || noPrice.length > 0) && (
                 <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                    <span>No registrar charges recorded yet for {untracked.map((x) => x.name).join(' and ')}, so its cost shows as 0 and profit equals sales. Sync it, or add charges and deposits in its wallet.</span>
+                    <span>
+                        Some sales have no cost yet.
+                        {noRate.length > 0 && <> {noRate.join(' and ')}: set BDT per 1 USD in <Link className="font-semibold underline" to="/admin/settings?tab=currencies">Settings &gt; Currencies</Link>.</>}
+                        {noPrice.length > 0 && <> No TLD cost price for {noPrice.join(', ')}: press Sync to fetch the prices.</>}
+                    </span>
                 </p>
             )}
 
             <StatCards items={[
                 { label: `Domain sales, ${span} months`, value: r ? money(r.grand.sales) : '-', icon: <ArrowDown size={20} />, tone: 'bg-emerald-100 text-emerald-700' },
-                { label: 'Registrar cost', value: r ? money(r.grand.cost) : '-', icon: <ReceiptText size={20} />, tone: 'bg-amber-100 text-amber-700' },
+                { label: estimated > 0 ? 'Registrar cost (incl. TLD price)' : 'Registrar cost', value: r ? money(r.grand.cost) : '-', icon: <ReceiptText size={20} />, tone: 'bg-amber-100 text-amber-700' },
                 { label: 'Profit', value: r ? <Profit value={String(r.grand.profit)} /> : '-', icon: <ArrowUp size={20} />, tone: 'bg-[var(--accent-soft)] text-accent' },
                 { label: 'Margin', value: m === null ? '-' : `${m.toFixed(1)}%`, icon: <Percent size={20} />, tone: 'bg-sky-100 text-sky-700' },
             ]} />
@@ -437,23 +514,25 @@ function DomainProfitReport({ registrars }: { registrars: Registrar[] }) {
                             </div>
                         )}
                     </QueryState>
-                    {r && <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500">Cost is what registrations and renewals took from your registrar balance, at what that money cost you in BDT. Deposited in this range: {money(r.deposited.sent_bdt)} + {money(r.deposited.fees_bdt)} fees (money moved, not cost).</p>}
+                    {r && <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500">Cost is what registrations and renewals took from your registrar balance, at what that money cost you in BDT; where no charge is recorded, the TLD cost price times years. Deposited in this range: {money(r.deposited.sent_bdt)} + {money(r.deposited.fees_bdt)} fees (money moved, not cost).</p>}
                 </section>
 
                 <section className="card overflow-hidden">
                     <header className="border-b border-slate-200 px-4 py-3"><h3 className="font-semibold text-slate-900">By TLD</h3></header>
                     {r && (r.tlds.length === 0 ? <p className="px-4 py-6 text-center text-sm text-slate-500">No domain sales in this range.</p> : (
                         <table className="w-full text-sm">
-                            <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="px-4 py-2">TLD</th><th className="px-4 py-2 text-right">Sales</th><th className="px-4 py-2 text-right">Profit</th></tr></thead>
+                            <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="px-4 py-2">TLD</th><th className="px-4 py-2 text-right">Sales</th><th className="px-4 py-2 text-right">Cost</th><th className="px-4 py-2 text-right">Profit</th></tr></thead>
                             <tbody className="divide-y divide-slate-100">
                                 {r.tlds.map((t) => (
-                                    <tr key={t.tld}><td className="px-4 py-2 font-medium text-slate-900">{t.tld}</td><td className="px-4 py-2 text-right tabular-nums">{money(t.sales)}</td><td className="px-4 py-2 text-right"><Profit value={String(t.profit)} /></td></tr>
+                                    <tr key={t.tld}><td className="px-4 py-2 font-medium text-slate-900">{t.tld}</td><td className="px-4 py-2 text-right tabular-nums">{money(t.sales)}</td><td className="px-4 py-2 text-right text-slate-600 tabular-nums">{money(t.cost)}</td><td className="px-4 py-2 text-right"><Profit value={String(t.profit)} /></td></tr>
                                 ))}
                             </tbody>
                         </table>
                     ))}
                 </section>
             </div>
+
+            {r && <DomainCosts rows={r.domains} nameOf={nameOf} domainUrl={domainUrl} />}
 
             {r && (
                 <section className="card space-y-3 p-4">
@@ -534,7 +613,7 @@ export function RegistrarsPage() {
                             { header: 'Reseller ID', cell: (r) => r.reseller_id ?? '-' },
                             { header: 'Currency', cell: (r) => r.currency },
                             { header: 'Connection', cell: (r) => <ConnectionStatus registrar={r} checking={checking.includes(r.code)} /> },
-                            { header: 'Wallet Balance', cell: (r) => <button type="button" className="table-action-link text-right tabular-nums" onClick={() => setWallet(r)}>{inCurrency(r.wallet.balance, r.currency)}<span className="block text-[11px] text-slate-500">worth {money(r.wallet.balance_bdt)}</span></button>, align: 'right' },
+                            { header: 'Wallet Balance', cell: (r) => <button type="button" className="table-action-link text-right tabular-nums" onClick={() => setWallet(r)}>{inCurrency(r.wallet.balance, r.currency)}<span className="block text-[11px] text-slate-500">worth {money(r.wallet.balance_bdt)}</span>{r.api_balance !== null && <span className="block text-[11px] text-slate-500" title={r.api_balance_at ? `Read from the registrar ${new Date(r.api_balance_at).toLocaleString()}` : undefined}>Registrar says {inCurrency(r.api_balance, r.currency)}</span>}</button>, align: 'right' },
                             {
                                 header: 'Last Sync',
                                 cell: (r) => r.sync_error

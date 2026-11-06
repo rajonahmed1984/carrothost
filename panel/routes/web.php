@@ -173,6 +173,7 @@ Route::prefix('api')->group(function () {
         Route::post('tlds/registrar-sync/{code}', [Admin\TldController::class, 'registrarSync']);
         Route::put('tlds/lookup', [Admin\TldController::class, 'updateLookup']);
         Route::post('tlds/pricing', [Admin\TldController::class, 'bulkPricing']);
+        Route::post('tlds/bulk-add', [Admin\TldController::class, 'bulkAdd']);
         Route::apiResource('tlds', Admin\TldController::class)->except('show');
         Route::get('servers/profit', [Admin\ServerController::class, 'profit']);
         Route::get('servers/{server}/costs', [Admin\ServerController::class, 'costs']);

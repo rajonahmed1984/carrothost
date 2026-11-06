@@ -10,6 +10,12 @@ use App\Provisioning\WebuzoModule;
 return [
     'currency' => env('BILLING_CURRENCY', 'BDT'),
 
+    // BDT per 1 unit of each other currency: domain costs at USD registrars, and PayPal unless
+    // its gateway sets its own rate. Admin > Settings > Currencies overrides these.
+    'exchange_rates' => [
+        'USD' => env('USD_RATE'),
+    ],
+
     // Company details shown to customers. Admin > Settings overrides these.
     'company_email' => env('MAIL_FROM_ADDRESS'),
     'pay_to' => null,
@@ -59,6 +65,14 @@ return [
     // Daily: refresh disk and bandwidth from the servers, and expiry and status from the registrars.
     'usage_update_enabled' => true,
     'domain_sync_enabled' => true,
+
+    // Admin emails sent at midnight, like WHMCS: what the daily jobs did the day before, and
+    // what the domain sync changed. recipients: comma separated; blank means every admin.
+    'reports' => [
+        'cron_activity' => true,
+        'domain_sync' => true,
+        'recipients' => null,
+    ],
 
     // Add Funds limits, in the billing currency. Admin > Settings overrides these.
     'credit' => [
@@ -148,7 +162,7 @@ return [
                 ['key' => 'display_name', 'label' => 'Display name', 'required' => true],
                 ['key' => 'button_label', 'label' => 'Payment button label'],
                 ['key' => 'email', 'label' => 'PayPal email', 'type' => 'email', 'required' => true],
-                ['key' => 'usd_rate', 'label' => 'BDT per 1 USD', 'type' => 'number', 'required' => true, 'hint' => 'Invoices are in BDT and PayPal charges USD. Keep this rate current.'],
+                ['key' => 'usd_rate', 'label' => 'BDT per 1 USD', 'type' => 'number', 'hint' => 'Invoices are in BDT and PayPal charges USD. Leave blank to use the rate in Settings > Currencies.'],
             ],
         ],
         'stripe' => ['name' => 'Stripe', 'implemented' => false],

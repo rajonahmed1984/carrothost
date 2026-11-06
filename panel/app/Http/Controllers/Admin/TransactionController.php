@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\BillingService;
+use App\Support\Currency;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,9 +43,10 @@ class TransactionController extends Controller
             ->when(($data['direction'] ?? null) === 'in', fn ($query) => $query->where('amount', '>', 0))
             ->when(($data['direction'] ?? null) === 'out', fn ($query) => $query->where('amount', '<', 0));
 
-        $in = (string) (clone $filtered)->where('amount', '>', 0)->sum('amount');
-        $fees = (string) (clone $filtered)->sum('fee');
-        $out = bcmul((string) (clone $filtered)->where('amount', '<', 0)->sum('amount'), '-1', 2);
+        // Totals are in BDT: USD payments count at the current rate.
+        $in = Currency::sumInBase((clone $filtered)->where('amount', '>', 0), 'amount');
+        $fees = Currency::sumInBase(clone $filtered, 'fee');
+        $out = bcmul(Currency::sumInBase((clone $filtered)->where('amount', '<', 0), 'amount'), '-1', 2);
         $gatewayName = fn (string $code) => $code === 'credit' ? 'Account Credit' : config("billing.gateways.{$code}.name", $code);
 
         $page = (clone $filtered)->with(['invoice:id,number,client_id', 'invoice.client:id,name,company'])

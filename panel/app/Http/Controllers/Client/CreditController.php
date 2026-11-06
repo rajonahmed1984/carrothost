@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Services\BillingService;
 use App\Services\PaymentService;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -19,8 +20,8 @@ class CreditController extends Controller
 
         return [
             'balance' => $client->credit_balance,
-            'currency' => config('billing.currency'),
-            'limits' => config('billing.credit'),
+            'currency' => $client->currencyCode(),
+            'limits' => $this->limits($client->currencyCode()),
             'gateways' => $methods['gateways'],
             'bank_transfer' => $methods['payment_instructions'] !== null,
             'history' => $client->credits()->with('invoice:id,number')->latest('id')->limit(500)
@@ -32,7 +33,8 @@ class CreditController extends Controller
     public function store(Request $request, BillingService $billing, PaymentService $payments)
     {
         $client = $request->user('client');
-        $limits = config('billing.credit');
+        $currency = $client->currencyCode();
+        $limits = $this->limits($currency);
         $data = $request->validate([
             'amount' => "required|numeric|min:{$limits['min_deposit']}|max:{$limits['max_deposit']}",
             'gateway' => 'required|string',
@@ -40,7 +42,7 @@ class CreditController extends Controller
         $amount = number_format((float) $data['amount'], 2, '.', '');
 
         if (bccomp(bcadd((string) $client->credit_balance, $amount, 2), (string) $limits['max_balance'], 2) > 0) {
-            throw ValidationException::withMessages(['amount' => "Your credit balance cannot go above {$limits['max_balance']} ".config('billing.currency').'.']);
+            throw ValidationException::withMessages(['amount' => "Your credit balance cannot go above {$limits['max_balance']} {$currency}."]);
         }
 
         $methods = PaymentService::customerMethods();
@@ -57,5 +59,11 @@ class CreditController extends Controller
             'invoice_id' => $invoice->id,
             'redirect_url' => $online ? $payments->begin($invoice, $data['gateway']) : null,
         ];
+    }
+
+    /** The Add Funds limits are set in BDT; a client in another currency sees them converted. */
+    private function limits(string $currency): array
+    {
+        return array_map(fn ($bdt) => Currency::fromBase((string) $bdt, $currency), (array) config('billing.credit'));
     }
 }

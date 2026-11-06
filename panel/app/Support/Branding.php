@@ -19,7 +19,10 @@ class Branding
     {
         return [
             'name' => config('app.name'),
-            'currency' => config('billing.currency'),
+            // Admin figures are in the base currency; each client sees their own (from /me).
+            'currency' => Currency::BASE,
+            'default_currency' => Currency::default(),
+            'currencies' => Currency::SUPPORTED,
             'logo_url' => self::logoUrl(),
             'icon_url' => self::iconUrl(),
             'custom_icon' => self::uploaded('billing.favicon_path') !== null,

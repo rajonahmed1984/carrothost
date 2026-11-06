@@ -7,6 +7,8 @@ import { ProfileHeader } from './account';
 
 export type ClientProfile = {
     id: number; name: string; email: string; otp_enabled: boolean; has_password: boolean; impersonating: boolean;
+    /** What this client is billed in; the whole client area shows amounts in it. */
+    currency: string;
     /** Set when a user of the account, not its owner, is signed in. */
     user: { name: string; email: string; permissions: string[] } | null;
 };

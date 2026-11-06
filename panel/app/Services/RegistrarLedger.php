@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Registrar;
 use App\Models\RegistrarCharge;
 use App\Models\RegistrarDeposit;
+use App\Models\RegistrarTld;
+use App\Support\Currency;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +41,8 @@ class RegistrarLedger
             ->sortBy([['at', 'asc'], ['order', 'asc']])->values();
 
         $lots = []; // [remaining, rate]
-        $lastRate = $currency === 'BDT' ? 1.0 : null;
+        // Before any deposit, spending is priced at the rate in Settings > Currencies, if there is one.
+        $lastRate = Currency::bdtRate($currency);
         $costs = [];
         $unfunded = 0.0;
         $spent = 0.0;
@@ -125,36 +128,75 @@ class RegistrarLedger
         }
 
         $codes = collect(array_keys(config('billing.registrars')))->when($only, fn ($c) => $c->filter(fn ($code) => $code === $only))->values();
-        $blank = fn () => ['sales' => 0.0, 'cost' => 0.0, 'profit' => 0.0];
+        // estimated: the part of cost priced from TLD prices because no registrar charge was found.
+        $blank = fn () => ['sales' => 0.0, 'cost' => 0.0, 'profit' => 0.0, 'estimated' => 0.0];
         $registrars = [];
         $totals = array_fill_keys($months, $blank());
         $tlds = [];
         $ledgers = [];
 
         $sales = $this->sales($codes->all(), $from, $end);
+        $perDomain = [];
+        $unpriced = [];
+        $domainRow = fn ($id, $name, $code, $clientId) => ['domain_id' => $id, 'domain' => $name, 'registrar' => $code, 'client_id' => $clientId, 'sales' => 0.0, 'cost' => 0.0, 'estimated' => 0.0, 'last_paid' => ''];
         foreach ($codes as $code) {
             $ledgers[$code] = $this->ledger($code);
             $row = ['code' => $code, 'name' => config("billing.registrars.{$code}.name"), 'months' => array_fill_keys($months, $blank()), 'totals' => $blank()];
+            $registrar = Registrar::where('code', $code)->first();
+            $rate = $registrar ? $registrar->bdtRate($ledgers[$code]['wallet']['average_rate']) : null;
+            $prices = $this->tldPrices($code);
+            // An actual charge near the sale replaces the estimate, so nothing is counted twice.
+            $actual = RegistrarCharge::where('registrar_code', $code)->where('type', 'debit')->whereNotNull('domain_id')
+                ->where('charged_at', '>=', $from->subDays(60))->where('charged_at', '<', $end->addDays(60))
+                ->get(['domain_id', 'charged_at'])->groupBy('domain_id');
 
             foreach ($sales->where('registrar', $code) as $sale) {
                 $month = substr($sale->paid_at, 0, 7);
+                $tld = $this->tld($sale->name);
                 $row['months'][$month]['sales'] += (float) $sale->amount;
-                $tlds[$this->tld($sale->name)]['sales'] = ($tlds[$this->tld($sale->name)]['sales'] ?? 0) + (float) $sale->amount;
+                $tlds[$tld]['sales'] = ($tlds[$tld]['sales'] ?? 0) + (float) $sale->amount;
+
+                $paid = strtotime($sale->paid_at);
+                $charged = ($actual->get($sale->domain_id) ?? collect())->contains(fn ($c) => abs($c->charged_at->timestamp - $paid) <= 60 * 86400);
+                $action = $this->costAction($sale);
+                $estimate = null;
+                if (! $charged && $action) {
+                    $price = $this->priceFor($prices, $sale->name, $action);
+                    if ($price === null || $rate === null) {
+                        $priceTld = $this->priceTld($prices, $sale->name) ?? $tld;
+                        $unpriced["{$code}{$priceTld}{$action}"] = ['registrar' => $code, 'tld' => $priceTld, 'action' => $action, 'reason' => $price === null ? 'no_price' : 'no_rate'];
+                    } else {
+                        $estimate = round($price * max(1, (int) ($sale->years ?? 1)) * $rate, 2);
+                        $row['months'][$month]['cost'] += $estimate;
+                        $row['months'][$month]['estimated'] += $estimate;
+                        $tlds[$tld]['cost'] = ($tlds[$tld]['cost'] ?? 0) + $estimate;
+                    }
+                }
+
+                $perDomain[$sale->domain_id] ??= $domainRow($sale->domain_id, $sale->name, $code, $sale->client_id);
+                $perDomain[$sale->domain_id]['sales'] += (float) $sale->amount;
+                $perDomain[$sale->domain_id]['cost'] += $estimate ?? 0.0;
+                $perDomain[$sale->domain_id]['estimated'] += $estimate ?? 0.0;
+                $perDomain[$sale->domain_id]['last_paid'] = max($perDomain[$sale->domain_id]['last_paid'], substr($sale->paid_at, 0, 10));
             }
 
-            $charges = RegistrarCharge::with('domain:id,name')->where('registrar_code', $code)
+            $charges = RegistrarCharge::with('domain:id,name,client_id')->where('registrar_code', $code)
                 ->where('charged_at', '>=', $from)->where('charged_at', '<', $end)->get();
             foreach ($charges as $charge) {
                 $cost = $ledgers[$code]['costs'][$charge->id]['cost_bdt'] ?? 0.0;
                 $row['months'][$charge->charged_at->format('Y-m')]['cost'] += $cost;
                 $tld = $charge->domain ? $this->tld($charge->domain->name) : 'Unmatched';
                 $tlds[$tld]['cost'] = ($tlds[$tld]['cost'] ?? 0) + $cost;
+                if ($charge->domain) {
+                    $perDomain[$charge->domain_id] ??= $domainRow($charge->domain_id, $charge->domain->name, $code, $charge->domain->client_id);
+                    $perDomain[$charge->domain_id]['cost'] += $cost;
+                }
             }
 
             foreach ($months as $month) {
                 $cell = &$row['months'][$month];
                 $cell['profit'] = $cell['sales'] - $cell['cost'];
-                foreach (['sales', 'cost', 'profit'] as $key) {
+                foreach (['sales', 'cost', 'profit', 'estimated'] as $key) {
                     $row['totals'][$key] += $cell[$key];
                     $totals[$month][$key] += $cell[$key];
                 }
@@ -166,10 +208,16 @@ class RegistrarLedger
 
         $grand = $blank();
         foreach ($totals as $cell) {
-            foreach (['sales', 'cost', 'profit'] as $key) {
+            foreach (['sales', 'cost', 'profit', 'estimated'] as $key) {
                 $grand[$key] += $cell[$key];
             }
         }
+
+        $domains = collect($perDomain)->map(fn ($d) => [...$d, 'profit' => $d['sales'] - $d['cost'], 'cost_source' => match (true) {
+            $d['estimated'] <= 0 => $d['cost'] > 0 ? 'actual' : 'none',
+            $d['estimated'] < $d['cost'] - 0.001 => 'mixed',
+            default => 'estimated',
+        }])->sortByDesc('sales')->values()->all();
 
         $byTld = collect($tlds)->map(fn ($t, $name) => ['tld' => $name, 'sales' => round($t['sales'] ?? 0, 2), 'cost' => round($t['cost'] ?? 0, 2), 'profit' => round(($t['sales'] ?? 0) - ($t['cost'] ?? 0), 2)])
             ->sortByDesc('sales')->values();
@@ -185,7 +233,59 @@ class RegistrarLedger
             'deposited' => ['sent_bdt' => round((float) $deposits->sum('amount_bdt'), 2), 'fees_bdt' => round((float) $deposits->sum('fee_bdt'), 2)],
             'wallets' => collect($ledgers)->map(fn ($l) => $l['wallet'])->values(),
             'checks' => $this->checks($codes->all(), $ledgers),
+            // Every domain sold or charged in the range, with its cost.
+            'domains' => $this->round($domains),
+            // TLDs whose sales could not be costed: no synced price, or no BDT rate for the currency.
+            'unpriced' => array_values($unpriced),
         ];
+    }
+
+    /** Which registrar price a paid line costs: renew for a renewal, else what the domain was ordered as. */
+    private function costAction(object $sale): ?string
+    {
+        if ($sale->kind === 'renewal') {
+            return 'renew';
+        }
+
+        return match ($sale->action) {
+            'register' => 'register',
+            'transfer' => 'transfer',
+            'renew', 'renewal' => 'renew',
+            default => null, // a customer's own domain costs nothing at the registrar
+        };
+    }
+
+    /** @return array<string, array{register: ?float, renew: ?float, transfer: ?float}> keyed by TLD with the leading dot */
+    private function tldPrices(string $code): array
+    {
+        return RegistrarTld::where('registrar_code', $code)->get(['tld', 'register_cost', 'renew_cost', 'transfer_cost'])
+            ->mapWithKeys(fn ($t) => [strtolower($t->tld) => [
+                'register' => $t->register_cost !== null ? (float) $t->register_cost : null,
+                'renew' => $t->renew_cost !== null ? (float) $t->renew_cost : null,
+                'transfer' => $t->transfer_cost !== null ? (float) $t->transfer_cost : null,
+            ]])->all();
+    }
+
+    /** The longest priced TLD the name ends with, e.g. .com.bd before .bd. */
+    private function priceTld(array $prices, string $name): ?string
+    {
+        $parts = explode('.', strtolower($name));
+        for ($i = 1; $i < count($parts); $i++) {
+            $tld = '.'.implode('.', array_slice($parts, $i));
+            if (isset($prices[$tld])) {
+                return $tld;
+            }
+        }
+
+        return null;
+    }
+
+    /** One year's cost in the registrar's currency. A missing renew or transfer price falls back to register. */
+    private function priceFor(array $prices, string $name, string $action): ?float
+    {
+        $tld = $this->priceTld($prices, $name);
+
+        return $tld === null ? null : ($prices[$tld][$action] ?? $prices[$tld]['register'] ?? null);
     }
 
     /** Paid invoice lines for domains at these registrars, paid in the range. */
@@ -200,7 +300,11 @@ class RegistrarLedger
             ->whereIn('domains.registrar', $codes)
             ->whereIn('invoice_items.kind', self::SALE_KINDS)
             ->where('invoice_items.amount', '>', 0)
-            ->get(['domains.id as domain_id', 'domains.name', 'domains.registrar', 'invoice_items.amount', 'invoices.paid_at', 'invoices.id as invoice_id', 'invoices.number', 'invoices.client_id']);
+            ->get(['invoices.currency', 'domains.id as domain_id', 'domains.name', 'domains.registrar', 'domains.action', 'domains.years', 'invoice_items.kind', 'invoice_items.amount', 'invoices.paid_at', 'invoices.id as invoice_id', 'invoices.number', 'invoices.client_id'])
+            // Profit is in BDT, so a USD sale counts at the current rate.
+            ->each(function ($sale) {
+                $sale->amount = Currency::toBase($sale->amount, $sale->currency);
+            });
     }
 
     /**

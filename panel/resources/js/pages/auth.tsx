@@ -280,7 +280,9 @@ function Register() {
     const navigate = useNavigate();
     const { state } = useLocation();
     const recaptcha = useRecaptcha('REGISTER');
-    const [form, setForm] = useState({ name: '', company: '', email: '', phone_country: '+880', phone: '', address: '', password: '', password_confirmation: '', ...state?.form });
+    const branding = useBranding();
+    const currencies = branding.currencies ?? ['BDT', 'USD'];
+    const [form, setForm] = useState({ name: '', company: '', email: '', phone_country: '+880', phone: '', address: '', currency: '', password: '', password_confirmation: '', ...state?.form });
     const set = (field: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value });
     const submit = useMutation({
         mutationFn: () => api.post('/client/register', { ...form, ...recaptcha.field }),
@@ -297,7 +299,12 @@ function Register() {
                 <div className="sm:col-span-2"><Field label="Email"><Input type="email" required autoComplete="email" maxLength={255} value={form.email} onChange={set('email')} /></Field></div>
                 <Field label="Country code"><Select value={form.phone_country} onChange={set('phone_country')}>{phoneCountries.map(([code, label]) => <option key={code} value={code}>{label}</option>)}</Select></Field>
                 <Field label="Phone (optional)"><Input type="tel" autoComplete="tel-national" maxLength={24} value={form.phone ?? ''} onChange={set('phone')} /></Field>
-                <div className="sm:col-span-2"><Field label="Address (optional)"><Input autoComplete="street-address" maxLength={255} value={form.address ?? ''} onChange={set('address')} /></Field></div>
+                <Field label="Address (optional)"><Input autoComplete="street-address" maxLength={255} value={form.address ?? ''} onChange={set('address')} /></Field>
+                <Field label="Currency" hint="Your prices and invoices are in this.">
+                    <Select value={form.currency || branding.default_currency || 'BDT'} onChange={set('currency')}>
+                        {currencies.map((c) => <option key={c} value={c}>{c === 'BDT' ? 'BDT (Bangladeshi Taka)' : c === 'USD' ? 'USD (US Dollar)' : c}</option>)}
+                    </Select>
+                </Field>
                 <Field label="Password" hint="At least 10 characters"><Input type="password" required minLength={10} autoComplete="new-password" value={form.password} onChange={set('password')} /></Field>
                 <Field label="Confirm password" hint={mismatch ? 'Passwords do not match' : undefined}><Input type="password" required autoComplete="new-password" value={form.password_confirmation} onChange={set('password_confirmation')} /></Field>
                 <div className="space-y-4 sm:col-span-2">

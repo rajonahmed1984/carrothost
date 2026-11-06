@@ -96,7 +96,7 @@ class ServiceController extends Controller
             if (! $price) {
                 throw ValidationException::withMessages(['recurring_amount' => "{$product->name} has no {$cycle} price, so the amount cannot be recalculated."]);
             }
-            $changes['recurring_amount'] = bcmul($price->price, (string) ($changes['quantity'] ?? $service->quantity), 2);
+            $changes['recurring_amount'] = bcmul($price->priceIn($service->client->currencyCode()), (string) ($changes['quantity'] ?? $service->quantity), 2);
         }
 
         // Login details kept in the panel. They do not change the password on the server.
@@ -148,9 +148,17 @@ class ServiceController extends Controller
     {
         $data = $request->validate(['product_id' => 'nullable|integer|exists:products,id', 'cycle' => ['nullable', Rule::in(array_keys(config('billing.cycles')))]]);
 
+        // Prices in the client's currency, as the upgrade invoice will be.
+        $currency = $service->client->currencyCode();
+
         return [
-            'products' => Product::with('prices:id,product_id,cycle,price')->orderBy('name')->get(['id', 'name', 'module'])
-                ->filter(fn (Product $p) => $p->prices->isNotEmpty())->values(),
+            'currency' => $currency,
+            'products' => Product::with('prices')->orderBy('name')->get(['id', 'name', 'module'])
+                ->filter(fn (Product $p) => $p->prices->isNotEmpty())->values()
+                ->map(fn (Product $p) => [
+                    ...$p->only('id', 'name', 'module'),
+                    'prices' => $p->prices->map(fn ($price) => ['cycle' => $price->cycle, 'price' => $price->priceIn($currency)])->values(),
+                ]),
             'quote' => isset($data['product_id'], $data['cycle']) ? $tools->quote($service, Product::find($data['product_id']), $data['cycle']) : null,
         ];
     }

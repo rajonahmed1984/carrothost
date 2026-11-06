@@ -14,7 +14,8 @@ export const settings = [
 
 const tabs = [
     { key: 'general', label: 'General', hint: 'Brand, contact, locale and sign-in security.' },
-    { key: 'invoices', label: 'Invoices', hint: 'Currency and when new invoices fall due.' },
+    { key: 'invoices', label: 'Invoices', hint: 'When new invoices fall due, and Add Funds limits.' },
+    { key: 'currencies', label: 'Currencies', hint: 'Which currency new clients start in, and what 1 USD is worth in BDT.' },
     { key: 'domains', label: 'Domains', hint: 'What customers can order, and the defaults each new domain starts with.' },
     { key: 'automation', label: 'Automation', hint: 'Renewals, suspensions and support ticket clean-up.' },
     { key: 'email', label: 'Email', hint: 'Mail goes out through the server unless an SMTP server is saved here.' },
@@ -22,7 +23,7 @@ const tabs = [
 
 type Values = {
     company_name: string; company_email: string | null; pay_to_text: string | null; company_country: string | null; time_zone: string;
-    currency: string; invoice_due_days: number; renewal_notice_days: number; credit_min_deposit: string; credit_max_deposit: string; credit_max_balance: string; suspension_enabled: boolean; suspend_after_days: number;
+    currency: string; usd_rate: string | null; invoice_due_days: number; renewal_notice_days: number; credit_min_deposit: string; credit_max_deposit: string; credit_max_balance: string; suspension_enabled: boolean; suspend_after_days: number;
     unsuspension_enabled: boolean; ticket_auto_close_days: number; domain_allow_register: boolean; domain_allow_transfer: boolean;
     domain_allow_own: boolean; domain_auto_renew: boolean; nameserver_1: string | null; nameserver_2: string | null; nameserver_3: string | null;
     nameserver_4: string | null; nameserver_5: string | null; recaptcha_enabled: boolean; recaptcha_site_key: string | null;
@@ -30,6 +31,7 @@ type Values = {
     mail_scheme: string | null; mail_username: string | null; mail_from_address: string | null; mail_from_name: string | null;
     termination_enabled: boolean; terminate_after_days: number; reminder_before_due_days: number; overdue_notice_1: number; overdue_notice_2: number;
     overdue_notice_3: number; domain_reminder_days: string; usage_update_enabled: boolean; domain_sync_enabled: boolean;
+    cron_report_enabled: boolean; domain_sync_report_enabled: boolean; report_recipients: string | null;
 };
 type Automation = { heartbeat: string | null; runs: Record<string, { at: string; count: number | null }> };
 type Secrets = { recaptcha_secret_key: boolean; recaptcha_api_key: boolean; mail_password: boolean };
@@ -212,9 +214,6 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                 <div className={tab.key === 'invoices' ? 'space-y-4' : 'hidden'}>
                     <Section title="Invoice Settings">
                         <div className="grid gap-4 md:grid-cols-2">
-                            <Field label="Currency" hint="Applies to new invoices. Existing invoices keep theirs.">
-                                <Select {...text('currency')}><option value="BDT">BDT</option><option value="USD">USD</option></Select>
-                            </Field>
                             <Field label="Invoice due days" hint="Days after an order that its invoice falls due. 0 = due straight away.">
                                 <Input type="number" min="0" max="365" required {...text('invoice_due_days')} />
                             </Field>
@@ -227,6 +226,47 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                         <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                             Bank transfer and other payment instructions are set on the Manual gateway in <Link className="table-action-link" to="/admin/settings/gateways">Payment Gateways</Link>.
                         </p>
+                    </Section>
+                </div>
+
+                <div className={tab.key === 'currencies' ? 'space-y-4' : 'hidden'}>
+                    <Section title="Client Currency">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field label="Default for new clients" hint="Customers can pick BDT or USD when they sign up; this is preselected. Change an existing client's currency on their profile.">
+                                <Select {...text('currency')}><option value="BDT">BDT</option><option value="USD">USD</option></Select>
+                            </Field>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                            Each client is billed in their own currency: store prices, orders, invoices, renewals, upgrades and credit. Prices are set in BDT; a USD client pays the fixed USD price where a product or TLD has one, else the BDT price converted at the rate below. Reports add everything up in BDT.
+                        </p>
+                    </Section>
+                    <Section title="Exchange Rates">
+                        <div className="overflow-x-auto rounded-xl border border-slate-200">
+                            <table className="w-full min-w-[30rem] text-sm">
+                                <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase">
+                                    <tr><th className="px-4 py-2">Currency</th><th className="px-4 py-2">Rate</th><th className="px-4 py-2">Used for</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    <tr>
+                                        <td className="px-4 py-3 font-medium text-slate-900">BDT <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Base</span></td>
+                                        <td className="px-4 py-3 text-slate-600 tabular-nums">1.00</td>
+                                        <td className="px-4 py-3 text-xs text-slate-500">Every amount is converted to BDT.</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-4 py-3 font-medium text-slate-900">USD</td>
+                                        <td className="px-4 py-3">
+                                            <label className="flex items-center gap-2">
+                                                <span className="text-xs whitespace-nowrap text-slate-500">1 USD =</span>
+                                                <input type="number" min="0.0001" max="100000" step="0.0001" placeholder="122.00" aria-label="BDT per 1 USD" className="ui-input w-32" {...text('usd_rate')} />
+                                                <span className="text-xs text-slate-500">BDT</span>
+                                            </label>
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-slate-500">USD prices without a fixed price, bKash/SSLCommerz payments of USD invoices, PayPal payments of BDT invoices, USD registrar costs, and BDT totals in reports.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="text-xs text-slate-500">Keep this rate current. Domain profit uses it for USD costs with no deposit recorded in the registrar's wallet; a recorded deposit uses what you actually paid.</p>
                     </Section>
                 </div>
 
@@ -295,6 +335,15 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             <Check checked={values.usage_update_enabled} onChange={set('usage_update_enabled')} label="Update disk and bandwidth usage from the servers" />
                             <Check checked={values.domain_sync_enabled} onChange={set('domain_sync_enabled')} label="Sync domain expiry and status from the registrars" />
                         </div>
+                    </Section>
+                    <Section title="Admin Reports">
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <Check checked={values.cron_report_enabled} onChange={set('cron_report_enabled')} label="Email the daily Cron Job Activity report at midnight" />
+                            <Check checked={values.domain_sync_report_enabled} onChange={set('domain_sync_report_enabled')} label="Email the Domain Synchronisation Cron Report after the midnight sync" />
+                        </div>
+                        <Field label="Send reports to" hint="Comma separated. Leave blank to send to every admin.">
+                            <Input placeholder="admin@example.com, billing@example.com" {...text('report_recipients')} />
+                        </Field>
                     </Section>
                     <Section title="Support Ticket Automation">
                         <Field label="Auto-close days" hint="Close tickets left Answered this many days with no customer reply. 0 = never.">

@@ -98,7 +98,7 @@ class ServiceTools
             throw ValidationException::withMessages(['cycle' => "{$product->name} has no {$cycle} price."]);
         }
 
-        $newRecurring = bcmul((string) $price->price, (string) max(1, $service->quantity), 2);
+        $newRecurring = bcmul($price->priceIn($service->client->currencyCode()), (string) max(1, $service->quantity), 2);
         $due = $service->next_due_date;
         $daysLeft = 0;
         $cycleDays = 0;

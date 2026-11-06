@@ -16,10 +16,27 @@ class LoginOtpService
 
     public const OTP_EXPIRY_MINUTES = 10;
 
-    /** A fixed code on a server would undo the check, so this needs both a local env and debug mode. */
+    /**
+     * A fixed code on a server would undo the check, so this needs a local env, debug mode
+     * and a request to a local host. The host check keeps it off a live domain even when
+     * a development .env was uploaded there by mistake.
+     */
     public static function isLocalDev(): bool
     {
-        return app()->environment('local') && config('app.debug');
+        if (! app()->environment('local') || ! config('app.debug')) {
+            return false;
+        }
+
+        return self::isLocalHost(request()->getHost());
+    }
+
+    public static function isLocalHost(?string $host): bool
+    {
+        $host = strtolower(trim((string) $host, '[]'));
+
+        return in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            || str_ends_with($host, '.localhost')
+            || str_ends_with($host, '.test');
     }
 
     /** False means the code could not be delivered. */

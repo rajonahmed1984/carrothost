@@ -130,7 +130,6 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const [login, setLogin] = useState(false);
     const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
-    const [panel, setPanel] = useState<string | null>(null);
     const navigate = useNavigate();
     const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
     const dirty = JSON.stringify(form) !== JSON.stringify(toForm(s));
@@ -421,22 +420,13 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 <Section
                     title="Control Panel"
                     icon={<MonitorSmartphone size={16} />}
-                    action={panel ? (
-                        <span className="flex items-center gap-2">
-                            <a href={panel} target="_blank" rel="noreferrer" className="ui-btn ui-btn-secondary h-8 px-3 text-xs"><ExternalLink size={13} /> New Tab</a>
-                            <button type="button" onClick={() => setPanel(null)} className="ui-btn ui-btn-secondary h-8 px-3 text-xs"><X size={13} /> Close</button>
-                        </span>
-                    ) : undefined}
                 >
-                    {panel ? (
-                        <iframe title={`${s.product.module} control panel for ${s.remote_id}`} src={panel} className="block h-[720px] w-full border-0 bg-white" />
-                    ) : (
-                        <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
-                            <p className="max-w-md text-sm text-slate-500">Open {s.remote_id}'s control panel right here, already signed in. Every opening creates a new one-time login.</p>
-                            <ErrorNote error={sso.error} />
-                            <Button type="button" disabled={sso.isPending} onClick={() => sso.mutate(undefined, { onSuccess: setPanel })}><MonitorSmartphone size={14} /> {sso.isPending ? 'Signing in...' : 'Open Control Panel Here'}</Button>
-                        </div>
-                    )}
+                    {/* cPanel and Webuzo refuse to load inside another site's frame, so the login opens in its own tab. */}
+                    <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
+                        <p className="max-w-md text-sm text-slate-500">Open {s.remote_id}'s control panel in a new tab, already signed in. Every opening creates a new one-time login.</p>
+                        <ErrorNote error={sso.error} />
+                        <Button type="button" disabled={sso.isPending} onClick={loginToPanel}><ExternalLink size={14} /> {sso.isPending ? 'Signing in...' : 'Open Control Panel'}</Button>
+                    </div>
                 </Section>
             )}
 

@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Models\Gateway;
 use App\Models\PaymentAttempt;
+use App\Support\Currency;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -12,9 +13,10 @@ class SslCommerzDriver implements PaymentDriver
 {
     public function __construct(private Gateway $gateway) {}
 
-    public function charge(string $balance): array
+    /** Charged in BDT; a USD invoice is charged its BDT value at the current rate. */
+    public function charge(string $balance, string $currency): array
     {
-        return [$balance, 'BDT'];
+        return [Currency::convert($balance, $currency, 'BDT'), 'BDT'];
     }
 
     public function start(PaymentAttempt $attempt): string

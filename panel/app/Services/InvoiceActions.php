@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Support\Currency;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -89,7 +90,8 @@ class InvoiceActions
     {
         $items = $invoice->items()->whereNotIn('kind', BillingService::PREPAYMENT_KINDS)
             ->where(fn ($q) => $q->where('description', '!=', 'Credit applied')->orWhere('amount', '>=', 0))
-            ->get()->map(fn ($item) => ['description' => $item->description, 'amount' => (string) $item->amount, 'kind' => 'other'])->all();
+            // The copy is raised in the client's currency; an older invoice in another one is converted.
+            ->get()->map(fn ($item) => ['description' => $item->description, 'amount' => Currency::convert((string) $item->amount, $invoice->currency ?: 'BDT', $invoice->client->currencyCode()), 'kind' => 'other'])->all();
 
         $copy = $this->billing->createInvoice($invoice->client, $items, today());
         ActivityLog::record('invoice.duplicated', $copy, ['from' => $invoice->number]);
@@ -153,6 +155,12 @@ class InvoiceActions
     {
         if ($invoices->count() < $min || $invoices->pluck('client_id')->unique()->count() > 1 || $invoices->contains(fn (Invoice $i) => $i->status !== 'unpaid')) {
             throw ValidationException::withMessages(['invoice_ids' => "{$label} needs at least {$min} unpaid invoices of the same client."]);
+        }
+
+        // The new invoice is in the client's currency, so every one bundled must be too.
+        $currency = $invoices->first()->client->currencyCode();
+        if ($invoices->contains(fn (Invoice $i) => strtoupper((string) $i->currency) !== $currency)) {
+            throw ValidationException::withMessages(['invoice_ids' => "{$label} needs invoices in the client's currency ({$currency})."]);
         }
 
         return $invoices->sortBy([['due_date', 'asc'], ['id', 'asc']])->values();

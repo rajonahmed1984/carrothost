@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Models\Gateway;
 use App\Models\PaymentAttempt;
+use App\Support\Currency;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -13,9 +14,19 @@ class PayPalDriver implements PaymentDriver
 {
     public function __construct(private Gateway $gateway) {}
 
-    public function charge(string $balance): array
+    public function charge(string $balance, string $currency): array
     {
-        $amount = bcdiv($balance, (string) $this->gateway->config['usd_rate'], 2);
+        // A USD invoice is charged as it is.
+        if (strtoupper($currency) === 'USD') {
+            return [$balance, 'USD'];
+        }
+
+        // The gateway's own rate, else the one in Settings > Currencies.
+        $rate = (float) ($this->gateway->config['usd_rate'] ?? 0) > 0 ? (float) $this->gateway->config['usd_rate'] : Currency::bdtRate('USD');
+        if (! $rate) {
+            throw new RuntimeException('PayPal needs a USD rate. Set BDT per 1 USD in Settings > Currencies.');
+        }
+        $amount = bcdiv($balance, number_format($rate, 4, '.', ''), 2);
 
         if (bccomp($amount, '0.01', 2) < 0) {
             throw new RuntimeException('This amount is too small to pay by PayPal.');

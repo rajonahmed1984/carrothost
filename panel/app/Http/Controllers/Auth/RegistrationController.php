@@ -35,7 +35,13 @@ class RegistrationController extends Controller
             'phone_country' => 'nullable|string|max:6',
             'phone' => 'nullable|string|max:24',
             'address' => 'nullable|string|max:255',
+            // What the new account is billed in. Blank means the default from Settings > Currencies.
+            'currency' => ['nullable', \Illuminate\Validation\Rule::in(\App\Support\Currency::SUPPORTED)],
         ], ['email.unique' => self::EMAIL_TAKEN]);
+
+        if (empty($data['currency'])) {
+            unset($data['currency']);
+        }
 
         $data['email'] = Str::lower($data['email']);
         $data['phone'] = $this->normalizePhone($data['phone'] ?? null, $data['phone_country'] ?? null);

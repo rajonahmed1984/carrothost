@@ -188,7 +188,7 @@ function ManageCredits({ client, onClose }: { client: Detail; onClose: () => voi
         <Modal wide title={`Manage Credits: ${client.name}`} onClose={onClose}>
             <div className="space-y-4">
                 <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                    Available credit: <strong className="tabular-nums">{money(balance)}</strong>
+                    Available credit: <strong className="tabular-nums">{money(balance, client.currency)}</strong>
                     <span className="block text-xs text-emerald-800">Added credit pays the client's unpaid invoices straight away, oldest due first.</span>
                 </p>
                 <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="grid items-end gap-3 sm:grid-cols-[8rem_9rem_1fr_auto]">
@@ -208,7 +208,7 @@ function ManageCredits({ client, onClose }: { client: Detail; onClose: () => voi
                         { header: 'Date', cell: (r) => <span className="whitespace-nowrap">{formatWhmcsDate(r.created_at)}</span> },
                         { header: 'Description', cell: (r) => r.invoice ? <Link className="table-action-link" to={`/admin/paid-invoices/${r.invoice.id}`}>{r.description}</Link> : r.description },
                         { header: 'By', cell: (r) => r.user?.name ?? 'System' },
-                        { header: 'Amount', cell: (r) => <span className={Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(r.amount)}</span>, align: 'right' },
+                        { header: 'Amount', cell: (r) => <span className={Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(r.amount, client.currency)}</span>, align: 'right' },
                     ]}
                 />
             </div>
@@ -257,12 +257,12 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
             <div className="min-w-0 space-y-4">
                 <Panel title="Invoices/Billing" footer={<><Action icon={<ReceiptText size={14} />} onClick={onInvoice}>Create Invoice</Action><Action icon={<Wallet size={14} />} onClick={() => setCredits(true)}>Manage Credits</Action></>}>
                     <Rows rows={[
-                        ['Paid', `${t.paid.count} (${money(t.paid.total)})`],
-                        ['Unpaid/Due', `${t.unpaid.count} (${money(t.unpaid.total)})`],
+                        ['Paid', `${t.paid.count} (${money(t.paid.total, c.currency)})`],
+                        ['Unpaid/Due', `${t.unpaid.count} (${money(t.unpaid.total, c.currency)})`],
                         ['Overdue', String(c.overdue_invoices)],
-                        ['Cancelled', `${t.cancelled.count} (${money(t.cancelled.total)})`],
-                        ['Gross Revenue', money(c.gross_revenue)],
-                        ['Credit Balance', <span key="credit" className="font-semibold text-emerald-700">{money(c.credit_balance)}</span>],
+                        ['Cancelled', `${t.cancelled.count} (${money(t.cancelled.total, c.currency)})`],
+                        ['Gross Revenue', money(c.gross_revenue, c.currency)],
+                        ['Credit Balance', <span key="credit" className="font-semibold text-emerald-700">{money(c.credit_balance, c.currency)}</span>],
                     ]} />
                 </Panel>
                 {credits && <ManageCredits client={c} onClose={() => setCredits(false)} />}
@@ -876,7 +876,7 @@ export function ClientDetailPage() {
                     {tab === 'profile' && (
                         <Card title="Profile" action={<Button onClick={() => setEditing(true)}><UserPen size={14} /> Edit Profile</Button>}>
                             <dl className="grid gap-x-8 sm:grid-cols-2">
-                                {([['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country], ['Status', <Status key="s" value={c.status} />], ['Signup Date', new Date(c.created_at).toLocaleDateString('en-GB')], ['Credit Balance', money(c.credit_balance)]] as [string, ReactNode][]).map(([label, value]) => (
+                                {([['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country], ['Status', <Status key="s" value={c.status} />], ['Signup Date', new Date(c.created_at).toLocaleDateString('en-GB')], ['Currency', c.currency ?? 'BDT'], ['Credit Balance', money(c.credit_balance, c.currency)]] as [string, ReactNode][]).map(([label, value]) => (
                                     <div key={label} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm">
                                         <dt className="text-slate-500">{label}</dt>
                                         <dd className="text-right font-medium break-words text-slate-800">{value || '-'}</dd>

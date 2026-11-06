@@ -175,6 +175,24 @@ class AuthTest extends TestCase
         $this->assertAuthenticatedAs($admin, 'web');
     }
 
+    public function test_fixed_local_code_never_works_on_a_live_domain_even_with_a_dev_env(): void
+    {
+        $admin = $this->admin();
+        $this->withoutMiddleware(PreventRequestForgery::class);
+        $this->app['env'] = 'local';
+        config(['app.debug' => true]);
+
+        $live = 'https://my.carrothost.com';
+        $this->postJson("{$live}/api/login", ['email' => $admin->email, 'password' => self::PASSWORD])->assertOk();
+        $this->getJson("{$live}/api/login/otp")->assertOk()->assertJson(['local_otp' => null]);
+        $this->postJson("{$live}/api/login/otp", ['otp' => LoginOtpService::LOCAL_TEMP_OTP])->assertUnprocessable();
+        $this->assertGuest('web');
+
+        $this->assertTrue(LoginOtpService::isLocalHost('127.0.0.1'));
+        $this->assertTrue(LoginOtpService::isLocalHost('carrothost.test'));
+        $this->assertFalse(LoginOtpService::isLocalHost('my.carrothost.com'));
+    }
+
     public function test_undelivered_code_is_reported_instead_of_a_dead_end(): void
     {
         $admin = $this->admin();

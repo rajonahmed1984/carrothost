@@ -131,7 +131,7 @@ class DomainController extends Controller
             } catch (\Throwable) {
                 throw ValidationException::withMessages(['recurring_amount' => "No TLD price is set up for {$name}, so the amount cannot be recalculated."]);
             }
-            $changes['recurring_amount'] = bcmul($tld->renew_price, (string) ($changes['years'] ?? $domain->years), 2);
+            $changes['recurring_amount'] = bcmul($tld->priceIn('renew', $domain->client->currencyCode()), (string) ($changes['years'] ?? $domain->years), 2);
         }
 
         $this->pushToRegistrar($domain, $changes, $registrar);

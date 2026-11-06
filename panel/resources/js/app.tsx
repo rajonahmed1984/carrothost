@@ -349,7 +349,8 @@ function App() {
     const guestPage = isGuestPath(pathname);
     const home = safeRedirect(new URLSearchParams(search).get('redirect')) ?? (me.data ? '/admin/dashboard' : '/');
 
-    if (config.data) setDefaultCurrency(config.data.branding.currency);
+    // Admins see the base currency; a signed-in customer sees everything in their own.
+    if (config.data) setDefaultCurrency(!me.data && clientMe.data?.currency ? clientMe.data.currency : config.data.branding.currency);
     if (me.isLoading || clientMe.isLoading || config.isLoading) return <p className="p-10 text-center text-slate-500">Loading...</p>;
 
     if (me.data) {

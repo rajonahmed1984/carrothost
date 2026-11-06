@@ -187,35 +187,70 @@ class AutomationService
     /** Copies expiry, nameservers, lock and status from the registrar for domains it holds. */
     public function syncDomains(): int
     {
-        if (! config('billing.domain_sync_enabled')) {
-            return 0;
+        return count($this->syncDomainsReport()['synced']);
+    }
+
+    /**
+     * The sync with what it did to each domain, for the Domain Synchronisation Cron Report.
+     *
+     * @return array{enabled: bool, synced: list<array{domain: string, registrar: string, changes: list<string>}>, missing: list<array{domain: string, registrar: string}>, failed: list<array{domain: string, registrar: string, error: string}>, remaining: int}
+     */
+    public function syncDomainsReport(): array
+    {
+        $report = ['enabled' => (bool) config('billing.domain_sync_enabled'), 'synced' => [], 'missing' => [], 'failed' => [], 'remaining' => 0];
+        if (! $report['enabled']) {
+            return $report;
         }
 
         $connected = Registrar::whereNotNull('api_key')->whereNotNull('reseller_id')->pluck('code')
             ->filter(fn ($code) => config("billing.registrars.{$code}.class"));
-        $count = 0;
 
-        $domains = Domain::whereIn('registrar', $connected)->whereIn('status', ['active', 'expired', 'grace', 'pending'])
-            ->where(fn ($q) => $q->whereNull('registrar_synced_at')->orWhere('registrar_synced_at', '<', now()->subHours(20)))
-            ->orderBy('registrar_synced_at')
-            ->limit(300)
-            ->get();
+        $due = Domain::whereIn('registrar', $connected)->whereIn('status', ['active', 'expired', 'grace', 'pending'])
+            ->where(fn ($q) => $q->whereNull('registrar_synced_at')->orWhere('registrar_synced_at', '<', now()->subHours(20)));
+        $domains = (clone $due)->orderBy('registrar_synced_at')->limit(self::DOMAIN_SYNC_BATCH)->get();
 
         foreach ($domains as $domain) {
+            $row = ['domain' => $domain->name, 'registrar' => (string) $domain->registrar];
             try {
                 if (! $this->registrar->orderId($domain)) {
                     $domain->forceFill(['registrar_synced_at' => now()])->save(); // not in that account; look again tomorrow
+                    $report['missing'][] = $row;
 
                     continue;
                 }
+
+                $before = $this->syncSnapshot($domain);
                 $this->registrar->syncToPanel($domain);
-                $count++;
-            } catch (Throwable) {
+                $after = $this->syncSnapshot($domain);
+
+                $changes = [];
+                foreach (['expires_at' => 'Expiry date', 'next_due_date' => 'Next due date', 'status' => 'Status'] as $field => $label) {
+                    if ($before[$field] !== $after[$field]) {
+                        $changes[] = "{$label} ".($before[$field] ?? 'none')." → {$after[$field]}";
+                    }
+                }
+                $report['synced'][] = [...$row, 'changes' => $changes];
+            } catch (Throwable $e) {
                 // Leave it for the next run.
+                $report['failed'][] = [...$row, 'error' => mb_strimwidth($e->getMessage(), 0, 200, '...')];
             }
         }
 
-        return $count;
+        $report['remaining'] = (clone $due)->count();
+
+        return $report;
+    }
+
+    public const DOMAIN_SYNC_BATCH = 300;
+
+    /** @return array{expires_at: ?string, next_due_date: ?string, status: ?string} */
+    private function syncSnapshot(Domain $domain): array
+    {
+        return [
+            'expires_at' => $domain->expires_at?->toDateString(),
+            'next_due_date' => $domain->next_due_date?->toDateString(),
+            'status' => $domain->status,
+        ];
     }
 
     /** Last run of each daily task, for the Automation settings page. */

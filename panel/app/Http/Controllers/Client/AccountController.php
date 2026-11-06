@@ -161,6 +161,8 @@ class AccountController extends Controller
 
         return [
             ...$client->only('id', 'name', 'email', 'otp_enabled'),
+            // Everything in the client area is shown in this.
+            'currency' => $client->currencyCode(),
             'has_password' => $user ? true : $client->password !== null, // a user always signed in with their own
             'impersonating' => $request->session()->has(LoginService::IMPERSONATOR),
             // Set when a user of the account (not its owner) is signed in. Null permissions = everything.

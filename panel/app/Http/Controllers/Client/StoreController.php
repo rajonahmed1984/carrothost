@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Domain;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\ProductPrice;
 use App\Models\Tld;
 use App\Services\BillingService;
 use App\Services\DomainLookup;
@@ -17,8 +18,11 @@ use Illuminate\Validation\ValidationException;
 /** What a customer can order: active products in visible groups only. */
 class StoreController extends Controller
 {
-    public function index()
+    /** Prices come in the signed-in client's currency. */
+    public function index(Request $request)
     {
+        $currency = $request->user('client')->currencyCode();
+
         return ProductGroup::where('is_visible', true)
             ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('name')->with('prices')])
             ->orderBy('sort_order')
@@ -26,20 +30,27 @@ class StoreController extends Controller
             ->get(['id', 'name', 'slug', 'headline'])
             ->map(fn (ProductGroup $group) => [
                 ...$group->only('id', 'name', 'slug', 'headline'),
+                'currency' => $currency,
                 'products' => $group->products->map(fn (Product $product) => [
                     ...$product->only('id', 'name', 'type', 'description'),
-                    'prices' => $product->prices->map->only('cycle', 'price', 'setup_fee')->values(),
+                    'prices' => $product->prices->map(fn (ProductPrice $p) => [
+                        'cycle' => $p->cycle,
+                        'price' => $p->priceIn($currency),
+                        'setup_fee' => $p->setupFeeIn($currency),
+                    ])->values(),
                 ]),
             ]);
     }
 
     /** Which domain choices Admin > Settings > Domains allows, with prices for those that cost money. */
-    public function domainOptions(DomainLookup $lookup)
+    public function domainOptions(Request $request, DomainLookup $lookup)
     {
         $options = config('billing.domains');
         $sells = $options['allow_register'] || $options['allow_transfer'];
+        $currency = $request->user('client')->currencyCode();
 
         return [
+            'currency' => $currency,
             'register' => (bool) $options['allow_register'],
             'transfer' => (bool) $options['allow_transfer'],
             'own' => (bool) $options['allow_own'],
@@ -47,8 +58,13 @@ class StoreController extends Controller
             'lookup' => (bool) $lookup->provider(),
             'premium' => (bool) $options['premium_enabled'],
             'tlds' => $sells
-                ? Tld::where('is_active', true)->orderBy('sort_order')->orderBy('tld')
-                    ->get(['tld', 'register_price', 'renew_price', 'transfer_price', 'is_spotlight', 'epp_required'])
+                ? Tld::where('is_active', true)->orderBy('sort_order')->orderBy('tld')->get()
+                    ->map(fn (Tld $t) => [
+                        ...$t->only('tld', 'is_spotlight', 'epp_required'),
+                        'register_price' => $t->priceIn('register', $currency),
+                        'renew_price' => $t->priceIn('renew', $currency),
+                        'transfer_price' => $t->priceIn('transfer', $currency),
+                    ])
                 : [],
         ];
     }

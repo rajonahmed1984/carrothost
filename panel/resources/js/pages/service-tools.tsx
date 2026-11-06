@@ -11,6 +11,8 @@ type Saved<T> = (result: T) => void;
 const label = (v: string) => v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 type UpgradeOptions = {
+    /** The client's currency: every amount here is in it. */
+    currency: string;
     products: { id: number; name: string; prices: { cycle: string; price: string }[] }[];
     quote: { days_left: number; cycle_days: number; credit: string; new_recurring: string; amount_due: string; new_next_due_date: string | null } | null;
 };
@@ -31,6 +33,7 @@ export function UpgradeModal({ service, onClose, onDone }: {
     const product = options.data?.products.find((p) => p.id === productId);
     const unchanged = productId === service.product_id && cycle === service.cycle;
     const quote = options.data?.quote;
+    const cur = options.data?.currency;
     const create = useMutation({
         mutationFn: async () => (await api.post<{ message: string; invoice_id: number | null }>(`/services/${service.id}/upgrade`, { product_id: productId, cycle })).data,
         onSuccess: onDone,
@@ -45,7 +48,7 @@ export function UpgradeModal({ service, onClose, onDone }: {
         <Modal title="Upgrade / Downgrade" onClose={onClose}>
             <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
                 <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Current: <strong className="text-slate-900">{service.product.name}</strong>{service.domain && ` (${service.domain})`}, {money(service.recurring_amount)} {label(service.cycle)}
+                    Current: <strong className="text-slate-900">{service.product.name}</strong>{service.domain && ` (${service.domain})`}, {money(service.recurring_amount, cur)} {label(service.cycle)}
                 </p>
                 <Field label="New Product/Service">
                     <select className="ui-input" value={productId} onChange={(e) => setProductId(Number(e.target.value))}>
@@ -54,7 +57,7 @@ export function UpgradeModal({ service, onClose, onDone }: {
                 </Field>
                 <Field label="Billing Cycle">
                     <select className="ui-input" value={cycle} onChange={(e) => setCycle(e.target.value)}>
-                        {product?.prices.map((p) => <option key={p.cycle} value={p.cycle}>{money(p.price)} {label(p.cycle)}</option>)}
+                        {product?.prices.map((p) => <option key={p.cycle} value={p.cycle}>{money(p.price, cur)} {label(p.cycle)}</option>)}
                     </select>
                 </Field>
                 <div className="rounded-xl border border-slate-200 p-4">
@@ -62,10 +65,10 @@ export function UpgradeModal({ service, onClose, onDone }: {
                     {options.isError ? <ErrorNote error={options.error} /> : quote ? (
                         <dl className="space-y-1.5 text-sm">
                             <div className="flex justify-between gap-3"><dt className="text-slate-500">Days left on current cycle</dt><dd className="tabular-nums">{quote.days_left} / {quote.cycle_days}</dd></div>
-                            <div className="flex justify-between gap-3"><dt className="text-slate-500">Credit for unused days</dt><dd className="tabular-nums">{money(quote.credit)}</dd></div>
-                            <div className="flex justify-between gap-3"><dt className="text-slate-500">New recurring amount</dt><dd className="tabular-nums">{money(quote.new_recurring)} {label(cycle)}</dd></div>
+                            <div className="flex justify-between gap-3"><dt className="text-slate-500">Credit for unused days</dt><dd className="tabular-nums">{money(quote.credit, cur)}</dd></div>
+                            <div className="flex justify-between gap-3"><dt className="text-slate-500">New recurring amount</dt><dd className="tabular-nums">{money(quote.new_recurring, cur)} {label(cycle)}</dd></div>
                             {quote.new_next_due_date && <div className="flex justify-between gap-3"><dt className="text-slate-500">Next due date</dt><dd className="tabular-nums">{quote.new_next_due_date}</dd></div>}
-                            <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-base font-semibold"><dt>Upgrade Total Due</dt><dd className="tabular-nums text-[var(--accent)]">{money(quote.amount_due)}</dd></div>
+                            <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-base font-semibold"><dt>Upgrade Total Due</dt><dd className="tabular-nums text-[var(--accent)]">{money(quote.amount_due, cur)}</dd></div>
                         </dl>
                     ) : <p className="text-sm text-slate-500">Calculating...</p>}
                 </div>

@@ -14,10 +14,12 @@ use App\Models\Payment;
 use App\Models\Service;
 use App\Services\Auth\SubUsers;
 use App\Services\BillingService;
+use App\Services\ClientCurrency;
 use App\Services\CreditService;
 use App\Services\CustomerMailer;
 use App\Support\EmailHtml;
 use App\Support\Auth\Portal;
+use App\Support\Currency;
 use App\Support\MailFrom;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -49,11 +51,18 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
+        // Totals are in the client's currency; an invoice from before a currency change is converted.
+        $currency = $client->currencyCode();
+        $inClientCurrency = fn ($amount, $from) => (float) (Currency::bdtRate($from ?: 'BDT') && Currency::bdtRate($currency) ? Currency::convert((string) $amount, $from ?: 'BDT', $currency) : $amount);
         $invoiceTotals = $client->invoices()
-            ->selectRaw('status, count(*) as count, sum(total) as total')
-            ->groupBy('status')
+            ->selectRaw('status, currency, count(*) as count, sum(total) as total')
+            ->groupBy('status', 'currency')
             ->get()
-            ->keyBy('status');
+            ->groupBy('status')
+            ->map(fn ($rows) => (object) [
+                'count' => $rows->sum('count'),
+                'total' => Currency::fmt($rows->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
+            ]);
         $payments = Payment::whereIn('invoice_id', $client->invoices()->select('id'));
         $gateways = Gateway::all()->keyBy('code');
         $gatewayName = fn (string $code) => match ($code) {
@@ -71,7 +80,8 @@ class ClientController extends Controller
                 'total' => (string) ($invoiceTotals->get($status)?->total ?? '0'),
             ]]),
             'overdue_invoices' => $client->invoices()->where('status', 'unpaid')->whereDate('due_date', '<', today())->count(),
-            'gross_revenue' => (string) (clone $payments)->sum('amount'),
+            'gross_revenue' => Currency::fmt((clone $payments)->selectRaw('currency, sum(amount) as total')->groupBy('currency')->get()
+                ->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
             'service_counts' => $client->services()
                 ->join('products', 'products.id', '=', 'services.product_id')
                 ->selectRaw('products.type as type, count(*) as total, sum(case when services.status = ? then 1 else 0 end) as active', ['active'])
@@ -86,10 +96,11 @@ class ClientController extends Controller
                 ]),
             'transactions' => (clone $payments)->with('invoice:id,number')->latest()->limit(500)->get()
                 ->map(fn (Payment $p) => [...$p->toArray(), 'gateway_name' => $gatewayName($p->gateway)]),
+            // In the client's currency, like the other totals.
             'transaction_totals' => [
-                'in' => $in = (string) (clone $payments)->where('amount', '>', 0)->sum('amount'),
-                'fees' => $fees = (string) (clone $payments)->sum('fee'),
-                'out' => $out = bcmul((string) (clone $payments)->where('amount', '<', 0)->sum('amount'), '-1', 2),
+                'in' => $in = Currency::fmt((clone $payments)->where('amount', '>', 0)->selectRaw('currency, sum(amount) as total')->groupBy('currency')->get()->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
+                'fees' => $fees = Currency::fmt((clone $payments)->selectRaw('currency, sum(fee) as total')->groupBy('currency')->get()->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
+                'out' => $out = Currency::fmt(-1 * (clone $payments)->where('amount', '<', 0)->selectRaw('currency, sum(amount) as total')->groupBy('currency')->get()->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
                 'balance' => bcsub(bcsub($in, $fees, 2), $out, 2),
             ],
             'ticket_stats' => [
@@ -337,6 +348,12 @@ class ClientController extends Controller
             unset($data['password']);
         }
 
+        // A new currency converts the client's services, domains and credit, so it has its own path.
+        if (isset($data['currency']) && $data['currency'] !== $client->currencyCode()) {
+            app(ClientCurrency::class)->change($client, $data['currency']);
+        }
+        unset($data['currency']);
+
         $client->update($data);
         ActivityLog::record('client.updated', $client);
 
@@ -508,6 +525,7 @@ class ClientController extends Controller
             'country' => 'nullable|string|size:2',
             'status' => 'nullable|in:active,inactive,closed',
             'notes' => 'nullable|string',
+            'currency' => ['nullable', Rule::in(Currency::SUPPORTED)],
         ]);
     }
 }

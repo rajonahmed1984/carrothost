@@ -82,6 +82,12 @@ class RegistrarSync
             throw $e instanceof RuntimeException ? $e : new RuntimeException($e->getMessage());
         }
 
+        try {
+            $registrar->refreshApiBalance($client->balance());
+        } catch (Throwable) {
+            // The balance is a nice-to-have; the transactions above are what the sync is for.
+        }
+
         $registrar->update(['last_synced_at' => now(), 'sync_error' => null]);
         $registrar->markConnection(true);
         ActivityLog::record('registrar.synced', $registrar, ['fetched' => $fetched, 'added' => $added, 'unreadable' => $unreadable]);

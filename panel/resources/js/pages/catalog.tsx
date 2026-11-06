@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, Eye, EyeOff, FolderPlus, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Eye, EyeOff, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
@@ -10,7 +10,7 @@ import { alertDialog, ask } from '../dialog';
 import { RegistrarTldList, type TldPreset } from './registrar-tlds';
 
 type Option = { code: string; name: string; connected: boolean };
-type Meta = { currency: string; cycles: string[]; modules: Option[]; registrars: Option[] };
+type Meta = { currency: string; usd_rate: number | null; cycles: string[]; modules: Option[]; registrars: Option[] };
 
 const useMeta = () => useQuery({ queryKey: ['meta'], queryFn: async () => (await api.get<Meta>('/meta')).data, staleTime: Infinity });
 const optionLabel = (o: Option) => (o.connected ? o.name : `${o.name} (not connected yet, manual)`);
@@ -55,7 +55,7 @@ function GroupForm({ group, onClose }: { group: Group | null; onClose: () => voi
 
 type Product = {
     id: number; product_group_id: number | null; name: string; type: string; description: string | null; module: string | null; module_package: string | null;
-    server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string }[];
+    server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string; price_usd?: string | null; setup_fee_usd?: string | null }[];
 };
 type Package = { id: string; name: string };
 
@@ -187,19 +187,28 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             </div>
 
             <div className={tab.key === 'pricing' ? 'card space-y-3 p-5' : 'hidden'}>
-                <p className="text-xs text-slate-500">Prices in {meta.data?.currency}. Add one row per billing cycle you offer.</p>
-                {prices.map((p, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
-                        <Field label="Cycle">
-                            <Select value={p.cycle} onChange={(e) => setPrices(prices.map((x, n) => (n === i ? { ...x, cycle: e.target.value } : x)))}>
-                                {meta.data?.cycles.map((c) => <option key={c} value={c}>{c}</option>)}
-                            </Select>
-                        </Field>
-                        <Field label="Price"><Input type="number" min="0" step="0.01" required value={p.price} onChange={(e) => setPrices(prices.map((x, n) => (n === i ? { ...x, price: e.target.value } : x)))} /></Field>
-                        <Field label="Setup fee"><Input type="number" min="0" step="0.01" value={p.setup_fee} onChange={(e) => setPrices(prices.map((x, n) => (n === i ? { ...x, setup_fee: e.target.value } : x)))} /></Field>
-                        <Button type="button" variant="ghost" aria-label="Remove price" disabled={prices.length === 1} onClick={() => setPrices(prices.filter((_, n) => n !== i))}><Trash2 size={14} /></Button>
-                    </div>
-                ))}
+                <p className="text-xs text-slate-500">
+                    Prices in {meta.data?.currency}. Add one row per billing cycle you offer. USD is optional: leave it blank to charge USD clients the {meta.data?.currency} price converted at {meta.data?.usd_rate ? `1 USD = ${meta.data.usd_rate} BDT` : 'the rate in Settings > Currencies (not set yet)'}, or enter a fixed USD price.
+                </p>
+                {prices.map((p, i) => {
+                    const setP = (key: keyof typeof p, value: string) => setPrices(prices.map((x, n) => (n === i ? { ...x, [key]: value } : x)));
+                    const auto = (bdt: string) => (meta.data?.usd_rate && bdt !== '' ? (Number(bdt) / meta.data.usd_rate).toFixed(2) : '');
+
+                    return (
+                        <div key={i} className="grid grid-cols-2 items-end gap-2 rounded-xl border border-slate-100 p-2 md:grid-cols-[1.1fr_1fr_1fr_1fr_1fr_auto] md:border-0 md:p-0">
+                            <Field label="Cycle">
+                                <Select value={p.cycle} onChange={(e) => setP('cycle', e.target.value)}>
+                                    {meta.data?.cycles.map((c) => <option key={c} value={c}>{c}</option>)}
+                                </Select>
+                            </Field>
+                            <Field label={`Price (${meta.data?.currency ?? 'BDT'})`}><Input type="number" min="0" step="0.01" required value={p.price} onChange={(e) => setP('price', e.target.value)} /></Field>
+                            <Field label={`Setup (${meta.data?.currency ?? 'BDT'})`}><Input type="number" min="0" step="0.01" value={p.setup_fee} onChange={(e) => setP('setup_fee', e.target.value)} /></Field>
+                            <Field label="Price (USD)"><Input type="number" min="0" step="0.01" placeholder={auto(p.price) || 'Auto'} value={p.price_usd ?? ''} onChange={(e) => setP('price_usd', e.target.value)} /></Field>
+                            <Field label="Setup (USD)"><Input type="number" min="0" step="0.01" placeholder={auto(p.setup_fee) || 'Auto'} value={p.setup_fee_usd ?? ''} onChange={(e) => setP('setup_fee_usd', e.target.value)} /></Field>
+                            <Button type="button" variant="ghost" aria-label="Remove price" disabled={prices.length === 1} onClick={() => setPrices(prices.filter((_, n) => n !== i))}><Trash2 size={14} /></Button>
+                        </div>
+                    );
+                })}
                 <Button type="button" variant="ghost" onClick={() => setPrices([...prices, { cycle: 'monthly', price: '', setup_fee: '0' }])}><Plus size={14} /> Add cycle</Button>
             </div>
 
@@ -316,6 +325,7 @@ export function ProductsPage() {
 
 type Tld = {
     id: number; tld: string; registrar: string | null; register_price: string; renew_price: string; transfer_price: string;
+    register_price_usd?: string | null; renew_price_usd?: string | null; transfer_price_usd?: string | null;
     is_active: boolean; is_spotlight: boolean; epp_required: boolean;
 };
 
@@ -325,10 +335,13 @@ function TldForm({ tld, preset, onClose }: { tld: Tld | null; preset?: TldPreset
     const [form, setForm] = useState({
         tld: tld?.tld ?? preset?.tld ?? '', registrar: tld?.registrar ?? preset?.registrar ?? '', register_price: tld?.register_price ?? '',
         renew_price: tld?.renew_price ?? '', transfer_price: tld?.transfer_price ?? '', is_active: tld?.is_active ?? true,
+        register_price_usd: tld?.register_price_usd ?? '', renew_price_usd: tld?.renew_price_usd ?? '', transfer_price_usd: tld?.transfer_price_usd ?? '',
     });
+    const auto = (bdt: string) => (meta.data?.usd_rate && bdt !== '' ? (Number(bdt) / meta.data.usd_rate).toFixed(2) : 'Auto');
     const save = useMutation({
         mutationFn: () => {
-            const body = { ...form, registrar: form.registrar || null };
+            const blank = (v: string) => (v === '' ? null : v);
+            const body = { ...form, registrar: form.registrar || null, register_price_usd: blank(form.register_price_usd), renew_price_usd: blank(form.renew_price_usd), transfer_price_usd: blank(form.transfer_price_usd) };
 
             return tld ? api.put(`/tlds/${tld.id}`, body) : api.post('/tlds', body);
         },
@@ -348,10 +361,16 @@ function TldForm({ tld, preset, onClose }: { tld: Tld | null; preset?: TldPreset
                     </Field>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Register / yr"><Input type="number" min="0" step="0.01" required value={form.register_price} onChange={(e) => setForm({ ...form, register_price: e.target.value })} /></Field>
-                    <Field label="Renew / yr"><Input type="number" min="0" step="0.01" required value={form.renew_price} onChange={(e) => setForm({ ...form, renew_price: e.target.value })} /></Field>
-                    <Field label="Transfer"><Input type="number" min="0" step="0.01" required value={form.transfer_price} onChange={(e) => setForm({ ...form, transfer_price: e.target.value })} /></Field>
+                    <Field label={`Register / yr (${meta.data?.currency ?? 'BDT'})`}><Input type="number" min="0" step="0.01" required value={form.register_price} onChange={(e) => setForm({ ...form, register_price: e.target.value })} /></Field>
+                    <Field label={`Renew / yr (${meta.data?.currency ?? 'BDT'})`}><Input type="number" min="0" step="0.01" required value={form.renew_price} onChange={(e) => setForm({ ...form, renew_price: e.target.value })} /></Field>
+                    <Field label={`Transfer (${meta.data?.currency ?? 'BDT'})`}><Input type="number" min="0" step="0.01" required value={form.transfer_price} onChange={(e) => setForm({ ...form, transfer_price: e.target.value })} /></Field>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Register / yr (USD)"><Input type="number" min="0" step="0.01" placeholder={auto(form.register_price)} value={form.register_price_usd ?? ''} onChange={(e) => setForm({ ...form, register_price_usd: e.target.value })} /></Field>
+                    <Field label="Renew / yr (USD)"><Input type="number" min="0" step="0.01" placeholder={auto(form.renew_price)} value={form.renew_price_usd ?? ''} onChange={(e) => setForm({ ...form, renew_price_usd: e.target.value })} /></Field>
+                    <Field label="Transfer (USD)"><Input type="number" min="0" step="0.01" placeholder={auto(form.transfer_price)} value={form.transfer_price_usd ?? ''} onChange={(e) => setForm({ ...form, transfer_price_usd: e.target.value })} /></Field>
+                </div>
+                <p className="text-xs text-slate-500">USD is optional. Blank charges USD clients the BDT price converted at {meta.data?.usd_rate ? `1 USD = ${meta.data.usd_rate} BDT` : 'the rate in Settings > Currencies (not set yet)'}.</p>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Available for new orders</label>
                 <ErrorNote error={save.error} />
                 <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={save.isPending}>Save TLD</Button></div>
@@ -439,6 +458,98 @@ function LookupPanels() {
     );
 }
 
+export type BulkAddPreset = { tlds: string[]; registrar: string };
+
+/** Adds many TLDs at once: the same fixed prices for all, or each priced from the registrar's cost plus a markup. */
+function BulkAddTlds({ preset, onClose }: { preset: BulkAddPreset | null; onClose: () => void }) {
+    const qc = useQueryClient();
+    const meta = useMeta();
+    const [text, setText] = useState(preset?.tlds.join(' ') ?? '');
+    const [registrar, setRegistrar] = useState(preset?.registrar ?? '');
+    const [mode, setMode] = useState<'fixed' | 'markup'>(preset?.registrar ? 'markup' : 'fixed');
+    const [prices, setPrices] = useState({ register_price: '', renew_price: '', transfer_price: '' });
+    const [markup, setMarkup] = useState('30');
+    const [roundTo, setRoundTo] = useState('10');
+    const [active, setActive] = useState(true);
+    const [epp, setEpp] = useState(true);
+    const tlds = [...new Set(text.split(/[\s,;]+/).map((t) => t.trim().toLowerCase()).filter(Boolean).map((t) => `.${t.replace(/^\.+/, '')}`))];
+    const add = useMutation({
+        mutationFn: async () => (await api.post<{ message: string; added: string[] }>('/tlds/bulk-add', {
+            tlds, registrar: registrar || null, mode, is_active: active, epp_required: epp,
+            ...(mode === 'fixed' ? prices : { markup_percent: markup, round_to: Number(roundTo) }),
+        })).data,
+        onSuccess: (r) => {
+            qc.invalidateQueries({ queryKey: ['tlds'] });
+            qc.invalidateQueries({ queryKey: ['/tlds/registrar-list'] });
+            onClose();
+            void alertDialog(r.message);
+        },
+    });
+    const cur = meta.data?.currency ?? 'BDT';
+
+    return (
+        <Modal wide title="Bulk add TLDs" onClose={onClose}>
+            <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="space-y-4">
+                <Field label="TLDs" hint={`Separate with spaces, commas or new lines, e.g. .com .net .xyz .com.bd. ${tlds.length} TLD(s). Ones already in your pricing are skipped.`}>
+                    <textarea required rows={4} className="ui-input py-2 font-mono text-sm" style={{ height: 'auto' }} placeholder=".com .net .org .xyz .info" value={text} onChange={(e) => setText(e.target.value)} />
+                </Field>
+                <Field label="Auto registration">
+                    <Select value={registrar} onChange={(e) => { setRegistrar(e.target.value); if (!e.target.value) setMode('fixed'); }}>
+                        <option value="">None (manual)</option>
+                        {meta.data?.registrars.map((r) => <option key={r.code} value={r.code}>{optionLabel(r)}</option>)}
+                    </Select>
+                </Field>
+
+                <fieldset className="space-y-3">
+                    <legend className="mb-2 text-xs font-semibold text-slate-600">Prices</legend>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        {([['fixed', 'Same price for all', 'Type one set of yearly prices.'], ['markup', 'Registrar cost + markup', registrar ? 'Each TLD priced from its synced cost.' : 'Choose a registrar first.']] as const).map(([value, title, hint]) => (
+                            <label key={value} className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${mode === value ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-slate-200'} ${value === 'markup' && !registrar ? 'cursor-not-allowed opacity-50' : ''}`}>
+                                <input type="radio" name="bulk-mode" className="mt-1" checked={mode === value} disabled={value === 'markup' && !registrar} onChange={() => setMode(value)} />
+                                <span><span className="block text-sm font-semibold text-slate-900">{title}</span><span className="block text-xs text-slate-500">{hint}</span></span>
+                            </label>
+                        ))}
+                    </div>
+
+                    {mode === 'fixed' ? (
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <Field label={`Register / yr (${cur})`}><Input type="number" min="0" step="0.01" required value={prices.register_price} onChange={(e) => setPrices({ ...prices, register_price: e.target.value })} /></Field>
+                            <Field label={`Renew / yr (${cur})`}><Input type="number" min="0" step="0.01" required value={prices.renew_price} onChange={(e) => setPrices({ ...prices, renew_price: e.target.value })} /></Field>
+                            <Field label={`Transfer (${cur})`}><Input type="number" min="0" step="0.01" required value={prices.transfer_price} onChange={(e) => setPrices({ ...prices, transfer_price: e.target.value })} /></Field>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <Field label="Markup %" hint="Added on top of the registrar's cost."><Input type="number" min="0" max="1000" step="0.1" required value={markup} onChange={(e) => setMarkup(e.target.value)} /></Field>
+                                <Field label={`Round up to (${cur})`}>
+                                    <Select value={roundTo} onChange={(e) => setRoundTo(e.target.value)}>
+                                        <option value="0">No rounding</option>
+                                        {['1', '5', '10', '50', '100'].map((n) => <option key={n} value={n}>Nearest {n}</option>)}
+                                    </Select>
+                                </Field>
+                            </div>
+                            <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                Price = registrar cost{meta.data?.usd_rate ? ` (USD costs × ${meta.data.usd_rate})` : ''} × (1 + {markup || 0}%), rounded up. TLDs the registrar has no cost for are skipped: press Sync in the registrar TLD list below first.
+                            </p>
+                        </>
+                    )}
+                </fieldset>
+
+                <div className="flex flex-wrap gap-4 text-sm text-slate-700">
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Available for new orders</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={epp} onChange={(e) => setEpp(e.target.checked)} /> Transfers need the EPP code</label>
+                </div>
+                <p className="text-xs text-slate-500">USD prices are left blank, so USD clients pay the {cur} price converted. Set a fixed USD price per TLD afterwards if you want one.</p>
+                <ErrorNote error={add.error} />
+                <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button disabled={add.isPending || tlds.length === 0}>{add.isPending ? 'Adding...' : `Add ${tlds.length} TLD(s)`}</Button>
+                </div>
+            </form>
+        </Modal>
+    );
+}
+
 function BulkPricing({ ids, onDone }: { ids: number[]; onDone: () => void }) {
     const qc = useQueryClient();
     const meta = useMeta();
@@ -473,6 +584,7 @@ function TldTable({ data }: { data: Tld[] }) {
     const [rows, setRows] = useState<TldRow[]>(() => data.map(({ id, tld, registrar, is_active, is_spotlight, epp_required }) => ({ id, tld, registrar, is_active, is_spotlight, epp_required })));
     const [selected, setSelected] = useState<number[]>([]);
     const [pricing, setPricing] = useState<Tld | 'new' | TldPreset | null>(null);
+    const [bulkAdd, setBulkAdd] = useState<BulkAddPreset | 'new' | null>(null);
     const byId = new Map(data.map((t) => [t.id, t]));
     const dirty = JSON.stringify(rows) !== JSON.stringify(data.map(({ id, tld, registrar, is_active, is_spotlight, epp_required }) => ({ id, tld, registrar, is_active, is_spotlight, epp_required })));
     const spotlight = rows.filter((r) => r.is_spotlight);
@@ -508,7 +620,7 @@ function TldTable({ data }: { data: Tld[] }) {
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1fr_18rem]">
-                <Card title={`Domain pricing (${rows.length})`} action={<div className="flex items-center gap-2"><input className="ui-input h-9 w-40" placeholder="Search TLD" aria-label="Search TLDs" value={search} onChange={(e) => setSearch(e.target.value)} /><Button onClick={() => setPricing('new')}><Plus size={14} /> Add TLD</Button></div>}>
+                <Card title={`Domain pricing (${rows.length})`} action={<div className="flex items-center gap-2"><input className="ui-input h-9 w-40" placeholder="Search TLD" aria-label="Search TLDs" value={search} onChange={(e) => setSearch(e.target.value)} /><Button variant="ghost" onClick={() => setBulkAdd('new')}><Layers size={14} /> Bulk Add</Button><Button onClick={() => setPricing('new')}><Plus size={14} /> Add TLD</Button></div>}>
                     {rows.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">No TLDs yet. Add one to sell domains.</p> : (
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[46rem] text-left text-sm">
@@ -580,8 +692,9 @@ function TldTable({ data }: { data: Tld[] }) {
                 </div>
             </div>
             {meta.data && meta.data.registrars.length > 0 && (
-                <RegistrarTldList registrars={meta.data.registrars} onAdd={(preset) => setPricing(preset)} onEdit={(id) => { const t = byId.get(id); if (t) setPricing(t); }} />
+                <RegistrarTldList registrars={meta.data.registrars} onAdd={(preset) => setPricing(preset)} onBulkAdd={(tlds, registrar) => setBulkAdd({ tlds, registrar })} onEdit={(id) => { const t = byId.get(id); if (t) setPricing(t); }} />
             )}
+            {bulkAdd && <BulkAddTlds preset={bulkAdd === 'new' ? null : bulkAdd} onClose={() => setBulkAdd(null)} />}
             {pricing && <TldForm tld={pricing === 'new' || !('id' in pricing) ? null : pricing} preset={pricing !== 'new' && !('id' in pricing) ? pricing : undefined} onClose={() => setPricing(null)} />}
         </div>
     );

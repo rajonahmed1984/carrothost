@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Currency;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -27,6 +28,24 @@ class Client extends Authenticatable
             'support_pin_expires_at' => 'datetime',
             'credit_balance' => 'decimal:2',
         ];
+    }
+
+    /** New clients are billed in the default currency unless one is chosen. */
+    protected static function booted(): void
+    {
+        static::creating(function (Client $client) {
+            if (empty($client->currency)) {
+                $client->currency = Currency::default();
+            }
+        });
+    }
+
+    /** What this client is billed in: their prices, invoices, renewals and credit. */
+    public function currencyCode(): string
+    {
+        $code = strtoupper((string) $this->currency);
+
+        return in_array($code, Currency::SUPPORTED, true) ? $code : Currency::BASE;
     }
 
     public function credits(): HasMany

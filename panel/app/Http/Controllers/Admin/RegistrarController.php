@@ -10,6 +10,7 @@ use App\Models\RegistrarDeposit;
 use App\Services\LogicBoxesClient;
 use App\Services\RegistrarLedger;
 use App\Services\RegistrarSync;
+use App\Services\RegistrarTldSync;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,8 @@ class RegistrarController extends Controller
             'reseller_id' => $saved->get($code)?->reseller_id,
             'has_api_key' => (bool) $saved->get($code)?->api_key,
             'currency' => $saved->get($code)?->currency ?? 'USD',
+            'api_balance' => $saved->get($code)?->api_balance,
+            'api_balance_at' => $saved->get($code)?->api_balance_at?->toISOString(),
             'last_synced_at' => $saved->get($code)?->last_synced_at?->toISOString(),
             'sync_error' => $saved->get($code)?->sync_error,
             'connection_ok' => $saved->get($code)?->connection_ok,
@@ -129,7 +132,7 @@ class RegistrarController extends Controller
         return $this->ledger($code, $ledger);
     }
 
-    public function sync(string $code, RegistrarSync $sync)
+    public function sync(string $code, RegistrarSync $sync, RegistrarTldSync $tldSync)
     {
         $this->known($code);
         $registrar = Registrar::where('code', $code)->first();
@@ -153,6 +156,14 @@ class RegistrarController extends Controller
         }
         if ($result['unreadable']) {
             $message .= " {$result['unreadable']} row(s) could not be read (fields: {$result['sample_fields']}). They were written to the log.";
+        }
+
+        // TLD cost prices price every domain the transactions do not cover.
+        try {
+            $tlds = $tldSync->sync($registrar->refresh());
+            $message .= " TLD cost prices: {$tlds['priced']} of {$tlds['tlds']} TLDs priced.";
+        } catch (Throwable $e) {
+            $message .= ' TLD cost prices could not be fetched: '.$e->getMessage();
         }
 
         return ['message' => $message];
@@ -214,7 +225,7 @@ class RegistrarController extends Controller
         }
 
         try {
-            (new LogicBoxesClient($registrar))->balance();
+            $registrar->refreshApiBalance((new LogicBoxesClient($registrar))->balance());
             $registrar->markConnection(true);
 
             return ['ok' => true, 'message' => 'Connection succeeded.'];

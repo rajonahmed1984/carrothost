@@ -9,13 +9,14 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Service;
 use App\Services\DashboardService;
+use App\Support\Currency;
 
 class DashboardController extends Controller
 {
     public function __invoke(DashboardService $dashboard)
     {
         return [
-            'currency' => config('billing.currency'),
+            'currency' => Currency::BASE,
             'overdue_invoices' => Invoice::where('status', 'unpaid')->whereDate('due_date', '<', today())->count(),
             'pending_orders' => Order::where('status', 'pending')->count(),
             'suspended_services' => Service::where('status', 'suspended')->count(),
@@ -52,7 +53,9 @@ class DashboardController extends Controller
             ->values();
 
         return [
-            'currency' => config('billing.currency'),
+            'currency' => Currency::BASE,
+            'default_currency' => Currency::default(),
+            'usd_rate' => Currency::bdtRate('USD'),
             'cycles' => array_keys(config('billing.cycles')),
             'modules' => $names('provisioning_modules'),
             'registrars' => $names('registrars'),

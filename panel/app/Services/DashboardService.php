@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Server;
 use App\Models\Service;
+use App\Support\Currency;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -20,11 +21,17 @@ class DashboardService
     public function billing(): array
     {
         return [
-            'today' => Payment::where('created_at', '>=', today())->sum('amount'),
-            'month' => Payment::where('created_at', '>=', now()->startOfMonth())->sum('amount'),
-            'year' => Payment::where('created_at', '>=', now()->startOfYear())->sum('amount'),
-            'all_time' => Payment::sum('amount'),
+            'today' => self::incomeInBase(Payment::where('created_at', '>=', today())),
+            'month' => self::incomeInBase(Payment::where('created_at', '>=', now()->startOfMonth())),
+            'year' => self::incomeInBase(Payment::where('created_at', '>=', now()->startOfYear())),
+            'all_time' => self::incomeInBase(Payment::query()),
         ];
+    }
+
+    /** Payments added up in BDT: each currency's total at its current rate. */
+    public static function incomeInBase($payments): string
+    {
+        return Currency::sumInBase($payments, 'amount');
     }
 
     /** One row per hour, day or month. Grouped in PHP so buckets follow the app timezone. */
@@ -52,8 +59,8 @@ class DashboardService
             $rows[$at->format($key)]['activated_orders']++;
         }
 
-        foreach (Payment::where('created_at', '>=', $start)->get(['created_at', 'amount']) as $payment) {
-            $rows[$payment->created_at->format($key)]['income'] += (float) $payment->amount;
+        foreach (Payment::where('created_at', '>=', $start)->get(['created_at', 'amount', 'currency']) as $payment) {
+            $rows[$payment->created_at->format($key)]['income'] += Currency::toBase($payment->amount, $payment->currency);
         }
 
         return array_values(array_filter($rows, fn ($row) => isset($row['label'])));

@@ -30,6 +30,7 @@ class SettingController extends Controller
                 'company_country' => config('billing.country'),
                 'time_zone' => config('app.timezone'),
                 'currency' => config('billing.currency'),
+                'usd_rate' => config('billing.exchange_rates.USD'),
                 'invoice_due_days' => (int) config('billing.invoice_due_days'),
                 'renewal_notice_days' => (int) config('billing.renewal_notice_days'),
                 'credit_min_deposit' => config('billing.credit.min_deposit'),
@@ -46,6 +47,9 @@ class SettingController extends Controller
                 'domain_reminder_days' => (string) config('billing.reminders.domain_days'),
                 'usage_update_enabled' => (bool) config('billing.usage_update_enabled'),
                 'domain_sync_enabled' => (bool) config('billing.domain_sync_enabled'),
+                'cron_report_enabled' => (bool) config('billing.reports.cron_activity'),
+                'domain_sync_report_enabled' => (bool) config('billing.reports.domain_sync'),
+                'report_recipients' => config('billing.reports.recipients'),
                 'domain_allow_register' => (bool) config('billing.domains.allow_register'),
                 'domain_allow_transfer' => (bool) config('billing.domains.allow_transfer'),
                 'domain_allow_own' => (bool) config('billing.domains.allow_own'),
@@ -94,6 +98,7 @@ class SettingController extends Controller
             'remove_logo' => 'boolean',
             'remove_favicon' => 'boolean',
             'currency' => 'required|in:BDT,USD',
+            'usd_rate' => 'nullable|numeric|min:0.0001|max:100000',
             'invoice_due_days' => 'required|integer|between:0,365',
             'renewal_notice_days' => 'required|integer|between:0,90',
             'credit_min_deposit' => 'nullable|numeric|min:0.01|max:9999999',
@@ -112,6 +117,15 @@ class SettingController extends Controller
             'domain_reminder_days' => ['sometimes', 'nullable', 'string', 'max:60', 'regex:/^\s*-?\d{1,3}(\s*,\s*-?\d{1,3})*\s*$/'],
             'usage_update_enabled' => 'boolean',
             'domain_sync_enabled' => 'boolean',
+            'cron_report_enabled' => 'boolean',
+            'domain_sync_report_enabled' => 'boolean',
+            'report_recipients' => ['sometimes', 'nullable', 'string', 'max:500', function ($attribute, $value, $fail) {
+                foreach (\App\Services\AdminReports::parseRecipients($value) as $email) {
+                    if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $fail("{$email} is not a valid email address.");
+                    }
+                }
+            }],
             'domain_allow_register' => 'boolean',
             'domain_allow_transfer' => 'boolean',
             'domain_allow_own' => 'boolean',
@@ -131,6 +145,13 @@ class SettingController extends Controller
             'mail_from_address' => 'nullable|required_with:mail_host|email|max:255',
             'mail_from_name' => 'nullable|string|max:100',
         ]);
+
+        // USD prices are converted from BDT, so USD clients cannot be billed without a rate.
+        $usdRate = array_key_exists('usd_rate', $data) ? (float) $data['usd_rate'] : (float) config('billing.exchange_rates.USD');
+        $usdClients = \App\Models\Client::where('currency', 'USD')->exists();
+        if ($usdRate <= 0 && ($data['currency'] === 'USD' || $usdClients)) {
+            throw ValidationException::withMessages(['usd_rate' => $usdClients ? 'Some clients are billed in USD, so the USD rate cannot be blank.' : 'Set the USD rate before making USD the default for new clients.']);
+        }
 
         if ($request->boolean('recaptcha_enabled') && empty($data['recaptcha_secret_key']) && ! Settings::isSet('recaptcha_secret_key') && empty(config('recaptcha.secret_key'))) {
             throw ValidationException::withMessages(['recaptcha_secret_key' => 'Enter the reCAPTCHA secret key to turn it on.']);

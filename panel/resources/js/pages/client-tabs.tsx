@@ -242,7 +242,7 @@ export function ServicesTab({ client, open, onOpen }: { client: Detail } & Viewe
                 { header: 'ID', cell: (s) => <OpenLink className="font-semibold tabular-nums" onClick={() => onOpen(s.id)}>{s.id}</OpenLink>, sort: (s) => s.id },
                 { header: 'Product/Service', cell: (s) => <OpenLink className="font-semibold" onClick={() => onOpen(s.id)}>{s.product.name}</OpenLink>, sort: (s) => s.product.name },
                 { header: 'Domain', cell: (s) => s.domain ?? '-', sort: (s) => s.domain ?? '' },
-                { header: 'Pricing', cell: (s) => <>{money(s.recurring_amount)} <span className="text-xs text-slate-400 capitalize">/ {s.cycle}</span></>, sort: (s) => Number(s.recurring_amount), align: 'right' },
+                { header: 'Pricing', cell: (s) => <>{money(s.recurring_amount, client.currency)} <span className="text-xs text-slate-400 capitalize">/ {s.cycle}</span></>, sort: (s) => Number(s.recurring_amount), align: 'right' },
                 { header: 'Next Due', cell: (s) => day(s.next_due_date), sort: (s) => s.next_due_date ?? '' },
                 { header: 'Server', cell: (s) => s.server?.name ?? '-' },
                 { header: 'Status', cell: (s) => <Status value={s.status} />, sort: (s) => s.status },
@@ -270,7 +270,7 @@ export function DomainsTab({ client, open, onOpen }: { client: Detail } & Viewer
                 { header: 'Registrar', cell: (d) => d.registrar ?? 'Manual', sort: (d) => d.registrar ?? '' },
                 { header: 'Registered', cell: (d) => day(d.created_at), sort: (d) => d.created_at },
                 { header: 'Expires', cell: (d) => day(d.expires_at), sort: (d) => d.expires_at ?? '' },
-                { header: 'Renewal', cell: (d) => <>{money(d.recurring_amount)} <span className="text-xs text-slate-400">/ {d.years} yr</span></>, sort: (d) => Number(d.recurring_amount), align: 'right' },
+                { header: 'Renewal', cell: (d) => <>{money(d.recurring_amount, client.currency)} <span className="text-xs text-slate-400">/ {d.years} yr</span></>, sort: (d) => Number(d.recurring_amount), align: 'right' },
                 { header: 'Auto Renew', cell: (d) => <Status value={d.auto_renew ? 'on' : 'off'} /> },
                 { header: 'Status', cell: (d) => <Status value={d.status} />, sort: (d) => d.status },
                 { header: '', cell: (d) => <OpenLink onClick={() => onOpen(d.id)}>View</OpenLink>, align: 'right' },
@@ -484,10 +484,10 @@ function TransactionList({ client, onOpen, onGo }: { client: Detail; onOpen: Vie
     return (
         <div className="space-y-4">
             <StatCards items={[
-                { label: 'Total In', value: money(t.in), icon: <ArrowDown size={20} />, tone: 'bg-emerald-100 text-emerald-700' },
-                { label: 'Total Fees', value: money(t.fees), icon: <ReceiptText size={20} />, tone: 'bg-amber-100 text-amber-700' },
-                { label: 'Total Out', value: money(t.out), icon: <ArrowUp size={20} />, tone: 'bg-rose-100 text-rose-600' },
-                { label: 'Balance', value: money(t.balance), icon: <Wallet size={20} />, tone: 'bg-[var(--accent-soft)] text-accent' },
+                { label: 'Total In', value: money(t.in, client.currency), icon: <ArrowDown size={20} />, tone: 'bg-emerald-100 text-emerald-700' },
+                { label: 'Total Fees', value: money(t.fees, client.currency), icon: <ReceiptText size={20} />, tone: 'bg-amber-100 text-amber-700' },
+                { label: 'Total Out', value: money(t.out, client.currency), icon: <ArrowUp size={20} />, tone: 'bg-rose-100 text-rose-600' },
+                { label: 'Balance', value: money(t.balance, client.currency), icon: <Wallet size={20} />, tone: 'bg-[var(--accent-soft)] text-accent' },
             ]} />
             <RecordsTable
                 rows={client.transactions}

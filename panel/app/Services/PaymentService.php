@@ -70,7 +70,7 @@ class PaymentService
         }
 
         try {
-            [$chargeAmount, $chargeCurrency] = $driver->charge($balance);
+            [$chargeAmount, $chargeCurrency] = $driver->charge($balance, $invoice->currency ?: 'BDT');
 
             $attempt = PaymentAttempt::create([
                 'invoice_id' => $invoice->id,
