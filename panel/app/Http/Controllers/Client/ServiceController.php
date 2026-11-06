@@ -283,6 +283,8 @@ class ServiceController extends Controller
             'username' => $live ? ($service->credentials['username'] ?? null) : null,
             // The login page only; signing in still takes the account password.
             'panel_url' => $live && $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
+            // One-click login works (the list's Quick Action signs in instead of opening the login page).
+            'can_sso' => $live && $port && ServiceTools::hasTools($service),
         ];
     }
 }

@@ -72,6 +72,8 @@ class ClientServiceToolsTest extends TestCase
             ->assertJsonPath('server.hostname', 'earth.test')
             ->assertJsonPath('panel_url', 'https://earth.test:2003');
 
+        // The list's Quick Action signs in the same way instead of opening the login page.
+        $this->getJson('/api/client/services')->assertOk()->assertJsonPath('0.can_sso', true);
         $this->postJson("/api/client/services/{$service->id}/sso")->assertOk()->assertJsonPath('url', 'https://earth.test:2003/sess1/?as=token');
         // Webuzo has no deep links, so asking for one is refused.
         $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'email'])->assertJsonValidationErrors('app');

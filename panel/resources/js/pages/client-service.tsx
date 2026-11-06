@@ -70,6 +70,17 @@ function usePanelLogin(id: number) {
     };
 }
 
+/** Signs straight into the control panel in a new tab, like the service page's button. */
+export function PanelLoginButton({ serviceId, label, className }: { serviceId: number; label: string; className: string }) {
+    const panel = usePanelLogin(serviceId);
+
+    return (
+        <button type="button" disabled={panel.pending} onClick={() => panel.open()} className={`${className} cursor-pointer disabled:cursor-wait disabled:opacity-60`}>
+            <ExternalLink size={13} /> {panel.pending ? 'Signing in...' : label}
+        </button>
+    );
+}
+
 export function CopyButton({ value, what }: { value: string | null | undefined; what: string }) {
     const [copied, setCopied] = useState(false);
     if (!value) return null;

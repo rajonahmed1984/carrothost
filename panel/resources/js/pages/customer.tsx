@@ -12,7 +12,7 @@ import { AddFundsPage, CreditHistoryPage } from './credits';
 import { clientCan, ClientPasswordPage, ClientSecurityPage, type ClientProfile } from './security';
 import { ClientChatPage, ClientNewTicketPage, ClientTicketPage, ClientTicketsPage } from './support';
 import { PanelLogo, panelName } from '../panel-logo';
-import { ClientServicePage } from './client-service';
+import { ClientServicePage, PanelLoginButton } from './client-service';
 import { ClientDomainPage } from './client-domain';
 import { DomainOrderPage } from './domain-order';
 
@@ -177,7 +177,7 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
 
 type ClientService = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string;
-    product: { name: string; type: string; module: string | null; group: string | null }; username: string | null; panel_url: string | null;
+    product: { name: string; type: string; module: string | null; group: string | null }; username: string | null; panel_url: string | null; can_sso?: boolean;
 };
 
 const typeTabs = [
@@ -225,7 +225,7 @@ function RowMenu({ service }: { service: ClientService }) {
 
 type SortKey = 'name' | 'group' | 'price' | 'due' | 'status';
 
-function MyServices({ orderTo }: { orderTo: string }) {
+function MyServices({ orderTo, canManage }: { orderTo: string; canManage: boolean }) {
     const query = useQuery({ queryKey: ['client-services'], queryFn: async () => (await api.get<ClientService[]>('/client/services')).data });
     const [tab, setTab] = useState('all');
     const [status, setStatus] = useState('');
@@ -341,7 +341,9 @@ function MyServices({ orderTo }: { orderTo: string }) {
                                         <td className="px-5 py-3"><span className="inline-flex items-center gap-2 capitalize"><span className={`h-2 w-2 rounded-full ${statusDot[x.status] ?? 'bg-slate-400'}`} />{x.status}</span></td>
                                         <td className="px-5 py-3">
                                             {x.panel_url && x.status === 'active'
-                                                ? <a href={x.panel_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><ExternalLink size={13} /> Login to {panelName(x.product.module)}</a>
+                                                ? canManage && x.can_sso
+                                                    ? <PanelLoginButton serviceId={x.id} label={`Login to ${panelName(x.product.module)}`} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100" />
+                                                    : <a href={x.panel_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><ExternalLink size={13} /> Login to {panelName(x.product.module)}</a>
                                                 : <span className="text-xs text-slate-400">-</span>}
                                         </td>
                                         <td className="px-5 py-3">
@@ -1205,7 +1207,7 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                         <Routes>
                             <Route path="/" element={<Home profile={profile} firstStore={store.data?.[0] ? `/store/${store.data[0].slug}` : null} />} />
                             {/* A page the signed-in user may not use falls through to the dashboard. */}
-                            {can('products') && <Route path="/services" element={<MyServices orderTo={store.data?.[0] ? `/store/${store.data[0].slug}` : '/order-domain'} />} />}
+                            {can('products') && <Route path="/services" element={<MyServices orderTo={store.data?.[0] ? `/store/${store.data[0].slug}` : '/order-domain'} canManage={can('manageproducts')} />} />}
                             {can('products') && <Route path="/services/:id" element={<ClientServicePage canManage={can('manageproducts')} />} />}
                             {can('domains') && <Route path="/domains" element={<MyDomains />} />}
                             {can('domains') && <Route path="/domains/:id" element={<ClientDomainPage canManage={can('managedomains')} />} />}
