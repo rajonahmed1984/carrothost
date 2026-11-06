@@ -54,6 +54,37 @@ class PayPalDriver implements PaymentDriver
         ]);
     }
 
+    /**
+     * Checkout needs only the email (PayPal Standard, confirmed by IPN). With the classic API
+     * username, password and signature saved, it also asks PayPal for the balance to prove they work.
+     */
+    public function testConnection(): string
+    {
+        $c = $this->gateway->config;
+        if (! filter_var($c['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Enter the PayPal email that receives payments.');
+        }
+        if (blank($c['api_username'] ?? null) || blank($c['api_password'] ?? null) || blank($c['api_signature'] ?? null)) {
+            return "PayPal checkout needs only the email ({$c['email']}). Add the API username, password and signature to check the account itself.";
+        }
+
+        try {
+            $reply = Http::asForm()->timeout(30)->post($this->gateway->test_mode ? 'https://api-3t.sandbox.paypal.com/nvp' : 'https://api-3t.paypal.com/nvp', [
+                'METHOD' => 'GetBalance', 'VERSION' => '204',
+                'USER' => $c['api_username'], 'PWD' => $c['api_password'], 'SIGNATURE' => $c['api_signature'],
+            ])->body();
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            throw new RuntimeException('Could not reach PayPal.');
+        }
+        parse_str($reply, $answer);
+
+        if (! str_starts_with(strtoupper((string) ($answer['ACK'] ?? '')), 'SUCCESS')) {
+            throw new RuntimeException('PayPal refused the API credentials: '.($answer['L_LONGMESSAGE0'] ?? $answer['L_SHORTMESSAGE0'] ?? 'no answer').'. Check them and Sandbox mode.');
+        }
+
+        return 'Connected to PayPal ('.($this->gateway->test_mode ? 'sandbox' : 'live').'). The API credentials work; payments go to '.$c['email'].'.';
+    }
+
     /** @return array{0: bool, 1: string} verified, then the transaction id or the reason it failed */
     public function verifyIpn(PaymentAttempt $attempt, string $rawBody, array $fields): array
     {

@@ -84,6 +84,37 @@ class SslCommerzDriver implements PaymentDriver
         };
     }
 
+    /**
+     * Opens a payment session for 10 BDT that is never paid: SSLCommerz answers "Store Credential
+     * Error" for a wrong store ID or password. Nothing is charged.
+     */
+    public function testConnection(): string
+    {
+        try {
+            $response = Http::asForm()->timeout(30)->post($this->base().'/gwprocess/v4/api.php', [
+                'store_id' => $this->gateway->config['store_id'] ?? '',
+                'store_passwd' => $this->gateway->config['store_password'] ?? '',
+                'total_amount' => '10.00',
+                'currency' => 'BDT',
+                'tran_id' => 'TEST-'.now()->format('YmdHis'),
+                'success_url' => url('/pay/sslcommerz/success'),
+                'fail_url' => url('/pay/sslcommerz/fail'),
+                'cancel_url' => url('/pay/sslcommerz/cancel'),
+                'cus_name' => 'Connection test', 'cus_email' => 'test@example.com', 'cus_add1' => 'N/A', 'cus_city' => 'Dhaka',
+                'cus_country' => 'BD', 'cus_phone' => '01700000000', 'shipping_method' => 'NO',
+                'product_name' => 'Connection test', 'product_category' => 'Hosting', 'product_profile' => 'non-physical-goods',
+            ]);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Could not reach SSLCommerz.');
+        }
+
+        if ($response->json('status') !== 'SUCCESS') {
+            throw new RuntimeException('SSLCommerz refused: '.($response->json('failedreason') ?: 'HTTP '.$response->status()).'. Check the Store ID, Store password and Sandbox mode.');
+        }
+
+        return 'Connected to SSLCommerz ('.($this->gateway->test_mode ? 'sandbox' : 'live').'). The store ID and password work.';
+    }
+
     private function base(): string
     {
         return $this->gateway->test_mode ? 'https://sandbox.sslcommerz.com' : 'https://securepay.sslcommerz.com';

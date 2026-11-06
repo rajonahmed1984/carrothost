@@ -13,6 +13,7 @@ function GatewayCard({ gateway }: { gateway: Gateway }) {
     const [enabled, setEnabled] = useState(gateway.is_enabled);
     const [sandbox, setSandbox] = useState(gateway.test_mode);
     const [config, setConfig] = useState<Record<string, string>>(() => Object.fromEntries(gateway.fields.map((f) => [f.key, f.value])));
+    const test = useMutation({ mutationFn: async () => (await api.post<{ message: string }>(`/gateways/${gateway.code}/test`)).data });
     const save = useMutation({
         mutationFn: () => api.put(`/gateways/${gateway.code}`, { is_enabled: enabled, test_mode: sandbox, config }),
         onSuccess: () => {
@@ -48,7 +49,14 @@ function GatewayCard({ gateway }: { gateway: Gateway }) {
                 {gateway.has_sandbox && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sandbox} onChange={(e) => setSandbox(e.target.checked)} /> Sandbox mode (uncheck for live)</label>}
                 {gateway.callback_url && <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs break-all text-slate-600">Turn on Instant Payment Notification in your PayPal account and set the URL to <strong>{gateway.callback_url}</strong></p>}
                 <ErrorNote error={save.error} />
-                <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save changes'}</Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save changes'}</Button>
+                    {/* Checks the saved credentials with the gateway; nothing is charged. */}
+                    <Button type="button" variant="ghost" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test connection'}</Button>
+                    <span className="text-xs text-slate-500">Save first, then test.</span>
+                </div>
+                {test.data && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{test.data.message}</p>}
+                <ErrorNote error={test.error} />
             </form>
         </Card>
     );

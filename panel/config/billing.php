@@ -135,10 +135,17 @@ return [
             'fields' => [
                 ['key' => 'display_name', 'label' => 'Display name', 'required' => true],
                 ['key' => 'button_label', 'label' => 'Payment button label'],
-                ['key' => 'app_key', 'label' => 'bKash App Key', 'required' => true],
-                ['key' => 'token_url', 'label' => 'Token API URL', 'type' => 'url', 'required' => true, 'hint' => 'Returns the bKash grant token.'],
-                ['key' => 'token_secret', 'label' => 'Token API secret', 'type' => 'secret', 'required' => true, 'hint' => 'Bearer token for the Token API.'],
+                ['key' => 'username', 'label' => 'Username (PGW)', 'hint' => 'From bKash, usually the merchant number.'],
+                ['key' => 'password', 'label' => 'Password (PGW)', 'type' => 'secret'],
+                ['key' => 'app_key', 'label' => 'app_key (PGW)', 'required' => true],
+                ['key' => 'app_secret', 'label' => 'app_secret (PGW)', 'type' => 'secret'],
+                ['key' => 'base_url', 'label' => 'API base URL (optional)', 'type' => 'url', 'hint' => 'Blank uses https://tokenized.pay.bka.sh/v1.2.0-beta, or the sandbox one in Sandbox mode.'],
+                ['key' => 'token_url', 'label' => 'Token API URL (older setup only)', 'type' => 'url', 'hint' => 'Only for a separate token service. Leave blank when using the username and password above.'],
+                ['key' => 'token_secret', 'label' => 'Token API secret (older setup only)', 'type' => 'secret'],
             ],
+            // Either set is enough to turn it on: the merchant credentials, or the older token service.
+            'required_any' => [['username', 'password', 'app_secret'], ['token_url', 'token_secret']],
+            'required_any_message' => 'Fill in the bKash Username, Password and app_secret (or the older Token API URL and secret) before turning bKash on.',
         ],
         'sslcommerz' => [
             'name' => 'SSLCommerz',
@@ -161,7 +168,10 @@ return [
             'fields' => [
                 ['key' => 'display_name', 'label' => 'Display name', 'required' => true],
                 ['key' => 'button_label', 'label' => 'Payment button label'],
-                ['key' => 'email', 'label' => 'PayPal email', 'type' => 'email', 'required' => true],
+                ['key' => 'email', 'label' => 'PayPal email', 'type' => 'email', 'required' => true, 'hint' => 'Receives the payments. This is all checkout needs.'],
+                ['key' => 'api_username', 'label' => 'API username (optional)', 'hint' => 'PayPal > Account Settings > API access (NVP/SOAP). Used to test the account.'],
+                ['key' => 'api_password', 'label' => 'API password (optional)', 'type' => 'secret'],
+                ['key' => 'api_signature', 'label' => 'API signature (optional)', 'type' => 'secret'],
                 ['key' => 'usd_rate', 'label' => 'BDT per 1 USD', 'type' => 'number', 'hint' => 'Invoices are in BDT and PayPal charges USD. Leave blank to use the rate in Settings > Currencies.'],
             ],
         ],

@@ -282,6 +282,7 @@ Route::prefix('api')->group(function () {
 
         Route::get('gateways', [Admin\GatewayController::class, 'index']);
         Route::put('gateways/{code}', [Admin\GatewayController::class, 'update']);
+        Route::post('gateways/{code}/test', [Admin\GatewayController::class, 'test'])->middleware('throttle:10,1,gateway-test');
 
         Route::get('settings', [Admin\SettingController::class, 'show']);
         Route::post('settings', [Admin\SettingController::class, 'update']);

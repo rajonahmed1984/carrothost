@@ -36,6 +36,28 @@ class GatewayController extends Controller
         })->values();
     }
 
+    /** Checks the saved credentials with the gateway, without taking a payment. */
+    public function test(string $code)
+    {
+        $definition = config("billing.gateways.{$code}");
+        abort_unless($definition, 404);
+        $gateway = Gateway::where('code', $code)->first();
+        $driver = $gateway && ($definition['driver'] ?? null) ? new $definition['driver']($gateway) : null;
+
+        if (! $driver || ! method_exists($driver, 'testConnection')) {
+            throw ValidationException::withMessages(['gateway' => "Save the {$definition['name']} settings first. This gateway has no connection test."]);
+        }
+
+        try {
+            $message = $driver->testConnection();
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['gateway' => $e->getMessage()]);
+        }
+        ActivityLog::record('gateway.tested', $gateway);
+
+        return ['message' => $message];
+    }
+
     public function update(Request $request, string $code)
     {
         $definition = config("billing.gateways.{$code}");
@@ -78,6 +100,13 @@ class GatewayController extends Controller
             foreach ($fields as $field) {
                 if (($field['required'] ?? false) && blank($config[$field['key']] ?? null)) {
                     throw ValidationException::withMessages(['is_enabled' => "Fill in {$field['label']} before turning {$definition['name']} on."]);
+                }
+            }
+            // A gateway with alternative credential sets needs one of them complete.
+            if ($sets = $definition['required_any'] ?? null) {
+                $complete = collect($sets)->contains(fn ($keys) => collect($keys)->every(fn ($key) => filled($config[$key] ?? null)));
+                if (! $complete) {
+                    throw ValidationException::withMessages(['is_enabled' => $definition['required_any_message'] ?? "Fill in the {$definition['name']} credentials first."]);
                 }
             }
         }
