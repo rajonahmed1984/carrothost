@@ -31,6 +31,10 @@ class ServiceController extends Controller
                 'pending_cancellation' => $q->where('terminate_end_of_cycle', true)->whereIn('status', ['active', 'suspended', 'pending']),
                 default => $q->where('status', $status),
             })
+            // From the Products list: one plan's services.
+            ->when($request->query('product'), fn ($q, $product) => $q->where('product_id', (int) $product))
+            // "inactive" is everything not running: pending, cancelled, terminated.
+            ->when($request->query('state') === 'inactive', fn ($q) => $q->whereIn('status', ['pending', 'cancelled', 'terminated', 'fraud']))
             ->when($request->query('group'), fn ($q, $group) => $q->whereHas('product', fn ($p) => $group === 'none'
                 ? $p->whereNull('product_group_id')
                 : $p->where('product_group_id', (int) $group)))

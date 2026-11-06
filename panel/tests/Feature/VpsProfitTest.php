@@ -78,6 +78,23 @@ class VpsProfitTest extends TestCase
         $this->assertSame('24000.00', $this->getJson('/api/vps/profit?from=2026-11&to=2026-11&spread=0')->json('vps.1.months.2026-11.sales'));
     }
 
+    public function test_products_list_counts_services_and_links_to_them(): void
+    {
+        $small = Product::create(['name' => 'VPS Small', 'type' => 'vps']);
+        $other = Product::create(['name' => 'Other', 'type' => 'vps']);
+        $client = Client::create(['name' => 'Rahim', 'email' => 'rahim@example.com']);
+        foreach (['active', 'active', 'suspended', 'cancelled', 'pending'] as $status) {
+            Service::create(['client_id' => $client->id, 'product_id' => $small->id, 'cycle' => 'monthly', 'recurring_amount' => 1, 'status' => $status]);
+        }
+        Service::create(['client_id' => $client->id, 'product_id' => $other->id, 'cycle' => 'monthly', 'recurring_amount' => 1, 'status' => 'active']);
+
+        $row = collect($this->getJson('/api/products')->assertOk()->json())->firstWhere('id', $small->id);
+        $this->assertSame([2, 1, 2], [$row['active_count'], $row['suspended_count'], $row['inactive_count']]);
+
+        $this->getJson("/api/services?product={$small->id}&status=active")->assertOk()->assertJsonPath('total', 2);
+        $this->getJson("/api/services?product={$small->id}&state=inactive")->assertOk()->assertJsonPath('total', 2);
+    }
+
     public function test_active_vps_without_a_cost_is_flagged(): void
     {
         $bare = Product::create(['name' => 'VPS Bare', 'type' => 'vps']);

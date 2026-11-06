@@ -58,6 +58,7 @@ type Product = {
     server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string; price_usd?: string | null; setup_fee_usd?: string | null }[];
     module_config?: Partial<VpsConfig> | null;
     cost_amount?: string | null; cost_currency?: string | null;
+    active_count?: number; suspended_count?: number; inactive_count?: number;
 };
 type Package = { id: string; name: string };
 type OsImage = { slug: string; name: string };
@@ -406,6 +407,16 @@ const productColumns: Column<Product>[] = [
     { header: 'Name', cell: (p) => <Link className="table-action-link font-semibold" to={`/admin/products-pricing/${p.id}`}>{p.name}</Link> },
     { header: 'Type', cell: (p) => p.type.replace('_', ' ') },
     { header: 'Automation', cell: (p) => (p.module ? `${p.module}${p.module_package ? ` / ${p.module_package}` : ''}` : 'Manual') },
+    {
+        header: 'Services',
+        cell: (p) => (
+            <span className="flex flex-wrap gap-1.5 text-xs whitespace-nowrap">
+                <Link to={`/admin/products-services?product=${p.id}&status=active`} title="Active services" className={`rounded-full px-2 py-0.5 font-semibold hover:underline ${p.active_count ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{p.active_count ?? 0} active</Link>
+                {!!p.suspended_count && <Link to={`/admin/products-services?product=${p.id}&status=suspended`} title="Suspended services" className="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-700 hover:underline">{p.suspended_count} suspended</Link>}
+                {!!p.inactive_count && <Link to={`/admin/products-services?product=${p.id}&state=inactive`} title="Pending, cancelled or terminated" className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 hover:underline">{p.inactive_count} inactive</Link>}
+            </span>
+        ),
+    },
     { header: 'Pricing', cell: (p) => p.prices.map((x) => `${money(x.price)} / ${x.cycle}`).join(', ') },
     { header: 'Status', cell: (p) => <Status value={p.is_active ? 'active' : 'cancelled'} /> },
     { header: '', cell: (p) => <Link className="table-action-link" to={`/admin/products-pricing/${p.id}`}>Edit</Link>, align: 'right' },
@@ -765,9 +776,35 @@ function TldTable({ data }: { data: Tld[] }) {
         onSuccess: () => qc.invalidateQueries({ queryKey: ['tlds'] }),
     });
     const allTicked = rows.length > 0 && selected.length === rows.length;
+    // Domain Pricing and the registrars' own lists, one at a time. Both stay mounted so unsaved edits survive a switch.
+    const [params, setParams] = useSearchParams();
+    const tab = params.get('tab') === 'registrar' ? 'registrar' : 'pricing';
+    const hasRegistrars = !!meta.data && meta.data.registrars.length > 0;
+    const goTab = (key: 'pricing' | 'registrar') => {
+        const next = new URLSearchParams(params);
+        if (key === 'pricing') next.delete('tab'); else next.set('tab', key);
+        setParams(next, { replace: true });
+    };
 
     return (
         <div className="space-y-4">
+            <div className="card flex flex-wrap items-center gap-2 p-3" role="tablist" aria-label="Domain pricing views">
+                {([['pricing', `Domain Pricing (${data.length})`], ...(hasRegistrars ? [['registrar', `Registrar TLDs (${meta.data!.registrars.length} registrar${meta.data!.registrars.length > 1 ? 's' : ''})`]] : [])] as ['pricing' | 'registrar', string][]).map(([key, label]) => (
+                    <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === key}
+                        onClick={() => goTab(key)}
+                        className={`cursor-pointer rounded-full border px-4 py-2 text-sm font-semibold transition ${tab === key ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-[var(--accent)] hover:text-accent'}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+                {dirty && tab === 'registrar' && <span className="ml-auto text-xs font-semibold text-amber-700">Unsaved changes in Domain Pricing</span>}
+            </div>
+
+            <div className={tab === 'pricing' ? 'space-y-4' : 'hidden'}>
             <div className="card flex flex-wrap items-center gap-2 p-4">
                 <span className="mr-2 text-sm font-semibold text-slate-700" title="Featured first on the customer's domain page.">Spotlight TLDs</span>
                 {Array.from({ length: SPOTLIGHT_LIMIT }, (_, i) => spotlight[i]).map((r, i) => (
@@ -851,8 +888,12 @@ function TldTable({ data }: { data: Tld[] }) {
                     <BulkPricing ids={selected} onDone={() => setSelected([])} />
                 </div>
             </div>
-            {meta.data && meta.data.registrars.length > 0 && (
-                <RegistrarTldList registrars={meta.data.registrars} onAdd={(preset) => setPricing(preset)} onBulkAdd={(tlds, registrar) => setBulkAdd({ tlds, registrar })} onEdit={(id) => { const t = byId.get(id); if (t) setPricing(t); }} />
+            </div>
+
+            {hasRegistrars && (
+                <div className={tab === 'registrar' ? '' : 'hidden'}>
+                    <RegistrarTldList registrars={meta.data!.registrars} onAdd={(preset) => setPricing(preset)} onBulkAdd={(tlds, registrar) => setBulkAdd({ tlds, registrar })} onEdit={(id) => { const t = byId.get(id); if (t) setPricing(t); }} />
+                </div>
             )}
             {bulkAdd && <BulkAddTlds preset={bulkAdd === 'new' ? null : bulkAdd} onClose={() => setBulkAdd(null)} />}
             {pricing && <TldForm tld={pricing === 'new' || !('id' in pricing) ? null : pricing} preset={pricing !== 'new' && !('id' in pricing) ? pricing : undefined} onClose={() => setPricing(null)} />}

@@ -17,7 +17,12 @@ class ProductController extends Controller
 {
     public function index()
     {
-        return Product::with('prices')->orderBy('name')->get();
+        // How many accounts each plan has, for the Services column.
+        return Product::with('prices')->withCount([
+            'services as active_count' => fn ($q) => $q->where('status', 'active'),
+            'services as suspended_count' => fn ($q) => $q->where('status', 'suspended'),
+            'services as inactive_count' => fn ($q) => $q->whereIn('status', ['pending', 'cancelled', 'terminated', 'fraud']),
+        ])->orderBy('name')->get();
     }
 
     public function show(Product $product)

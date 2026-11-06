@@ -75,15 +75,35 @@ export function ServicesPage() {
     const [search, setSearch] = useState('');
     const [group, setGroup] = useState('');
     const groups = useQuery({ queryKey: ['product-groups'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/product-groups')).data });
+    // Opened from the Products list: one plan's services, optionally only the inactive ones.
+    const [urlParams, setUrlParams] = useSearchParams();
+    const product = urlParams.get('product') ?? '';
+    const state = urlParams.get('state') ?? '';
+    const products = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/products')).data, enabled: !!product });
+    const productName = products.data?.find((p) => String(p.id) === product)?.name;
+    const clearProduct = () => {
+        const next = new URLSearchParams(urlParams);
+        next.delete('product');
+        next.delete('state');
+        setUrlParams(next, { replace: true });
+    };
 
     const params: Record<string, string> = {
         ...(search ? { q: search } : {}),
         ...(status ? { status } : {}),
         ...(group ? { group } : {}),
+        ...(product ? { product } : {}),
+        ...(state && !status ? { state } : {}),
     };
 
     return (
         <>
+            {product && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
+                    Showing {state === 'inactive' && !status ? 'inactive ' : ''}services on <strong>{productName ?? `product #${product}`}</strong>.
+                    <button type="button" onClick={clearProduct} className="ml-auto cursor-pointer font-semibold text-sky-800 hover:underline">Show all products</button>
+                </div>
+            )}
             <PagedTable<Service>
                 url="/services"
                 noun="services"
