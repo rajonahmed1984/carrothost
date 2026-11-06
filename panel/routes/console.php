@@ -90,6 +90,7 @@ Artisan::command('portal:import-orders', function () {
             ['id' => $o->portal_order_id],
             [
                 'client_id' => $o->panel_client_id,
+                'order_number' => $o->ordernum ?: null,
                 'status' => $status,
                 'amount' => $o->order_amount ?? 0,
                 'notes' => $o->notes ?: null,

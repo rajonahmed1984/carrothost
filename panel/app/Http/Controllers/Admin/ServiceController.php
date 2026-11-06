@@ -25,9 +25,12 @@ class ServiceController extends Controller
     {
         return Service::with(['client:id,name,email', 'product:id,name,module,product_group_id', 'product.group:id,name', 'server:id,name'])
             // "needs_action" is the dashboard's Pending Module Actions: failed, set up by hand, or awaiting accept.
-            ->when($request->query('status'), fn ($q, $status) => $status === 'needs_action'
-                ? $q->whereIn('provision_status', DashboardService::SERVICE_ACTIONS)
-                : $q->where('status', $status))
+            ->when($request->query('status'), fn ($q, $status) => match ($status) {
+                'needs_action' => $q->whereIn('provision_status', DashboardService::SERVICE_ACTIONS),
+                // The dashboard's Pending Cancellations: set to terminate at the end of the cycle, not yet terminated.
+                'pending_cancellation' => $q->where('terminate_end_of_cycle', true)->whereIn('status', ['active', 'suspended', 'pending']),
+                default => $q->where('status', $status),
+            })
             ->when($request->query('group'), fn ($q, $group) => $q->whereHas('product', fn ($p) => $group === 'none'
                 ? $p->whereNull('product_group_id')
                 : $p->where('product_group_id', (int) $group)))

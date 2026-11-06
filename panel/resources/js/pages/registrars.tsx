@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Check, Globe, Percent, ReceiptText, 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, SecretInput, Select, Status, Table } from '../ui';
 import { StatCards } from './client-tabs';
 import { monthLabel, Profit, shiftMonth, thisMonth } from './server-profit';
 import { alertDialog, ask } from '../dialog';
@@ -71,7 +71,9 @@ function RegistrarForm({ registrar, onClose }: { registrar: Registrar; onClose: 
         <Modal title={`Edit ${registrar.name}`} onClose={onClose}>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3">
                 <Field label="Reseller ID"><Input required value={resellerId} onChange={(e) => setResellerId(e.target.value)} /></Field>
-                <Field label="API key" hint={registrar.has_api_key ? 'Leave blank to keep the current key' : 'Stored encrypted'}><Input type="password" autoComplete="new-password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} /></Field>
+                <Field label="API key" hint={registrar.has_api_key ? 'Saved. Press the eye to see it, or type a new one to replace it.' : 'Stored encrypted'}>
+                    <SecretInput value={apiKey} onChange={setApiKey} saved={!!registrar.has_api_key} reveal={async () => (await api.post<{ value: string }>(`/secrets/registrars/${registrar.code}`)).data} />
+                </Field>
                 <Field label="Account currency" hint="What the registrar bills and holds your balance in">
                     <Select value={currency} onChange={(e) => setCurrency(e.target.value)}><option value="BDT">BDT</option><option value="USD">USD</option></Select>
                 </Field>

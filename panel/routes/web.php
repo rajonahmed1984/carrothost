@@ -202,6 +202,13 @@ Route::prefix('api')->group(function () {
         Route::post('servers/probe', [Admin\ServerController::class, 'probe']);
         Route::apiResource('servers', Admin\ServerController::class)->except('show');
         Route::post('servers/{server}/test', [Admin\ServerController::class, 'test']);
+        // Saved secrets, shown only on the eye button; throttled and logged.
+        Route::controller(Admin\SecretController::class)->middleware('throttle:30,1,admin-secret')->group(function () {
+            Route::post('secrets/setting', 'setting');
+            Route::post('secrets/servers/{server}', 'server');
+            Route::post('secrets/registrars/{code}', 'registrar');
+            Route::post('secrets/gateways/{code}', 'gateway');
+        });
 
         Route::get('registrars', [Admin\RegistrarController::class, 'index']);
         Route::get('registrars/profit', [Admin\RegistrarController::class, 'profit']);

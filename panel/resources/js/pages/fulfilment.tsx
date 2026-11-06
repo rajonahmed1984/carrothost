@@ -108,6 +108,7 @@ export function ServicesPage() {
                         { key: 'terminated', label: 'Terminated' },
                         { key: 'cancelled', label: 'Cancelled' },
                         { key: 'needs_action', label: 'Needs Action' },
+                        { key: 'pending_cancellation', label: 'Pending Cancellation' },
                     ],
                 }}
                 params={params}

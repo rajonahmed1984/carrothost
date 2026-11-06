@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import { Button, ErrorNote, Field, Input, QueryState, Select, Status, type Branding } from '../ui';
+import { Button, ErrorNote, Field, Input, QueryState, SecretInput, Select, Status, type Branding } from '../ui';
 import { EmailTemplatesSection } from './email-templates';
 
 /** Integration pages listed under System in the sidebar. */
@@ -190,7 +190,8 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
     const [remove, setRemove] = useState({ logo: false, favicon: false });
     const set = <K extends keyof Values>(key: K) => (value: Values[K]) => setValues({ ...values, [key]: value });
     const text = (key: keyof Values) => ({ value: String(values[key] ?? ''), onChange: (e: { target: { value: string } }) => setValues({ ...values, [key]: e.target.value }) });
-    const secretHint = (key: keyof Secrets) => (data.secrets[key] ? 'Saved. Leave blank to keep it.' : undefined);
+    const secretHint = (key: keyof Secrets) => (data.secrets[key] ? 'Saved. Press the eye to see it, or type a new one to replace it.' : undefined);
+    const reveal = (key: keyof Secrets) => async () => (await api.post<{ value: string }>('/secrets/setting', { key })).data;
 
     const save = useMutation({
         mutationFn: async () => {
@@ -273,9 +274,9 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                         <Check checked={values.recaptcha_enabled} onChange={set('recaptcha_enabled')} label="Check sign-in and sign-up forms with reCAPTCHA" />
                         <div className="grid gap-4 md:grid-cols-2">
                             <Field label="Site key"><Input {...text('recaptcha_site_key')} /></Field>
-                            <Field label="Secret key" hint={secretHint('recaptcha_secret_key')}><Input type="password" autoComplete="new-password" value={secrets.recaptcha_secret_key} onChange={(e) => setSecrets({ ...secrets, recaptcha_secret_key: e.target.value })} /></Field>
+                            <Field label="Secret key" hint={secretHint('recaptcha_secret_key')}><SecretInput value={secrets.recaptcha_secret_key} onChange={(v) => setSecrets({ ...secrets, recaptcha_secret_key: v })} saved={data.secrets.recaptcha_secret_key} reveal={reveal('recaptcha_secret_key')} /></Field>
                             <Field label="Project ID" hint="Enterprise only."><Input {...text('recaptcha_project_id')} /></Field>
-                            <Field label="API key" hint={secretHint('recaptcha_api_key') ?? 'Enterprise only.'}><Input type="password" autoComplete="new-password" value={secrets.recaptcha_api_key} onChange={(e) => setSecrets({ ...secrets, recaptcha_api_key: e.target.value })} /></Field>
+                            <Field label="API key" hint={secretHint('recaptcha_api_key') ?? 'Enterprise only.'}><SecretInput value={secrets.recaptcha_api_key} onChange={(v) => setSecrets({ ...secrets, recaptcha_api_key: v })} saved={data.secrets.recaptcha_api_key} reveal={reveal('recaptcha_api_key')} /></Field>
                             <Field label="Score threshold" hint="0 to 1. Lower lets more through."><Input type="number" min="0" max="1" step="0.01" {...text('recaptcha_score_threshold')} /></Field>
                         </div>
                     </Section>
@@ -438,7 +439,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                                 </Field>
                             </div>
                             <Field label="Username"><Input autoComplete="off" {...text('mail_username')} /></Field>
-                            <Field label="Password" hint={secretHint('mail_password')}><Input type="password" autoComplete="new-password" value={secrets.mail_password} onChange={(e) => setSecrets({ ...secrets, mail_password: e.target.value })} /></Field>
+                            <Field label="Password" hint={secretHint('mail_password')}><SecretInput value={secrets.mail_password} onChange={(v) => setSecrets({ ...secrets, mail_password: v })} saved={data.secrets.mail_password} reveal={reveal('mail_password')} /></Field>
                         </Section>
                         <div className="space-y-4">
                             <Section title="Sender">
@@ -457,7 +458,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                             <Field label="API URL"><Input type="url" placeholder="https://www.24bulksmsbd.com/api/smsSendApi" {...text('sms_api_url')} /></Field>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <Field label="Customer ID"><Input autoComplete="off" {...text('sms_customer_id')} /></Field>
-                                <Field label="API key" hint={secretHint('sms_api_key')}><Input type="password" autoComplete="new-password" value={secrets.sms_api_key} onChange={(e) => setSecrets({ ...secrets, sms_api_key: e.target.value })} /></Field>
+                                <Field label="API key" hint={secretHint('sms_api_key')}><SecretInput value={secrets.sms_api_key} onChange={(v) => setSecrets({ ...secrets, sms_api_key: v })} saved={data.secrets.sms_api_key} reveal={reveal('sms_api_key')} /></Field>
                             </div>
                             <Field label="Whitelisted server IP" hint="For reference only. The gateway rejects requests from any other server IP."><Input placeholder="0.0.0.0" {...text('sms_whitelisted_ip')} /></Field>
                         </Section>

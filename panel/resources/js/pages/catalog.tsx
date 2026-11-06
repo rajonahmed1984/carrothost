@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, Eye, EyeOff, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Select, Status, Table, type Column } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, SecretInput, Select, Status, Table, type Column } from '../ui';
 
 import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
 import { alertDialog, ask } from '../dialog';
@@ -884,7 +884,6 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
     });
     const setNs = (i: number, change: { host?: string; ip?: string }) => setForm((f) => ({ ...f, nameservers: f.nameservers.map((ns, j) => (j === i ? { ...ns, ...change } : ns)) }));
     const currentCost = server ? Number(server.this_month.cost).toFixed(2) : '';
-    const [showSecret, setShowSecret] = useState(false);
     const secretLabel = form.module === 'webuzo' ? 'Access Hash' : form.module === 'webdock' ? 'API token' : form.auth_type === 'password' ? 'Password' : 'API token';
     const webdock = form.module === 'webdock';
     const probe = useMutation({
@@ -926,25 +925,17 @@ function ServerForm({ server, onClose }: { server: ServerRow | null; onClose: ()
                             <Select value={form.auth_type} onChange={(e) => setForm({ ...form, auth_type: e.target.value })}><option value="token">API token</option><option value="password">Password</option></Select>
                         </Field>
                     )}
-                    <Field label={secretLabel} hint={server?.has_credentials ? `A ${secretLabel.toLowerCase()} is saved. Leave blank to keep it, or type a new one.` : webdock ? 'Webdock > Account > API & Integrations: create a token with server read, write, execute and provisioning access' : server ? `No ${secretLabel.toLowerCase()} saved yet` : 'Stored encrypted'}>
-                        <div className="relative">
-                            {/* A random name and no autocomplete keep the browser from filling in the panel's own login password. */}
-                            <input
-                                className="ui-input pr-10"
-                                type={showSecret ? 'text' : 'password'}
-                                name={`server-secret-${server?.id ?? 'new'}`}
-                                autoComplete="new-password"
-                                data-lpignore="true"
-                                data-1p-ignore="true"
-                                spellCheck={false}
-                                placeholder={server?.has_credentials ? 'Saved (hidden)' : ''}
-                                value={form.credentials}
-                                onChange={(e) => { setForm({ ...form, credentials: e.target.value }); probe.reset(); }}
-                            />
-                            <button type="button" className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer p-1 text-slate-400 hover:text-slate-700" aria-label={showSecret ? 'Hide' : 'Show'} onClick={() => setShowSecret(!showSecret)}>
-                                {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
-                            </button>
-                        </div>
+                    <Field label={secretLabel} hint={server?.has_credentials ? `A ${secretLabel.toLowerCase()} is saved. Press the eye to see it, or type a new one to replace it.` : webdock ? 'Webdock > Account > API & Integrations: create a token with server read, write, execute and provisioning access' : server ? `No ${secretLabel.toLowerCase()} saved yet` : 'Stored encrypted'}>
+                        {/* A random name and no autocomplete keep the browser from filling in the panel's own login password. */}
+                        <SecretInput
+                            name={`server-secret-${server?.id ?? 'new'}`}
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            saved={!!server?.has_credentials}
+                            reveal={server ? async () => (await api.post<{ value: string }>(`/secrets/servers/${server.id}`)).data : undefined}
+                            value={form.credentials}
+                            onChange={(v) => { setForm({ ...form, credentials: v }); probe.reset(); }}
+                        />
                     </Field>
                     <Field label="Max accounts" hint="0 means no limit"><Input type="number" min="0" value={form.max_accounts} onChange={(e) => setForm({ ...form, max_accounts: e.target.value })} /></Field>
                 </div>

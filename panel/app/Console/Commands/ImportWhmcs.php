@@ -72,7 +72,15 @@ class ImportWhmcs extends Command
             return self::FAILURE;
         }
 
-        $clients = $this->whmcs->table('tblclients')->where('status', 'Active')->orderBy('id')->get();
+        // WHMCS marks a client Inactive while they have no active service, so a new customer whose
+        // first order is still pending is Inactive: take them too, or their order would be lost.
+        $clients = $this->whmcs->table('tblclients')
+            ->where(fn ($q) => $q->where('status', 'Active')
+                ->orWhereIn('id', $this->whmcs->table('tblorders')->where('status', 'Pending')->select('userid'))
+                ->orWhereIn('id', $this->whmcs->table('tblhosting')->where('domainstatus', 'Pending')->select('userid'))
+                ->orWhereIn('id', $this->whmcs->table('tbldomains')->whereIn('status', ['Pending', 'Pending Transfer', 'Pending Registration'])->select('userid')))
+            ->where('status', '!=', 'Closed')
+            ->orderBy('id')->get();
         $services = $this->whmcs->table('tblhosting')
             ->whereIn('userid', $clients->pluck('id'))
             ->whereIn('domainstatus', ['Active', 'Suspended', 'Pending', 'Terminated', 'Cancelled'])
@@ -182,7 +190,11 @@ class ImportWhmcs extends Command
             'address' => trim(implode(', ', array_filter([trim($row->address1), trim($row->address2)]))) ?: null,
             'city' => trim($row->city) ?: null,
             'country' => strlen(trim($row->country)) === 2 ? strtoupper(trim($row->country)) : 'BD',
-            'status' => 'active',
+            // As in WHMCS, so Active Clients matches; an Inactive owner can still sign in and pay.
+            // A client made active here stays active: WHMCS's automatic Inactive does not undo it.
+            'status' => $client->exists && $client->status === 'active' && $row->status === 'Inactive'
+                ? 'active'
+                : (['Active' => 'active', 'Inactive' => 'inactive', 'Closed' => 'closed'][$row->status] ?? 'active'),
             'notes' => trim(html_entity_decode((string) $row->notes, ENT_QUOTES)) ?: null,
             'last_login_at' => $row->lastlogin && $row->lastlogin > '1970' ? $row->lastlogin : null,
             'created_at' => $this->date($row->datecreated) ?? now(),

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { X } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { api, basePath, errorMessage, type Page } from './api';
@@ -49,6 +49,66 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 export const Input = (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="ui-input" />;
+
+/**
+ * A password or API key field. A saved value shows as dots; the eye button loads it from the server
+ * (only then, and the server logs it) and shows it, and typing replaces it.
+ */
+export function SecretInput({ value, onChange, saved, reveal, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
+    value: string; onChange: (value: string) => void; saved: boolean; reveal?: () => Promise<{ value: string }>;
+}) {
+    const [visible, setVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const toggle = async () => {
+        setError(null);
+        if (visible) return setVisible(false);
+        if (value === '' && saved && reveal) {
+            setLoading(true);
+            try {
+                onChange((await reveal()).value);
+            } catch (e) {
+                setError(errorMessage(e));
+                setLoading(false);
+
+                return;
+            }
+            setLoading(false);
+        }
+        setVisible(true);
+    };
+
+    return (
+        <span className="block">
+            <span className="relative block">
+                <input
+                    {...props}
+                    type={visible ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={saved && value === '' ? '••••••••••••••••••••••••••••••••' : props.placeholder}
+                    className={`ui-input pr-10 ${visible ? 'font-mono' : ''} ${saved && value === '' ? 'placeholder:tracking-widest placeholder:text-slate-700' : ''}`}
+                />
+                {(saved || value !== '') && (
+                    <button
+                        type="button"
+                        onClick={toggle}
+                        disabled={loading}
+                        aria-label={visible ? 'Hide' : 'Show'}
+                        title={visible ? 'Hide' : 'Show'}
+                        className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-slate-400 hover:text-slate-700 disabled:cursor-wait"
+                    >
+                        {loading ? <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" /> : visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                )}
+            </span>
+            {error && <span className="mt-1 block text-xs text-rose-600">{error}</span>}
+        </span>
+    );
+}
+
 export const Select = (props: SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className="ui-input" />;
 
 export function Card({ title, action, children }: { title?: string; action?: ReactNode; children: ReactNode }) {

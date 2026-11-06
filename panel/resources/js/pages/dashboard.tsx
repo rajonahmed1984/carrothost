@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Ban, Check, ChevronDown, ChevronUp, FileWarning, RefreshCw, ShoppingCart, Table2, Wrench, X, XCircle, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Ban, Check, ChevronDown, ChevronUp, FileWarning, RefreshCw, ShoppingCart, Table2, X, XCircle, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -17,6 +17,7 @@ export type Dashboard = {
     pending_orders: number;
     suspended_services: number;
     pending_module_actions: number;
+    pending_cancellations?: number;
     pending_module_actions_split?: { services: number; domains: number };
     billing: { today: string; month: string; year: string; all_time: string };
     charts: Record<Range, ChartRow[]>;
@@ -360,14 +361,8 @@ export function DashboardPage() {
                         <Tile to="/admin/pending-orders" value={d.pending_orders} label="Pending Orders" Icon={ShoppingCart} color="#17733f" />
                         <Tile to="/admin/overdue-invoices" value={d.overdue_invoices} label="Overdue Invoices" Icon={FileWarning} color="#be123c" />
                         <Tile to="/admin/products-services?status=suspended" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
-                        {/* Services waiting on an admin first; the domain list when only domains wait. */}
-                        <Tile
-                            to={d.pending_module_actions_split && d.pending_module_actions_split.services === 0 && d.pending_module_actions_split.domains > 0 ? '/admin/domain-registrations?status=needs_action' : '/admin/products-services?status=needs_action'}
-                            value={d.pending_module_actions}
-                            label="Pending Module Actions"
-                            Icon={Wrench}
-                            color="#0f2233"
-                        />
+                        {/* Services marked to terminate at the end of their cycle: WHMCS's cancellation requests. */}
+                        <Tile to="/admin/products-services?status=pending_cancellation" value={d.pending_cancellations ?? 0} label="Pending Cancellations" Icon={XCircle} color="#0f2233" />
                     </div>
 
                     <div className="grid items-start gap-4 xl:grid-cols-3">

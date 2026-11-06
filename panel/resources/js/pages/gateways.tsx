@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api';
-import { Button, Card, ErrorNote, Field, Input, QueryState, Status } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, QueryState, SecretInput, Status } from '../ui';
 
 type GatewayField = { key: string; label: string; type?: string; required?: boolean; hint?: string; value: string; is_set: boolean };
 type Gateway = { code: string; name: string; implemented: boolean; has_sandbox: boolean; callback_url: string | null; is_enabled: boolean; test_mode: boolean; fields: GatewayField[] };
@@ -28,8 +28,15 @@ function GatewayCard({ gateway }: { gateway: Gateway }) {
                 <div className="grid gap-3 md:grid-cols-2">
                     {gateway.fields.map((field) => (
                         <div key={field.key} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                            <Field label={`${field.label}${field.required ? ' *' : ''}`} hint={field.type === 'secret' && field.is_set ? 'Saved. Leave blank to keep it.' : field.hint}>
-                                {field.type === 'textarea' ? (
+                            <Field label={`${field.label}${field.required ? ' *' : ''}`} hint={field.type === 'secret' && field.is_set ? 'Saved. Press the eye to see it, or type a new one to replace it.' : field.hint}>
+                                {field.type === 'secret' ? (
+                                    <SecretInput
+                                        value={config[field.key] ?? ''}
+                                        onChange={(v) => setConfig({ ...config, [field.key]: v })}
+                                        saved={!!field.is_set}
+                                        reveal={async () => (await api.post<{ value: string }>(`/secrets/gateways/${gateway.code}`, { field: field.key })).data}
+                                    />
+                                ) : field.type === 'textarea' ? (
                                     <textarea rows={3} className="ui-input py-2" value={config[field.key] ?? ''} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} />
                                 ) : (
                                     <Input type={inputType(field.type)} step={field.type === 'number' ? 'any' : undefined} autoComplete={field.type === 'secret' ? 'new-password' : 'off'} value={config[field.key] ?? ''} onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })} />
