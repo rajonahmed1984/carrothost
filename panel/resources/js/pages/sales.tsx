@@ -4,7 +4,7 @@ import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, money, type Page } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status, useBranding, type Tab } from '../ui';
-import { confirmDialog } from '../dialog';
+import { alertDialog, confirmDialog } from '../dialog';
 
 const RichEditor = lazy(() => import('../editor'));
 
@@ -300,15 +300,18 @@ export function OrdersPage({ mode = 'active' }: { mode?: 'active' | 'cancelled' 
             if (selectedIds.length === 0) return;
             return (await api.post('/orders/batch-action', { order_ids: selectedIds, action })).data;
         },
-        onSuccess: () => {
+        onSuccess: (result?: { message?: string | null; skipped?: string[] }) => {
             setSelectedIds([]);
             qc.invalidateQueries({ queryKey: ['/orders'] });
+            qc.invalidateQueries({ queryKey: ['/invoices'] });
+            qc.invalidateQueries({ queryKey: ['/services'] });
+            if (result?.skipped?.length) void alertDialog(result.message ?? '');
         },
     });
 
     const handleBatch = async (action: 'accept' | 'cancel' | 'delete') => {
         if (selectedIds.length === 0) return;
-        if (action === 'delete' && !(await confirmDialog(`Are you sure you want to delete ${selectedIds.length} selected order(s)?`))) return;
+        if (action === 'delete' && !(await confirmDialog(`Delete ${selectedIds.length} selected order(s)? Their invoices, services and domains are deleted too, and disappear from the client area. Orders with payments or a live account are skipped.`))) return;
         if (action === 'cancel' && !(await confirmDialog(`Are you sure you want to cancel ${selectedIds.length} selected order(s)?`))) return;
         batchMutation.mutate(action);
     };

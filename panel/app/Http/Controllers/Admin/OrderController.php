@@ -199,7 +199,7 @@ class OrderController extends Controller
         return response()->json($order->load('invoices'), 201);
     }
 
-    public function batchAction(Request $request, CustomerMailer $mailer)
+    public function batchAction(Request $request, CustomerMailer $mailer, InvoiceActions $invoices)
     {
         $data = $request->validate([
             'order_ids' => 'required|array',
@@ -208,6 +208,7 @@ class OrderController extends Controller
         ]);
 
         $orders = Order::whereIn('id', $data['order_ids'])->get();
+        $skipped = [];
 
         foreach ($orders as $order) {
             if ($data['action'] === 'accept') {
@@ -224,12 +225,25 @@ class OrderController extends Controller
                 $order->invoices()->where('status', 'unpaid')->update(['status' => 'cancelled']);
                 ActivityLog::record('order.cancelled', $order);
             } elseif ($data['action'] === 'delete') {
-                $order->delete();
-                ActivityLog::record('order.deleted', $order);
+                // The same as deleting one order: its invoices, services and domains go too, with the same checks.
+                try {
+                    $this->deleteOrder($order, $invoices);
+                } catch (ValidationException $e) {
+                    $skipped[] = '#'.($order->order_number ?: $order->id).': '.collect($e->errors())->flatten()->first();
+                }
             }
         }
 
-        return response()->json(['ok' => true, 'count' => count($orders)]);
+        $done = count($orders) - count($skipped);
+
+        return response()->json([
+            'ok' => true,
+            'count' => $done,
+            'skipped' => $skipped,
+            'message' => $data['action'] === 'delete'
+                ? "{$done} order(s) deleted.".($skipped ? ' Not deleted: '.implode(' ', $skipped) : '')
+                : null,
+        ]);
     }
 
     public function updateStatus(Request $request, Order $order)
@@ -271,6 +285,13 @@ class OrderController extends Controller
      */
     public function destroy(Order $order, InvoiceActions $invoices)
     {
+        $this->deleteOrder($order, $invoices);
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function deleteOrder(Order $order, InvoiceActions $invoices): void
+    {
         $order->load(['services', 'domains', 'invoices']);
 
         if ($order->invoices->contains(fn ($i) => $i->payments()->exists())) {
@@ -296,7 +317,5 @@ class OrderController extends Controller
             $order->domains->each->delete();
             $order->delete();
         });
-
-        return response()->json(['ok' => true]);
     }
 }
