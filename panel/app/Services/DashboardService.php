@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Str;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Domain;
@@ -98,8 +99,29 @@ class DashboardService
                 'Ran in the last 26 hours',
                 $lastRun ? 'Has not run in over 26 hours' : 'Has never run. Set up the cron job',
             )],
-            ['label' => 'Provisioning', ...$this->state($failedProvisioning === 0, 'critical', 'No failed services', "{$failedProvisioning} service(s) failed")],
-            ['label' => 'Queue', ...$this->state($failedJobs === 0, 'warning', 'No failed jobs', "{$failedJobs} failed job(s)")],
+            [
+                'label' => 'Provisioning',
+                ...$this->state($failedProvisioning === 0, 'critical', 'No failed services', "{$failedProvisioning} service(s) failed"),
+                // Which ones and why, so the admin can open each and Retry Create.
+                'link' => $failedProvisioning ? '/admin/products-services?status=needs_action' : null,
+                'items' => $failedProvisioning ? Service::where('provision_status', 'failed')->with(['client:id,name', 'product:id,name', 'server:id,name'])
+                    ->latest('updated_at')->limit(5)->get()
+                    ->map(fn (Service $s) => [
+                        'title' => trim(($s->client?->name ?? 'Client').' · '.($s->product?->name ?? 'Service').($s->domain ? " · {$s->domain}" : '')),
+                        'detail' => trim(($s->server ? "{$s->server->name}: " : '').Str::limit((string) ($s->provision_error ?: 'No error message was saved.'), 220)),
+                        'link' => "/admin/products-services/{$s->id}",
+                    ])->all() : [],
+            ],
+            [
+                'label' => 'Queue',
+                ...$this->state($failedJobs === 0, 'warning', 'No failed jobs', "{$failedJobs} failed job(s)"),
+                'items' => $failedJobs ? DB::table('failed_jobs')->latest('id')->limit(5)->get(['payload', 'exception', 'failed_at'])
+                    ->map(fn ($job) => [
+                        'title' => (string) (json_decode($job->payload, true)['displayName'] ?? 'Job').' · '.$job->failed_at,
+                        'detail' => Str::limit(strtok((string) $job->exception, "\n"), 220),
+                        'link' => null,
+                    ])->all() : [],
+            ],
             ['label' => 'Active server', ...$this->state(Server::where('is_active', true)->exists(), 'warning', 'At least one is active', 'No server is active')],
             ['label' => 'Payment gateway', ...$this->state(Gateway::where('is_enabled', true)->exists(), 'warning', 'At least one is enabled', 'No gateway is enabled')],
             ['label' => 'Debug mode', ...$this->state(! $debug, 'warning', 'Off', 'On. Turn off in production')],

@@ -9,7 +9,7 @@ import { alertDialog } from '../dialog';
 
 type ChartRow = { label: string; new_orders: number; activated_orders: number; income: number };
 type Range = 'today' | 'month' | 'year';
-type Check_ = { label: string; level: 'ok' | 'warning' | 'critical'; message: string };
+type Check_ = { label: string; level: 'ok' | 'warning' | 'critical'; message: string; link?: string | null; items?: { title: string; detail: string; link: string | null }[] };
 
 export type Dashboard = {
     currency: string;
@@ -207,7 +207,20 @@ function Health({ data }: { data: Dashboard }) {
                     {h.checks.map((c) => (
                         <li key={c.label} className="flex items-start gap-2 p-2.5">
                             {c.level === 'ok' ? <Check size={14} className="mt-0.5 shrink-0 text-brand-green" /> : c.level === 'warning' ? <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-700" /> : <XCircle size={14} className="mt-0.5 shrink-0 text-rose-700" />}
-                            <span><span className="font-semibold text-slate-800">{c.label}:</span> <span className="text-slate-600">{c.message}</span></span>
+                            <span className="min-w-0 flex-1">
+                                <span className="font-semibold text-slate-800">{c.label}:</span> <span className="text-slate-600">{c.message}</span>
+                                {c.link && <Link to={c.link} className="ml-2 font-semibold text-accent hover:underline">View all</Link>}
+                                {!!c.items?.length && (
+                                    <ul className="mt-2 space-y-1.5">
+                                        {c.items.map((it, i) => (
+                                            <li key={i} className="rounded-lg border border-rose-100 bg-rose-50/60 px-2.5 py-2">
+                                                {it.link ? <Link to={it.link} className="font-semibold text-slate-900 hover:text-accent hover:underline">{it.title}</Link> : <span className="font-semibold text-slate-900">{it.title}</span>}
+                                                <span className="mt-0.5 block break-words text-rose-800">{it.detail}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </span>
                         </li>
                     ))}
                 </ul>

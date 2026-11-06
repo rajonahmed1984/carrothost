@@ -19,7 +19,7 @@ class ProvisionService implements ShouldQueue
     // A failure is shown to the admin, who retries after checking the server.
     public int $tries = 1;
 
-    public int $timeout = 180;
+    public int $timeout = 420;
 
     /** $welcome: email the login details after a create. */
     public function __construct(public int $serviceId, public string $action, public bool $welcome = true) {}

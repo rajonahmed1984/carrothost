@@ -38,15 +38,36 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
         // The username and password set on the order when it was accepted, else new ones.
         [$username, $password] = $this->credentialsFor($service);
 
-        $this->call('createacct', [
-            'username' => $username,
-            'domain' => $service->domain,
-            'password' => $password,
-            'plan' => $service->product->module_package,
-            'contactemail' => $service->client->email,
-        ]);
+        try {
+            // Creating an account (DNS zone, mail, home folder) can take minutes on a busy server.
+            $this->call('createacct', [
+                'username' => $username,
+                'domain' => $service->domain,
+                'password' => $password,
+                'plan' => $service->product->module_package,
+                'contactemail' => $service->client->email,
+            ], 300);
+        } catch (RuntimeException $e) {
+            // WHM often finishes after the request gave up, and a retry then says it already exists.
+            // If the account is there with this domain, it was created.
+            if (! $this->exists($username, (string) $service->domain)) {
+                throw $e;
+            }
+        }
 
         return ['remote_id' => $username, 'username' => $username, 'password' => $password];
+    }
+
+    /** True when WHM has this username for this domain. Any lookup error counts as no. */
+    private function exists(string $username, string $domain): bool
+    {
+        try {
+            $acct = data_get($this->call('accountsummary', ['user' => $username], 30), 'data.acct.0', []);
+        } catch (RuntimeException) {
+            return false;
+        }
+
+        return is_array($acct) && strcasecmp((string) ($acct['domain'] ?? ''), $domain) === 0;
     }
 
     public function suspend(Service $service, string $reason): void
