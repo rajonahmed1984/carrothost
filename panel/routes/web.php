@@ -184,6 +184,7 @@ Route::prefix('api')->group(function () {
         Route::delete('clients/{client}/users/{user}', [Admin\ClientController::class, 'destroyUser']);
         Route::apiResource('product-groups', Admin\ProductGroupController::class)->except('show');
         Route::get('products/packages', [Admin\ProductController::class, 'packages']);
+        Route::get('products/images', [Admin\ProductController::class, 'images']);
         Route::apiResource('products', Admin\ProductController::class);
         Route::put('tlds', [Admin\TldController::class, 'bulkUpdate']);
         Route::get('tlds/lookup', [Admin\TldController::class, 'lookup']);

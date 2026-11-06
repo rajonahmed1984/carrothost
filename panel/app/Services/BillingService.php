@@ -23,7 +23,7 @@ class BillingService
     public function __construct(private readonly CustomerMailer $mailer) {}
 
     /**
-     * @param  array<int, array{product_id: int, cycle: string, domain?: ?string}>  $services
+     * @param  array<int, array{product_id: int, cycle: string, domain?: ?string, module_options?: ?array}>  $services
      * @param  array<int, array{name: string, action: string, years: int, epp_code?: ?string}>  $domains
      */
     public function createOrder(Client $client, array $services, array $domains = []): Order
@@ -51,6 +51,7 @@ class BillingService
                     'domain' => $line['domain'] ?? null,
                     'cycle' => $line['cycle'],
                     'recurring_amount' => $price->priceIn($currency),
+                    'module_options' => $line['module_options'] ?? null,
                 ]);
 
                 if ($product->module && $product->setup_mode === 'order') {

@@ -33,6 +33,9 @@ class StoreController extends Controller
                 'currency' => $currency,
                 'products' => $group->products->map(fn (Product $product) => [
                     ...$product->only('id', 'name', 'type', 'description'),
+                    // The OS choices a VPS product offers; empty means its default is installed.
+                    'os_choices' => $product->vpsConfig()['images'],
+                    'default_os' => $product->vpsConfig()['default_image'],
                     'prices' => $product->prices->map(fn (ProductPrice $p) => [
                         'cycle' => $p->cycle,
                         'price' => $p->priceIn($currency),
@@ -85,6 +88,7 @@ class StoreController extends Controller
             'domain_action' => 'nullable|in:register,transfer,own',
             'domain_years' => 'nullable|integer|between:1,10',
             'epp_code' => 'nullable|string|max:255',
+            'vps_image' => 'nullable|string|max:120',
         ]);
 
         $product = Product::where('is_active', true)
@@ -112,8 +116,14 @@ class StoreController extends Controller
             }
         }
 
+        // A VPS product may let the customer pick its operating system from the product's list.
+        $image = $data['vps_image'] ?? null;
+        if ($image !== null && ! in_array($image, $product->allowedImages(), true)) {
+            throw ValidationException::withMessages(['vps_image' => 'Choose one of the operating systems listed.']);
+        }
+
         $order = $billing->createOrder($request->user('client'), [
-            ['product_id' => $product->id, 'cycle' => $data['cycle'], 'domain' => $domain],
+            ['product_id' => $product->id, 'cycle' => $data['cycle'], 'domain' => $domain, 'module_options' => $image ? ['image' => $image] : null],
         ], $domains);
         ActivityLog::record('order.created', $order, ['by' => 'client']);
 

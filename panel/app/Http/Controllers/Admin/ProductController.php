@@ -49,6 +49,26 @@ class ProductController extends Controller
         }
     }
 
+    /** The operating systems a VPS module can install, for the product's OS settings. */
+    public function images(Request $request)
+    {
+        $data = $request->validate(['module' => ['required', Rule::in(array_keys(config('billing.provisioning_modules')))], 'server_id' => 'nullable|integer']);
+        $class = config("billing.provisioning_modules.{$data['module']}.class");
+        $server = Server::where('module', $data['module'])
+            ->when($data['server_id'] ?? null, fn ($q, $id) => $q->whereKey($id), fn ($q) => $q->where('is_active', true))
+            ->first();
+
+        if (! $class || ! is_subclass_of($class, \App\Provisioning\ManagesVps::class) || ! $server) {
+            return response()->json(['message' => 'This module has no operating system choices, or no server is added for it yet.'], 422);
+        }
+
+        try {
+            return ['images' => (new $class($server))->images(new Service)];
+        } catch (Throwable $e) {
+            return response()->json(['message' => "Could not load operating systems from {$server->name}: {$e->getMessage()}"], 422);
+        }
+    }
+
     public function store(Request $request)
     {
         return response()->json($this->save(new Product, $request), 201);
@@ -82,6 +102,15 @@ class ProductController extends Controller
             'module_package' => 'nullable|string|max:255',
             'server_id' => ['nullable', Rule::exists('servers', 'id')->where('module', $request->input('module'))],
             'setup_mode' => ['sometimes', Rule::in(Product::SETUP_MODES)],
+            // VPS settings (Webdock): default OS, the OS choices customers get, and what they may do.
+            'module_config' => 'nullable|array',
+            'module_config.default_image' => 'nullable|string|max:120',
+            'module_config.images' => 'nullable|array|max:50',
+            'module_config.images.*.slug' => 'required|string|max:120',
+            'module_config.images.*.name' => 'required|string|max:255',
+            'module_config.client_actions' => 'nullable|array',
+            'module_config.client_actions.*' => ['string', Rule::in(Product::DEFAULT_CLIENT_ACTIONS)],
+            'module_config.client_upgrade' => 'nullable|boolean',
             'is_active' => 'boolean',
             'prices' => 'required|array|min:1',
             'prices.*.cycle' => ['required', 'distinct', Rule::in(array_keys(config('billing.cycles')))],

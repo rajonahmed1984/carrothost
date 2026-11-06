@@ -12,10 +12,36 @@ class Product extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'module_config' => 'array'];
     }
 
     public const SETUP_MODES = ['order', 'payment', 'accept', 'manual'];
+
+    /** VPS actions a customer may use when the product does not say otherwise. */
+    public const DEFAULT_CLIENT_ACTIONS = ['start', 'stop', 'reboot', 'reinstall', 'password', 'console'];
+
+    /**
+     * The VPS settings from the product's Module tab, with defaults filled in.
+     *
+     * @return array{default_image: ?string, images: list<array{slug: string, name: string}>, client_actions: list<string>, client_upgrade: bool}
+     */
+    public function vpsConfig(): array
+    {
+        $c = $this->module_config ?? [];
+
+        return [
+            'default_image' => ($c['default_image'] ?? '') ?: null,
+            'images' => array_values(array_filter($c['images'] ?? [], fn ($i) => is_array($i) && ! empty($i['slug']))),
+            'client_actions' => array_values(array_intersect(self::DEFAULT_CLIENT_ACTIONS, $c['client_actions'] ?? self::DEFAULT_CLIENT_ACTIONS)),
+            'client_upgrade' => (bool) ($c['client_upgrade'] ?? true),
+        ];
+    }
+
+    /** OS images a customer may pick, by slug. Empty means the product offers no choice. */
+    public function allowedImages(): array
+    {
+        return array_column($this->vpsConfig()['images'], 'slug');
+    }
 
     public function group(): BelongsTo
     {

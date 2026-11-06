@@ -16,7 +16,7 @@ type Metric = { key: string; label: string; used: string; limit: string | null; 
 type Detail = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string; registered_at: string | null;
     product_id: number; product: { name: string; type: string; module: string | null; group: string | null }; description: string | null;
-    username: string | null; panel_url: string | null; has_password: boolean; is_vps?: boolean; has_tools: boolean; panel_apps: string[];
+    username: string | null; panel_url: string | null; has_password: boolean; is_vps?: boolean; vps_actions?: string[] | null; has_tools: boolean; panel_apps: string[];
     can_upgrade: boolean; pending_upgrade: { invoice_id: number | null; new_product: string | null; new_cycle: string; amount_due: string } | null;
     server: { hostname: string; ip: string | null } | null; nameservers: string[]; server_ip: string | null;
     usage: { disk_used: number | null; disk_limit: number | null; bw_used: number | null; bw_limit: number | null; metrics: Metric[]; updated_at: string | null };
@@ -258,6 +258,8 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
 
     const hosting = s.product.module === 'cpanel' || s.product.module === 'webuzo';
     const tools = canManage && s.has_tools;
+    // A VPS signs in through its web console, and only when the product lets customers use it.
+    const canLogin = tools && (!s.is_vps || !!s.vps_actions?.includes('console'));
     const active = s.status === 'active';
     const panelLabel = panelName(s.product.module);
     const days = s.next_due_date ? daysUntil(s.next_due_date) : null;
@@ -339,15 +341,15 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                         ))}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-3 lg:shrink-0 lg:justify-end lg:py-2">
-                        {tools && active && (
+                        {canLogin && active && (
                             <button type="button" disabled={panel.pending} onClick={() => panel.open()} className="ui-btn ui-btn-primary">
-                                <LogIn size={15} /> {panel.pending ? 'Signing in...' : `Login to ${panelLabel}`}
+                                <LogIn size={15} /> {panel.pending ? 'Opening...' : s.is_vps ? 'Open Console' : `Login to ${panelLabel}`}
                             </button>
                         )}
                         {!tools && s.panel_url && active && <a href={s.panel_url} target="_blank" rel="noreferrer" className="ui-btn ui-btn-primary"><ExternalLink size={15} /> Login to {panelLabel}</a>}
                         <Dropdown label="Manage service" buttonClassName="ui-btn ui-btn-secondary" button={<>Manage Service <ChevronDown size={14} /></>} menuClassName="w-56 py-1 text-sm">
-                            {canManage && s.can_upgrade && <button type="button" role="menuitem" className={menuItem} onClick={() => setDialog('upgrade')}><ArrowUpDown size={14} className="text-slate-400" /> Upgrade / Downgrade</button>}
-                            {tools && <button type="button" role="menuitem" className={menuItem} onClick={() => setDialog('password')}><KeyRound size={14} className="text-slate-400" /> Change Password</button>}
+                            {canManage && s.can_upgrade && <button type="button" role="menuitem" className={menuItem} onClick={() => setDialog('upgrade')}><ArrowUpDown size={14} className="text-slate-400" /> {s.is_vps ? 'Upgrade Plan' : 'Upgrade / Downgrade'}</button>}
+                            {tools && hosting && <button type="button" role="menuitem" className={menuItem} onClick={() => setDialog('password')}><KeyRound size={14} className="text-slate-400" /> Change Password</button>}
                             <button type="button" role="menuitem" className={menuItem} onClick={() => setParams({ tab: 'invoices' }, { replace: true })}><FileText size={14} className="text-slate-400" /> View Invoices</button>
                             <Link role="menuitem" className={menuItem} to={`/tickets/new?service=${s.id}`}><Headset size={14} className="text-slate-400" /> Get Support</Link>
                             {!['cancelled', 'terminated'].includes(s.status) && (

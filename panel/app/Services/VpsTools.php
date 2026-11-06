@@ -49,14 +49,24 @@ class VpsTools
             'username' => $service->credentials['username'] ?? null,
             'login_ready' => (bool) ($service->credentials['shell_ready'] ?? true),
             'setup_note' => $service->provision_error,
-            'actions' => $admin ? self::ADMIN_ACTIONS : ($service->status === 'active' ? self::CLIENT_ACTIONS : []),
+            'actions' => $admin ? self::ADMIN_ACTIONS : ($service->status === 'active' ? self::clientActions($service) : []),
             'snapshots' => $admin ? $this->quiet(fn () => $module->snapshots($service)) : null,
         ];
     }
 
-    public function images(Service $service): array
+    /** What a customer may do on this VPS: the product's Module tab narrows CLIENT_ACTIONS. */
+    public static function clientActions(Service $service): array
     {
-        return $this->run(fn () => $this->module($service)->images($service));
+        return array_values(array_intersect(self::CLIENT_ACTIONS, $service->product->vpsConfig()['client_actions']));
+    }
+
+    /** Operating systems to install. A customer sees only the product's OS choices when it has any. */
+    public function images(Service $service, bool $client = false): array
+    {
+        $images = $this->run(fn () => $this->module($service)->images($service));
+        $allowed = $client ? $service->product->allowedImages() : [];
+
+        return $allowed ? array_values(array_filter($images, fn ($i) => in_array($i['slug'], $allowed, true))) : $images;
     }
 
     public function resizeOptions(Service $service): array
@@ -67,13 +77,17 @@ class VpsTools
     /** Runs one action and returns what to tell the user. $who is 'admin' or 'client'. */
     public function act(Service $service, string $action, array $input, string $who): array
     {
-        $allowed = $who === 'admin' ? self::ADMIN_ACTIONS : self::CLIENT_ACTIONS;
+        $allowed = $who === 'admin' ? self::ADMIN_ACTIONS : self::clientActions($service);
 
         if (! in_array($action, $allowed, true)) {
             throw ValidationException::withMessages(['vps' => 'That action is not available.']);
         }
         if ($who === 'client' && $service->status !== 'active') {
             throw ValidationException::withMessages(['vps' => 'This VPS is '.$service->status.'. Pay any overdue invoice or open a ticket.']);
+        }
+        $allowedImages = $service->product->allowedImages();
+        if ($who === 'client' && $action === 'reinstall' && $allowedImages && ! in_array($input['image'] ?? null, $allowedImages, true)) {
+            throw ValidationException::withMessages(['image' => 'Choose one of the operating systems listed.']);
         }
 
         $module = $this->module($service);

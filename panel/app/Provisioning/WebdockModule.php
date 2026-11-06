@@ -60,7 +60,8 @@ class WebdockModule implements ManagesAccounts, ManagesVps, ProvisioningModule
             'slug' => $this->slugFor($service),
             'locationId' => $location,
             'profileSlug' => $profile,
-            'imageSlug' => $this->defaultImage(),
+            // The customer's choice at order, else the product's default, else the newest Ubuntu LTS.
+            'imageSlug' => ($service->module_options['image'] ?? null) ?: ($service->product->vpsConfig()['default_image'] ?? null) ?: $this->defaultImage(),
             'virtualization' => 'kvm',
         ]));
         $slug = (string) ($server['slug'] ?? '');

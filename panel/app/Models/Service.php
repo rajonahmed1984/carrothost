@@ -34,6 +34,7 @@ class Service extends Model
             'first_payment_amount' => 'decimal:2',
             'usage_updated_at' => 'datetime',
             'usage_metrics' => 'array',
+            'module_options' => 'array',
             'renewal_invoiced_for' => 'date:Y-m-d',
         ];
     }

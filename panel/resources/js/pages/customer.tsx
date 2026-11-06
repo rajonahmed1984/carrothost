@@ -949,7 +949,7 @@ function Invoice() {
     );
 }
 
-type StoreProduct = { id: number; name: string; type: string; description: string | null; prices: { cycle: string; price: string; setup_fee: string }[] };
+type StoreProduct = { id: number; name: string; type: string; description: string | null; prices: { cycle: string; price: string; setup_fee: string }[]; os_choices?: { slug: string; name: string }[]; default_os?: string | null };
 type StoreGroup = { id: number; name: string; slug: string; headline: string | null; products: StoreProduct[] };
 
 const useStore = (enabled = true) => useQuery({ queryKey: ['client-store'], queryFn: async () => (await api.get<StoreGroup[]>('/client/store')).data, enabled });
@@ -993,13 +993,15 @@ function ProductCard({ product }: { product: StoreProduct }) {
     const [cycle, setCycle] = useState(product.prices[0]?.cycle ?? '');
     const [domain, setDomain] = useState('');
     const [epp, setEpp] = useState('');
+    const osChoices = product.os_choices ?? [];
+    const [os, setOs] = useState(() => (osChoices.find((o) => o.slug === product.default_os) ?? osChoices[0])?.slug ?? '');
     const options = useDomainOptions().data;
     const allowed = (['register', 'transfer', 'own'] as const).filter((a) => options?.[a]);
     const [picked, setAction] = useState<DomainAction | null>(null);
     const action = picked && allowed.includes(picked) ? picked : (allowed[0] ?? 'own');
     const price = product.prices.find((p) => p.cycle === cycle);
     const order = useMutation({
-        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders', { product_id: product.id, cycle, domain: domain || null, domain_action: domain ? action : null, epp_code: action === 'transfer' ? epp || null : null })).data,
+        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders', { product_id: product.id, cycle, domain: domain || null, domain_action: domain ? action : null, epp_code: action === 'transfer' ? epp || null : null, vps_image: osChoices.length ? os : null })).data,
         onSuccess: ({ invoice_id }) => navigate(`/invoices/${invoice_id}`),
     });
 
@@ -1019,6 +1021,13 @@ function ProductCard({ product }: { product: StoreProduct }) {
                     <Field label="Billing cycle">
                         <Select value={cycle} onChange={(e) => setCycle(e.target.value)}>
                             {product.prices.map((p) => <option key={p.cycle} value={p.cycle}>{p.cycle} - {money(p.price)}</option>)}
+                        </Select>
+                    </Field>
+                )}
+                {osChoices.length > 0 && (
+                    <Field label="Operating system">
+                        <Select value={os} onChange={(e) => setOs(e.target.value)}>
+                            {osChoices.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}
                         </Select>
                     </Field>
                 )}

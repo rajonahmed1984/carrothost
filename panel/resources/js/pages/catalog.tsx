@@ -56,8 +56,85 @@ function GroupForm({ group, onClose }: { group: Group | null; onClose: () => voi
 type Product = {
     id: number; product_group_id: number | null; name: string; type: string; description: string | null; module: string | null; module_package: string | null;
     server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string; price_usd?: string | null; setup_fee_usd?: string | null }[];
+    module_config?: Partial<VpsConfig> | null;
 };
 type Package = { id: string; name: string };
+type OsImage = { slug: string; name: string };
+type VpsConfig = { default_image: string; images: OsImage[]; client_actions: string[]; client_upgrade: boolean };
+
+const VPS_ACTIONS: [string, string, string][] = [
+    ['start', 'Start', 'Power the VPS on'], ['stop', 'Stop', 'Shut it down'], ['reboot', 'Reboot', 'Restart it'],
+    ['console', 'Web console', 'Open a browser terminal'], ['password', 'Reset password', 'Set a new login password'], ['reinstall', 'Reinstall OS', 'Wipe the disk and install an OS'],
+];
+const vpsDefaults = (c?: Partial<VpsConfig> | null): VpsConfig => ({
+    default_image: c?.default_image ?? '', images: c?.images ?? [], client_actions: c?.client_actions ?? VPS_ACTIONS.map(([key]) => key), client_upgrade: c?.client_upgrade ?? true,
+});
+
+/** Webdock: the OS a new VPS gets, the OS choices customers see, and what customers may do. */
+export function VpsOptions({ module, serverId, value, onChange }: { module: string; serverId: string; value: VpsConfig; onChange: (value: VpsConfig) => void }) {
+    const images = useQuery({
+        queryKey: ['product-images', module, serverId],
+        queryFn: async () => (await api.get<{ images: OsImage[] }>('/products/images', { params: { module, server_id: serverId || undefined } })).data.images,
+        retry: false,
+        staleTime: 300000,
+    });
+    const list = images.data ?? [];
+    const chosen = new Set(value.images.map((i) => i.slug));
+    const toggleImage = (image: OsImage) => onChange({ ...value, images: chosen.has(image.slug) ? value.images.filter((i) => i.slug !== image.slug) : [...value.images, image] });
+    const toggleAction = (key: string) => onChange({ ...value, client_actions: value.client_actions.includes(key) ? value.client_actions.filter((a) => a !== key) : [...value.client_actions, key] });
+
+    return (
+        <div className="space-y-4">
+            <div className="card space-y-4 p-5">
+                <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Operating System</h3>
+                    <p className="text-xs text-slate-500">Loaded live from Webdock. The data centre comes from the plan above.</p>
+                </div>
+                {images.isError ? <ErrorNote error={images.error} /> : (
+                    <>
+                        <Field label="Default OS" hint="Installed when the customer does not choose one.">
+                            <Select value={value.default_image} disabled={images.isLoading} onChange={(e) => onChange({ ...value, default_image: e.target.value })}>
+                                <option value="">{images.isLoading ? 'Loading...' : 'Newest Ubuntu LTS (automatic)'}</option>
+                                {list.map((i) => <option key={i.slug} value={i.slug}>{i.name}</option>)}
+                            </Select>
+                        </Field>
+                        <div>
+                            <div className="mb-1 text-xs font-semibold text-slate-600">OS choices for customers</div>
+                            <p className="mb-2 text-xs text-slate-500">Ticked systems are offered when ordering and when reinstalling. Tick none to install the default only and let customers reinstall any system.</p>
+                            <div className="grid max-h-72 gap-1 overflow-y-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-2">
+                                {list.map((i) => (
+                                    <label key={i.slug} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+                                        <input type="checkbox" checked={chosen.has(i.slug)} onChange={() => toggleImage(i)} /> <span className="truncate">{i.name}</span>
+                                    </label>
+                                ))}
+                                {images.isLoading && <p className="p-2 text-xs text-slate-500">Loading from Webdock...</p>}
+                            </div>
+                            {value.images.length > 0 && <p className="mt-1 text-xs text-slate-500">{value.images.length} offered.</p>}
+                        </div>
+                    </>
+                )}
+            </div>
+            <div className="card space-y-3 p-5">
+                <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Customer Permissions</h3>
+                    <p className="text-xs text-slate-500">What customers can do from their service page. Admins can always do everything.</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {VPS_ACTIONS.map(([key, label, hint]) => (
+                        <label key={key} className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50">
+                            <input type="checkbox" className="mt-0.5" checked={value.client_actions.includes(key)} onChange={() => toggleAction(key)} />
+                            <span><span className="block font-medium text-slate-800">{label}</span><span className="block text-xs text-slate-500">{hint}</span></span>
+                        </label>
+                    ))}
+                </div>
+                <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50">
+                    <input type="checkbox" className="mt-0.5" checked={value.client_upgrade} onChange={(e) => onChange({ ...value, client_upgrade: e.target.checked })} />
+                    <span><span className="block font-medium text-slate-800">Let customers upgrade</span><span className="block text-xs text-slate-500">To a bigger plan in this category and data centre. They pay the difference; the VPS is resized when the invoice is paid.</span></span>
+                </label>
+            </div>
+        </div>
+    );
+}
 
 const productTabs = [
     { key: 'details', label: 'Details' },
@@ -116,6 +193,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
         module_package: product?.module_package ?? '', server_id: String(product?.server_id ?? ''), setup_mode: product?.setup_mode ?? 'payment',
         description: product?.description ?? '', is_active: product?.is_active ?? true,
     });
+    const [vps, setVps] = useState<VpsConfig>(() => vpsDefaults(product?.module_config));
     const [prices, setPrices] = useState(product?.prices.map((p) => ({ ...p })) ?? [{ cycle: 'annually', price: '', setup_fee: '0' }]);
     const moduleServers = servers.data?.filter((sv) => sv.module === form.module) ?? [];
     const connected = meta.data?.modules.find((m) => m.code === form.module)?.connected ?? false;
@@ -125,6 +203,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             const body = {
                 ...form, product_group_id: form.product_group_id ? Number(form.product_group_id) : null, description: form.description || null,
                 module: form.module || null, module_package: form.module ? form.module_package || null : null, server_id: form.module && form.server_id ? Number(form.server_id) : null, prices,
+                module_config: form.module === 'webdock' ? { ...vps, default_image: vps.default_image || null } : null,
             };
 
             return (product ? await api.put<Product>(`/products/${product.id}`, body) : await api.post<Product>('/products', body)).data;
@@ -236,6 +315,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
                             : <Field label="Plan" hint="Type the plan or package name exactly as it is on the server."><Input value={form.module_package} onChange={(e) => setForm({ ...form, module_package: e.target.value })} /></Field>}
                     </div>
                 )}
+                {form.module === 'webdock' && connected && <VpsOptions module={form.module} serverId={form.server_id} value={vps} onChange={setVps} />}
                 <div className="card divide-y divide-slate-100 p-2">
                     {setupModes.map((m) => (
                         <label key={m.value} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${form.module ? 'cursor-pointer text-slate-700 hover:bg-slate-50' : 'text-slate-400'}`}>

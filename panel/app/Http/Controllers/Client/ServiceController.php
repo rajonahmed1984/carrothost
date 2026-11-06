@@ -46,7 +46,7 @@ class ServiceController extends Controller
     public function show(Request $request, int $id, ServiceTools $tools)
     {
         $service = $request->user('client')->services()
-            ->with(['product:id,name,type,module,description,product_group_id', 'product.group:id,name', 'server:id,hostname,ip_address,nameservers'])
+            ->with(['product:id,name,type,module,module_package,module_config,description,product_group_id', 'product.group:id,name', 'server:id,hostname,ip_address,nameservers'])
             ->findOrFail($id);
         $live = in_array($service->status, ['active', 'suspended'], true);
         $hasTools = $live && ServiceTools::hasTools($service);
@@ -58,6 +58,7 @@ class ServiceController extends Controller
             'description' => $service->product->description,
             'has_password' => ! empty($service->credentials['password'] ?? null),
             'is_vps' => VpsTools::supports($service),
+            'vps_actions' => VpsTools::supports($service) ? VpsTools::clientActions($service) : null,
             // One-click login, password change and live usage go through the server module.
             'has_tools' => $hasTools,
             'panel_apps' => $hasTools ? array_keys(self::PANEL_APPS[$service->product->module] ?? []) : [],
@@ -102,7 +103,7 @@ class ServiceController extends Controller
     /** A one-time login link, optionally straight into email, databases and so on. */
     public function sso(Request $request, int $id, ServiceTools $tools)
     {
-        $service = $this->hosting($request, $id);
+        $service = $this->hosting($request, $id, 'console');
         $data = $request->validate(['app' => ['nullable', Rule::in(array_keys(self::PANEL_APPS[$service->product->module] ?? []))]]);
 
         return ['url' => $tools->loginUrl($service, $data['app'] ?? null)];
@@ -117,7 +118,7 @@ class ServiceController extends Controller
 
     public function changePassword(Request $request, int $id, ServiceTools $tools)
     {
-        $service = $this->hosting($request, $id);
+        $service = $this->hosting($request, $id, 'password');
         $data = $request->validate([
             'password' => ['required', 'string', 'min:10', 'max:64', 'confirmed', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/\d/'],
         ], ['password.regex' => 'Use upper and lower case letters and at least one digit.']);
@@ -174,30 +175,50 @@ class ServiceController extends Controller
         return $service;
     }
 
-    /** The current plan plus the active plans in its category, of its type and on its control panel. */
+    /**
+     * The current plan plus the active plans in its category, of its type and on its control panel.
+     * A VPS only moves up, within its data centre: Webdock cannot shrink a disk or move a server.
+     */
     private function upgradeProducts(Service $service)
     {
         $product = $service->product;
-
-        return Product::with('prices')
+        $products = Product::with('prices')
             ->where(fn ($q) => $q->whereKey($product->id)->orWhere(fn ($q) => $q
                 ->where('is_active', true)
                 ->where('product_group_id', $product->product_group_id)
                 ->where('type', $product->type)
                 ->when($product->module, fn ($q) => $q->where('module', $product->module), fn ($q) => $q->whereNull('module'))))
             ->orderBy('name')
-            ->get(['id', 'name', 'module'])
+            ->get(['id', 'name', 'module', 'module_package'])
             ->filter(fn (Product $p) => $p->prices->isNotEmpty())
             ->values();
+
+        if (! VpsTools::supports($service) && $product->type !== 'vps') {
+            return $products;
+        }
+        if (! $product->vpsConfig()['client_upgrade']) {
+            return $products->where('id', $product->id)->values();
+        }
+
+        $location = fn (?string $package) => explode('/', (string) $package, 2)[0];
+        $price = fn (Product $p) => (float) ($p->prices->firstWhere('cycle', $service->cycle)?->price ?? -1);
+        $current = $price($product);
+
+        return $products->filter(fn (Product $p) => $p->id === $product->id
+            || ($location($p->module_package) === $location($product->module_package) && $current >= 0 && $price($p) > $current))->values();
     }
 
     /** An active or suspended hosting account the module can reach. */
-    private function hosting(Request $request, int $id): Service
+    private function hosting(Request $request, int $id, ?string $vpsAction = null): Service
     {
         $service = $request->user('client')->services()->with(['product', 'server'])->findOrFail($id);
 
         if (! in_array($service->status, ['active', 'suspended'], true) || ! ServiceTools::hasTools($service)) {
             throw ValidationException::withMessages(['service' => 'This service has no control panel account to manage yet.']);
+        }
+        // On a VPS the panel login is the console and the password is the shell user's: the product decides.
+        if ($vpsAction && VpsTools::supports($service) && ! in_array($vpsAction, VpsTools::clientActions($service), true)) {
+            throw ValidationException::withMessages(['service' => 'This is not available for your plan. Open a ticket if you need it.']);
         }
 
         return $service;
@@ -212,7 +233,7 @@ class ServiceController extends Controller
 
     public function vpsImages(Request $request, int $id, VpsTools $vps)
     {
-        return $vps->images($this->own($request, $id));
+        return $vps->images($this->own($request, $id), client: true);
     }
 
     public function vpsAction(Request $request, int $id, string $action, VpsTools $vps)
