@@ -135,6 +135,12 @@ class OrderController extends Controller
             // A username carried over from WHMCS is only a plan until the account is created.
             $credentials = array_filter(['username' => $pick['username'] ?? $service->remote_id, 'password' => $pick['password'] ?? null]);
             $changes = ['status' => 'active'];
+            // Accepted before payment: it falls due with the order's invoice, as with set-up-on-order
+            // products, so overdue suspension catches it if that invoice is never paid. Paying it moves the date on.
+            if (! $service->next_due_date && ($dueWith = $order->invoices()->where('status', 'unpaid')->oldest('id')->first())) {
+                $changes['next_due_date'] = $dueWith->due_date;
+                $changes['renewal_invoiced_for'] = $dueWith->due_date;
+            }
             if ($credentials) {
                 $changes['credentials'] = $credentials;
             }

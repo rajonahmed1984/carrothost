@@ -48,6 +48,8 @@ class ProductModuleTest extends TestCase
 
         $this->actingAs($this->admin())->postJson("/api/orders/{$order->id}/accept", ['run_module_create' => true])->assertOk();
         $this->assertSame('queued', $service->refresh()->provision_status);
+        // It falls due with the unpaid invoice, so overdue suspension can catch it.
+        $this->assertSame($invoice->due_date->toDateString(), $service->next_due_date?->toDateString());
         Queue::assertPushed(ProvisionService::class, 1);
 
         // Nothing is left to accept, and paying later does not create it again.
