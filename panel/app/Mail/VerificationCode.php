@@ -18,6 +18,9 @@ class VerificationCode extends Mailable
         public string $footer,
         public string $sender = MailFrom::SUPPORT,
         public ?string $name = null,
+        /** From the email template: replaces the built-in wording when set. */
+        public ?string $templateHtml = null,
+        public ?string $templateText = null,
     ) {}
 
     public function envelope(): Envelope
@@ -27,6 +30,8 @@ class VerificationCode extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.verification-code', text: 'emails.verification-code-text');
+        return $this->templateHtml !== null
+            ? new Content(view: 'emails.templated', text: 'emails.templated-text', with: ['html' => $this->templateHtml, 'text' => $this->templateText, 'buttonUrl' => null, 'buttonLabel' => null])
+            : new Content(view: 'emails.verification-code', text: 'emails.verification-code-text');
     }
 }

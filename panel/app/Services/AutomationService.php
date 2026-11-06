@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\ProvisionService;
+use App\Jobs\SendInvoiceSms;
 use App\Models\Domain;
 use App\Models\DomainReminder;
 use App\Models\Invoice;
@@ -65,6 +66,7 @@ class AutomationService
 
             $this->mailer->invoiceReminder($invoice, $this->billing->balanceDue($invoice));
             $invoice->forceFill(['reminder_stage' => $target, 'reminded_at' => now()])->save();
+            SendInvoiceSms::notify($invoice->id, 'invoice_reminder');
             $sent++;
         }
 

@@ -111,7 +111,7 @@ class WebdockModule implements ManagesAccounts, ManagesVps, ProvisioningModule
         ];
     }
 
-    public function loginUrl(Service $service): string
+    public function loginUrl(Service $service, ?string $app = null): string
     {
         return $this->consoleUrl($service);
     }

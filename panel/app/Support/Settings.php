@@ -72,15 +72,28 @@ class Settings
         'mail_password' => 'mail.mailers.smtp.password',
         'mail_from_address' => 'mail.from.address',
         'mail_from_name' => 'mail.from.name',
+        'sms_enabled' => 'sms.enabled',
+        'sms_api_url' => 'sms.api_url',
+        'sms_customer_id' => 'sms.customer_id',
+        'sms_api_key' => 'sms.api_key',
+        'sms_whitelisted_ip' => 'sms.whitelisted_ip',
+        'sms_invoice_created_enabled' => 'sms.invoice.created',
+        'sms_invoice_paid_enabled' => 'sms.invoice.paid',
+        'sms_invoice_reminder_enabled' => 'sms.invoice.reminder',
+        // A blank template falls back to the default in config/sms.php.
+        'sms_invoice_created_template' => 'sms.templates.invoice_created',
+        'sms_invoice_paid_template' => 'sms.templates.invoice_paid',
+        'sms_invoice_reminder_template' => 'sms.templates.invoice_reminder',
     ];
 
     /** Stored encrypted and never sent back to the browser. */
-    public const SECRETS = ['recaptcha_secret_key', 'recaptcha_api_key', 'mail_password'];
+    public const SECRETS = ['recaptcha_secret_key', 'recaptcha_api_key', 'mail_password', 'sms_api_key'];
 
     public const BOOLEANS = [
         'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled', 'termination_enabled', 'usage_update_enabled', 'domain_sync_enabled',
         'cron_report_enabled', 'domain_sync_report_enabled',
         'domain_allow_register', 'domain_allow_transfer', 'domain_allow_own', 'domain_auto_renew', 'domain_premium_enabled',
+        'sms_enabled', 'sms_invoice_created_enabled', 'sms_invoice_paid_enabled', 'sms_invoice_reminder_enabled',
     ];
 
     public const INTEGERS = ['invoice_due_days', 'renewal_notice_days', 'suspend_after_days', 'ticket_auto_close_days', 'mail_port', 'terminate_after_days', 'reminder_before_due_days', 'overdue_notice_1', 'overdue_notice_2', 'overdue_notice_3'];

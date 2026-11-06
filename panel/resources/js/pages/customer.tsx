@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, ArrowRight, ArrowRightLeft, ArrowUpDown, Bell, Building2, CalendarDays, ChevronDown, ChevronRight, CircleCheck, CircleX, Clock, CreditCard, Download, ExternalLink, Eye, FileText, Filter, Globe, HardDrive, Headset, History, Info,
-    LayoutList, LockKeyhole, LogOut, Menu, MessageCircle, MessageSquareText, MoreVertical, Package, Plus, Printer, Search, Server, ShieldCheck, ShoppingCart, User, X, Contact, KeyRound, Mail, MonitorSmartphone, Power,
+    LayoutList, LockKeyhole, LogOut, Menu, MessageSquareText, MoreVertical, Package, Plus, Printer, Search, Server, ShieldCheck, ShoppingCart, User, X, Contact, KeyRound, Mail, MonitorSmartphone, Power,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -11,7 +11,10 @@ import { ContactsPage, EmailPage, EmailsPage, MyDetailsPage, SessionsPage, Suppo
 import { AddFundsPage, CreditHistoryPage } from './credits';
 import { clientCan, ClientPasswordPage, ClientSecurityPage, type ClientProfile } from './security';
 import { ClientChatPage, ClientNewTicketPage, ClientTicketPage, ClientTicketsPage } from './support';
-import { VpsPanel } from './vps-panel';
+import { PanelLogo, panelName } from '../panel-logo';
+import { ClientServicePage } from './client-service';
+import { ClientDomainPage } from './client-domain';
+import { DomainOrderPage } from './domain-order';
 
 type Overview = {
     services: { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; product: { name: string } }[];
@@ -176,7 +179,6 @@ type ClientService = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string;
     product: { name: string; type: string; module: string | null; group: string | null }; username: string | null; panel_url: string | null;
 };
-type ServiceDetail = ClientService & { description: string | null; has_password: boolean; is_vps?: boolean; nameservers: string[]; server_ip: string | null; invoices: Overview['invoices'] };
 
 const typeTabs = [
     { key: 'all', label: 'All Services', icon: <LayoutList size={15} /> },
@@ -185,14 +187,6 @@ const typeTabs = [
     { key: 'other', label: 'Other', icon: <Package size={15} /> },
 ];
 const statusDot: Record<string, string> = { active: 'bg-emerald-500', pending: 'bg-amber-500', suspended: 'bg-rose-500', terminated: 'bg-slate-400', cancelled: 'bg-slate-400' };
-const panelName = (module: string | null) => (module === 'cpanel' ? 'cPanel' : module === 'webuzo' ? 'Webuzo' : 'Control Panel');
-
-function ServiceIcon({ module, type }: { module: string | null; type: string }) {
-    if (module === 'cpanel') return <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-sm font-black text-orange-600 italic">cP</span>;
-    if (module === 'webuzo') return <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sm font-black text-sky-600">W</span>;
-
-    return <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{type === 'vps' ? <Server size={18} /> : <Package size={18} />}</span>;
-}
 
 function DueDate({ date }: { date: string | null }) {
     if (!date) return <span className="text-slate-400">-</span>;
@@ -337,7 +331,7 @@ function MyServices({ orderTo }: { orderTo: string }) {
                                     <tr key={x.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
                                         <td className="px-5 py-3">
                                             <div className="flex items-center gap-3">
-                                                <ServiceIcon module={x.product.module} type={x.product.type} />
+                                                <PanelLogo module={x.product.module} type={x.product.type} />
                                                 <div className="min-w-0"><div className="font-semibold text-slate-900">{x.product.name}</div><div className="truncate text-xs text-slate-500">{x.domain ?? 'No domain'}</div></div>
                                             </div>
                                         </td>
@@ -383,80 +377,6 @@ function MyServices({ orderTo }: { orderTo: string }) {
                 </section>
             </QueryState>
         </div>
-    );
-}
-
-function ServicePage() {
-    const { id } = useParams();
-    const query = useQuery({ queryKey: ['client-service', id], queryFn: async () => (await api.get<ServiceDetail>(`/client/services/${id}`)).data });
-    const reveal = useMutation({ mutationFn: async () => (await api.post<{ password: string | null }>(`/client/services/${id}/password`)).data });
-    const s = query.data;
-
-    return (
-        <QueryState query={query}>
-            {s && (
-                <div className="space-y-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <ServiceIcon module={s.product.module} type={s.product.type} />
-                            <div><h2 className="text-xl font-bold text-slate-900">{s.product.name}</h2><div className="text-sm text-slate-500">{s.domain ?? 'No domain'}</div></div>
-                        </div>
-                    </div>
-
-                    {s.is_vps && <VpsPanel base={`/client/services/${s.id}`} />}
-
-                    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-                        <Card title="Service details">
-                            <dl className="grid gap-4 p-5 sm:grid-cols-2">
-                                {[
-                                    ['Status', <span key="s" className="inline-flex items-center gap-2 capitalize"><span className={`h-2 w-2 rounded-full ${statusDot[s.status] ?? 'bg-slate-400'}`} />{s.status}</span>],
-                                    ['Category', s.product.group ?? '-'],
-                                    ['Recurring amount', `${money(s.recurring_amount)} / ${s.cycle}`],
-                                    ['Next due date', <DueDate key="d" date={s.next_due_date} />],
-                                    ['Registered', new Date(s.created_at).toLocaleDateString('en-GB')],
-                                    ['Username', s.username ? <span key="u" className="font-mono">{s.username}</span> : '-'],
-                                ].map(([label, value]) => (
-                                    <div key={label as string}><dt className="text-[11px] font-semibold text-slate-400 uppercase">{label}</dt><dd className="mt-1 text-sm text-slate-800">{value}</dd></div>
-                                ))}
-                                {s.has_password && (
-                                    <div>
-                                        <dt className="text-[11px] font-semibold text-slate-400 uppercase">Password</dt>
-                                        <dd className="mt-1 text-sm">{reveal.data ? <span className="font-mono">{reveal.data.password}</span> : <Button variant="link" disabled={reveal.isPending} onClick={() => reveal.mutate()}>Show password</Button>}</dd>
-                                    </div>
-                                )}
-                            </dl>
-                            {s.description && <p className="border-t border-slate-200 px-5 py-4 text-xs whitespace-pre-line text-slate-600">{s.description}</p>}
-                        </Card>
-
-                        <div className="space-y-5">
-                            <Card title="Quick links">
-                                <div className="grid gap-3 p-4">
-                                    {s.panel_url && s.status === 'active' && <a href={s.panel_url} target="_blank" rel="noreferrer" className="ui-btn ui-btn-primary justify-center"><ExternalLink size={14} /> Login to {panelName(s.product.module)}</a>}
-                                    <Link to={`/tickets/new?service=${s.id}`} className="ui-btn ui-btn-secondary justify-center"><Headset size={14} /> Get support for this service</Link>
-                                </div>
-                                {s.status === 'suspended' && <p className="border-t border-slate-200 px-4 py-3 text-xs text-rose-700">This service is suspended. Pay any overdue invoice below, or open a ticket if you think this is a mistake.</p>}
-                            </Card>
-                            {(s.nameservers.length > 0 || s.server_ip) && (
-                                <Card title="Nameservers">
-                                    <ul className="divide-y divide-slate-100">
-                                        {s.nameservers.map((ns, i) => <li key={ns} className="flex justify-between gap-3 px-4 py-2.5 text-sm"><span className="text-slate-500">Nameserver {i + 1}</span><span className="font-mono break-all text-slate-800">{ns}</span></li>)}
-                                        {s.server_ip && <li className="flex justify-between gap-3 px-4 py-2.5 text-sm"><span className="text-slate-500">Server IP</span><span className="font-mono text-slate-800">{s.server_ip}</span></li>}
-                                    </ul>
-                                    <p className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">Point your domain to these nameservers, or add an A record to the server IP.</p>
-                                </Card>
-                            )}
-                            <Card title="Invoices">
-                                <Table rows={s.invoices} empty="No invoices for this service." columns={[
-                                    { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/invoices/${i.id}`}>#{i.number}</Link> },
-                                    { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
-                                    { header: 'Status', cell: (i) => <Status value={i.status} /> },
-                                ]} />
-                            </Card>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </QueryState>
     );
 }
 
@@ -597,67 +517,6 @@ function MyDomains() {
                 </section>
             </QueryState>
         </div>
-    );
-}
-
-function DomainPage() {
-    const { id } = useParams();
-    const query = useQuery({ queryKey: ['client-domain', id], queryFn: async () => (await api.get<DomainDetailData>(`/client/domains/${id}`)).data });
-    const d = query.data;
-
-    return (
-        <QueryState query={query}>
-            {d && (
-                <div className="space-y-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Globe size={20} /></span>
-                            <div><h2 className="text-xl font-bold text-slate-900">{d.name}</h2><DomainStatus status={d.status} /></div>
-                        </div>
-                    </div>
-
-                    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-                        <Card title="Domain details">
-                            <dl className="grid gap-4 p-5 sm:grid-cols-2">
-                                {[
-                                    ['Registered', formatDate(d.created_at)],
-                                    ['Expiry date', isPast(d.status) ? (d.expires_at ? formatDate(d.expires_at) : '-') : <DueDate key="e" date={d.expires_at} />],
-                                    ['Order type', <span key="t" className="capitalize">{d.action}</span>],
-                                    ['Renewal price', `${money(d.recurring_amount)} / ${d.years > 1 ? `${d.years} years` : 'year'}`],
-                                ].map(([label, value]) => (
-                                    <div key={label as string}><dt className="text-[11px] font-semibold text-slate-400 uppercase">{label}</dt><dd className="mt-1 text-sm text-slate-800">{value}</dd></div>
-                                ))}
-                            </dl>
-                            <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-5 py-4">
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-900">Auto renew</div>
-                                    <div className="text-xs text-slate-500">{d.auto_renew ? 'A renewal invoice is raised before the domain expires.' : 'No renewal invoice will be raised. The domain lapses at expiry.'}</div>
-                                </div>
-                                <AutoRenewSwitch domain={d} />
-                            </div>
-                        </Card>
-
-                        <div className="space-y-5">
-                            <Card title="Nameservers">
-                                {d.nameservers.length ? (
-                                    <ul className="divide-y divide-slate-100">{d.nameservers.map((ns, i) => <li key={ns} className="flex justify-between px-4 py-2.5 text-sm"><span className="text-slate-500">Nameserver {i + 1}</span><span className="font-mono text-slate-800">{ns}</span></li>)}</ul>
-                                ) : <p className="px-4 py-4 text-sm text-slate-500">No nameservers on record.</p>}
-                                <div className="border-t border-slate-200 px-4 py-3">
-                                    <Link to={`/tickets/new?subject=${encodeURIComponent(`Change nameservers for ${d.name}`)}`} className="ui-btn ui-btn-secondary w-full justify-center"><Headset size={14} /> Request a change</Link>
-                                </div>
-                            </Card>
-                            <Card title="Invoices">
-                                <Table rows={d.invoices} empty="No invoices for this domain." columns={[
-                                    { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`/invoices/${i.id}`}>#{i.number}</Link> },
-                                    { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
-                                    { header: 'Status', cell: (i) => <Status value={i.status} /> },
-                                ]} />
-                            </Card>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </QueryState>
     );
 }
 
@@ -1097,19 +956,7 @@ const useStore = (enabled = true) => useQuery({ queryKey: ['client-store'], quer
 
 type Tld = { tld: string; register_price: string; renew_price: string; transfer_price: string; is_spotlight: boolean; epp_required: boolean };
 type DomainOptions = { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
-type Lookup = { domain: string; status: 'available' | 'taken' | 'premium' | 'unknown' };
 
-function LookupResult({ result, action, premium }: { result: Lookup; action: 'register' | 'transfer'; premium: boolean }) {
-    const [tone, text] = {
-        available: action === 'register' ? ['emerald', `${result.domain} is available.`] : ['rose', `${result.domain} is not registered yet. Register it instead.`],
-        taken: action === 'register' ? ['rose', `${result.domain} is already registered. If it is yours, transfer it.`] : ['emerald', `${result.domain} is registered and can be transferred.`],
-        premium: ['amber', premium ? `${result.domain} is a premium domain. Open a ticket and we will quote its price.` : `${result.domain} is not available.`],
-        unknown: ['amber', 'We could not check right now. You can still order; we confirm it before registering.'],
-    }[result.status];
-    const tones: Record<string, string> = { emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800', rose: 'border-rose-200 bg-rose-50 text-rose-800', amber: 'border-amber-200 bg-amber-50 text-amber-900' };
-
-    return <p role="status" className={`rounded-xl border px-3 py-2 text-xs font-medium ${tones[tone]}`}>{text}</p>;
-}
 type DomainAction = 'register' | 'transfer' | 'own';
 
 const useDomainOptions = (enabled = true) => useQuery({ queryKey: ['client-domain-options'], queryFn: async () => (await api.get<DomainOptions>('/client/store/domains')).data, enabled });
@@ -1222,84 +1069,6 @@ function Store() {
     );
 }
 
-function DomainOrder() {
-    const navigate = useNavigate();
-    const query = useDomainOptions();
-    const [params] = useSearchParams();
-    const allowed = (['register', 'transfer'] as const).filter((a) => query.data?.[a]);
-    const [picked, setAction] = useState<'register' | 'transfer'>(params.get('action') === 'transfer' ? 'transfer' : 'register');
-    const action = allowed.includes(picked) ? picked : allowed[0];
-    const spotlight = query.data?.tlds.filter((t) => t.is_spotlight) ?? [];
-    const [name, setName] = useState('');
-    const [years, setYears] = useState(1);
-    const [epp, setEpp] = useState('');
-    const lookup = useMutation({ mutationFn: async (domain: string) => (await api.get<Lookup>('/client/store/domains/lookup', { params: { name: domain } })).data });
-    const order = useMutation({
-        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders/domain', { name, action, years, epp_code: action === 'transfer' ? epp || null : null })).data,
-        onSuccess: ({ invoice_id }) => navigate(`/invoices/${invoice_id}`),
-    });
-    const eppRequired = query.data ? tldFor(name, query.data.tlds)?.epp_required ?? true : true;
-
-    return (
-        <QueryState query={query}>
-            {query.data && !action && <Navigate to="/" replace />}
-            {query.data && action && (
-                <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
-                    <Card title={action === 'transfer' ? 'Transfer a domain' : 'Register a domain'}>
-                        <form onSubmit={(e) => { e.preventDefault(); order.mutate(); }} className="space-y-4 p-4">
-                            {allowed.length > 1 && (
-                                <div className="flex gap-2">
-                                    {allowed.map((a) => (
-                                        <Button key={a} type="button" variant={a === action ? undefined : 'ghost'} onClick={() => setAction(a)}>{a === 'register' ? 'Register' : 'Transfer'}</Button>
-                                    ))}
-                                </div>
-                            )}
-                            <Field label="Domain name">
-                                <div className="flex gap-2">
-                                    <Input required placeholder="example.com" value={name} onChange={(e) => { setName(e.target.value.trim()); lookup.reset(); }} />
-                                    {query.data.lookup && <Button type="button" variant="ghost" disabled={!name.includes('.') || lookup.isPending} onClick={() => lookup.mutate(name)}>{lookup.isPending ? 'Checking...' : 'Check'}</Button>}
-                                </div>
-                            </Field>
-                            {lookup.data && lookup.data.domain === name.toLowerCase() && <LookupResult result={lookup.data} action={action} premium={query.data.premium} />}
-                            <ErrorNote error={lookup.error} />
-                            {spotlight.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {spotlight.map((t) => (
-                                        <button key={t.tld} type="button" onClick={() => { setName(`${name.split('.')[0] || 'yourname'}${t.tld}`); lookup.reset(); }} className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-left hover:border-[var(--accent)]">
-                                            <span className="block text-sm font-semibold text-slate-900">{t.tld}</span>
-                                            <span className="block text-[11px] text-slate-500">{money(action === 'transfer' ? t.transfer_price : t.register_price)}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {action === 'transfer' && (
-                                <Field label="EPP code" hint={eppRequired ? 'Required. Get it from your current registrar.' : 'Optional for this extension.'}>
-                                    <Input required={eppRequired} autoComplete="off" value={epp} onChange={(e) => setEpp(e.target.value)} />
-                                </Field>
-                            )}
-                            <Field label="Years">
-                                <Select value={years} onChange={(e) => setYears(Number(e.target.value))}>
-                                    {[1, 2, 3, 5, 10].map((y) => <option key={y} value={y}>{y} year{y > 1 ? 's' : ''}</option>)}
-                                </Select>
-                            </Field>
-                            <DomainPrice domain={name} action={action} years={years} tlds={query.data.tlds} />
-                            {action === 'transfer' && <p className="text-xs text-slate-500">Unlock the domain at your current registrar before ordering.</p>}
-                            <ErrorNote error={order.error} />
-                            <Button disabled={order.isPending}>{order.isPending ? 'Placing order...' : 'Order now'}</Button>
-                        </form>
-                    </Card>
-                    <Card title="Prices per year">
-                        <Table rows={query.data.tlds.map((t) => ({ ...t, code: t.tld }))} empty="No extensions on sale." columns={[
-                            { header: 'Extension', cell: (t) => <span className="font-medium">{t.tld}</span> },
-                            { header: action === 'transfer' ? 'Transfer' : 'Register', cell: (t) => money(action === 'transfer' ? t.transfer_price : t.register_price), align: 'right' },
-                        ]} />
-                    </Card>
-                </div>
-            )}
-        </QueryState>
-    );
-}
-
 export function CustomerArea({ profile }: { profile: ClientProfile }) {
     const client = useQueryClient();
     const logout = useMutation({
@@ -1369,7 +1138,7 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                             {can('domains') && <NavLink to="/domains" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/domains/') })}>{dot} My Domains</NavLink>}
                             {can('invoices') && (
                                 <>
-                                    <NavLink to="/invoices" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/invoices/') })}>{dot} Invoices{count(unpaidCount)}</NavLink>
+                                    <NavLink to="/invoices" className={({ isActive }) => navClass({ isActive: isActive || pathname.startsWith('/invoices/') })}>{dot} My Invoices{count(unpaidCount)}</NavLink>
                                     <NavLink to="/add-funds" className={navClass}>{dot} Add Funds</NavLink>
                                     <NavLink to="/credits" className={navClass}>{dot} Credit History</NavLink>
                                 </>
@@ -1428,15 +1197,15 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                             <Route path="/" element={<Home profile={profile} firstStore={store.data?.[0] ? `/store/${store.data[0].slug}` : null} />} />
                             {/* A page the signed-in user may not use falls through to the dashboard. */}
                             {can('products') && <Route path="/services" element={<MyServices orderTo={store.data?.[0] ? `/store/${store.data[0].slug}` : '/order-domain'} />} />}
-                            {can('products') && <Route path="/services/:id" element={<ServicePage />} />}
+                            {can('products') && <Route path="/services/:id" element={<ClientServicePage canManage={can('manageproducts')} />} />}
                             {can('domains') && <Route path="/domains" element={<MyDomains />} />}
-                            {can('domains') && <Route path="/domains/:id" element={<DomainPage />} />}
+                            {can('domains') && <Route path="/domains/:id" element={<ClientDomainPage canManage={can('managedomains')} />} />}
                             {can('invoices') && <Route path="/invoices" element={<MyInvoices />} />}
                             {can('invoices') && <Route path="/invoices/:id" element={<Invoice />} />}
                             {can('invoices') && <Route path="/add-funds" element={<AddFundsPage />} />}
                             {can('invoices') && <Route path="/credits" element={<CreditHistoryPage />} />}
                             {can('orders') && <Route path="/store/:slug" element={<Store />} />}
-                            {can('orders') && <Route path="/order-domain" element={<DomainOrder />} />}
+                            {can('orders') && <Route path="/order-domain" element={<DomainOrderPage />} />}
                             {can('tickets') && <Route path="/tickets" element={<ClientTicketsPage />} />}
                             {can('tickets') && <Route path="/tickets/new" element={<ClientNewTicketPage />} />}
                             {can('tickets') && <Route path="/tickets/:id" element={<ClientTicketPage />} />}
@@ -1455,12 +1224,6 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                     </main>
                 </div>
             </div>
-            {pathname !== '/chat' && (
-                <Link to="/chat" aria-label="Chat with us" className="fixed right-5 bottom-5 z-40 flex h-14 w-14 print:hidden items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg transition hover:scale-105 hover:bg-[var(--accent-hover)]">
-                    <MessageCircle size={26} />
-                    {!!badges.data?.unread_chat && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] font-bold text-white">{badges.data.unread_chat}</span>}
-                </Link>
-            )}
         </div>
     );
 }

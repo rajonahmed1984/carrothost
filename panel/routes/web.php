@@ -95,7 +95,12 @@ Route::prefix('api')->group(function () {
                 });
                 Route::post('services/{id}/password', [ClientServiceController::class, 'password'])->whereNumber('id')->middleware(['client.can:manageproducts', 'throttle:10,1']);
                 Route::middleware('client.can:manageproducts')->group(function () {
-                    Route::get('services/{id}/vps', [ClientServiceController::class, 'vps'])->whereNumber('id')->middleware('throttle:30,1');
+                    Route::post('services/{id}/sso', [ClientServiceController::class, 'sso'])->whereNumber('id')->middleware('throttle:20,1,client-sso');
+                    Route::post('services/{id}/usage', [ClientServiceController::class, 'refreshUsage'])->whereNumber('id')->middleware('throttle:6,1,client-usage');
+                    Route::post('services/{id}/change-password', [ClientServiceController::class, 'changePassword'])->whereNumber('id')->middleware('throttle:5,1,client-service-password');
+                    Route::get('services/{id}/upgrade', [ClientServiceController::class, 'upgradeOptions'])->whereNumber('id');
+                    Route::post('services/{id}/upgrade', [ClientServiceController::class, 'upgrade'])->whereNumber('id')->middleware('throttle:10,1,client-upgrade');
+                    Route::get('services/{id}/vps',[ClientServiceController::class, 'vps'])->whereNumber('id')->middleware('throttle:30,1');
                     Route::get('services/{id}/vps/images', [ClientServiceController::class, 'vpsImages'])->whereNumber('id');
                     Route::post('services/{id}/vps/{action}', [ClientServiceController::class, 'vpsAction'])->whereNumber('id')
                         ->whereIn('action', \App\Services\VpsTools::CLIENT_ACTIONS)->middleware('throttle:10,1');
@@ -106,6 +111,19 @@ Route::prefix('api')->group(function () {
                     Route::get('domains/{id}', [ClientDomainController::class, 'show'])->whereNumber('id');
                 });
                 Route::put('domains/{id}', [ClientDomainController::class, 'update'])->whereNumber('id')->middleware('client.can:managedomains');
+                Route::middleware('client.can:managedomains')->controller(ClientDomainController::class)->group(function () {
+                    Route::get('domains/{id}/registrar', 'registrar')->whereNumber('id')->middleware('throttle:30,1,client-domain-read');
+                    Route::put('domains/{id}/nameservers', 'nameservers')->whereNumber('id')->middleware('throttle:10,1,client-domain-ns');
+                    Route::post('domains/{id}/lock', 'lock')->whereNumber('id')->middleware('throttle:10,1,client-domain-lock');
+                    Route::post('domains/{id}/privacy', 'privacy')->whereNumber('id')->middleware('throttle:10,1,client-domain-privacy');
+                    Route::post('domains/{id}/epp', 'epp')->whereNumber('id')->middleware('throttle:5,1,client-domain-epp');
+                    Route::put('domains/{id}/contacts', 'contacts')->whereNumber('id')->middleware('throttle:5,1,client-domain-contacts');
+                    Route::get('domains/{id}/dns', 'dns')->whereNumber('id')->middleware('throttle:30,1,client-domain-read');
+                    Route::post('domains/{id}/dns', 'dnsStore')->whereNumber('id')->middleware('throttle:20,1,client-domain-dns');
+                    Route::post('domains/{id}/dns/delete', 'dnsDestroy')->whereNumber('id')->middleware('throttle:20,1,client-domain-dns');
+                    Route::post('domains/{id}/renew', 'renew')->whereNumber('id')->middleware('throttle:10,1,client-domain-renew');
+                    Route::put('domains/{id}/auth-code', 'authCode')->whereNumber('id')->middleware('throttle:5,1,client-domain-auth');
+                });
 
                 Route::middleware('client.can:invoices')->group(function () {
                     Route::get('invoices', [AccountController::class, 'invoices']);
@@ -257,6 +275,17 @@ Route::prefix('api')->group(function () {
         Route::get('settings', [Admin\SettingController::class, 'show']);
         Route::post('settings', [Admin\SettingController::class, 'update']);
         Route::post('settings/test-email', [Admin\SettingController::class, 'testEmail'])->middleware('throttle:5,1');
+        Route::controller(Admin\EmailTemplateController::class)->prefix('settings/email-templates')->group(function () {
+            Route::get('/', 'index');
+            Route::get('{key}', 'show');
+            Route::put('{key}', 'update');
+            Route::delete('{key}', 'destroy');
+            Route::post('{key}/toggle', 'toggle');
+            Route::post('{key}/preview', 'preview')->middleware('throttle:60,1,email-template-preview');
+            Route::post('{key}/test', 'test')->middleware('throttle:5,1,email-template-test');
+        });
+        Route::post('settings/test-sms', [Admin\SettingController::class, 'testSms'])->middleware('throttle:5,1');
+        Route::get('settings/sms-logs', [Admin\SettingController::class, 'smsLogs']);
 
         Route::get('badges', [Admin\ChatController::class, 'badges']);
         Route::get('tickets', [Admin\TicketController::class, 'index']);

@@ -15,15 +15,21 @@ class PasswordResetLink extends Mailable
         public string $url,
         public int $minutes,
         public bool $hasPassword,
+        /** From the email template: replaces the built-in wording and subject when set. */
+        public ?string $templateHtml = null,
+        public ?string $templateText = null,
+        public ?string $subjectLine = null,
     ) {}
 
     public function envelope(): Envelope
     {
-        return new Envelope(from: MailFrom::for(MailFrom::SUPPORT), subject: $this->hasPassword ? 'Reset your password' : 'Set your password');
+        return new Envelope(from: MailFrom::for(MailFrom::SUPPORT), subject: $this->subjectLine ?? ($this->hasPassword ? 'Reset your password' : 'Set your password'));
     }
 
     public function content(): Content
     {
-        return new Content(view: 'emails.password-reset-link', text: 'emails.password-reset-link-text');
+        return $this->templateHtml !== null
+            ? new Content(view: 'emails.templated', text: 'emails.templated-text', with: ['html' => $this->templateHtml, 'text' => $this->templateText, 'buttonUrl' => $this->url, 'buttonLabel' => $this->hasPassword ? 'Reset Password' : 'Set Password'])
+            : new Content(view: 'emails.password-reset-link', text: 'emails.password-reset-link-text');
     }
 }

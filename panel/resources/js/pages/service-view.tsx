@@ -9,6 +9,7 @@ import { SendMessage } from './sales';
 import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tools';
 import { alertDialog, ask } from '../dialog';
 import { VpsPanel } from './vps-panel';
+import { PanelLogo } from '../panel-logo';
 
 type Option = { code: string; name: string };
 
@@ -232,7 +233,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
             {/* Header */}
             <section className="card flex flex-wrap items-center gap-3 px-4 py-3">
                 {onBack && <button type="button" onClick={onBack} className="icon-btn h-9 w-9" aria-label="Back to services"><ArrowLeft size={16} /></button>}
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]"><Package size={18} /></span>
+                {s.product.module === 'cpanel' || s.product.module === 'webuzo'
+                    ? <PanelLogo module={s.product.module} />
+                    : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]"><Package size={18} /></span>}
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="truncate text-lg font-semibold text-slate-900">{s.product.name}</h2>

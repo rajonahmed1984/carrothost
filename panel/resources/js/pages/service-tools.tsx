@@ -17,16 +17,18 @@ type UpgradeOptions = {
     quote: { days_left: number; cycle_days: number; credit: string; new_recurring: string; amount_due: string; new_next_due_date: string | null } | null;
 };
 
-export function UpgradeModal({ service, onClose, onDone }: {
+export function UpgradeModal({ service, onClose, onDone, base = `/services/${service.id}` }: {
     service: { id: number; product_id: number; cycle: string; domain: string | null; product: { name: string }; recurring_amount: string };
     onClose: () => void;
     onDone: Saved<{ message: string; invoice_id: number | null }>;
+    /** The service's API path: the admin one by default, `/client/services/{id}` in the client area. */
+    base?: string;
 }) {
     const [productId, setProductId] = useState(service.product_id);
     const [cycle, setCycle] = useState(service.cycle);
     const options = useQuery({
-        queryKey: ['/services/upgrade', service.id, productId, cycle],
-        queryFn: async () => (await api.get<UpgradeOptions>(`/services/${service.id}/upgrade`, { params: { product_id: productId, cycle } })).data,
+        queryKey: [base, 'upgrade', productId, cycle],
+        queryFn: async () => (await api.get<UpgradeOptions>(`${base}/upgrade`, { params: { product_id: productId, cycle } })).data,
         placeholderData: keepPreviousData,
         retry: false,
     });
@@ -35,7 +37,7 @@ export function UpgradeModal({ service, onClose, onDone }: {
     const quote = options.data?.quote;
     const cur = options.data?.currency;
     const create = useMutation({
-        mutationFn: async () => (await api.post<{ message: string; invoice_id: number | null }>(`/services/${service.id}/upgrade`, { product_id: productId, cycle })).data,
+        mutationFn: async () => (await api.post<{ message: string; invoice_id: number | null }>(`${base}/upgrade`, { product_id: productId, cycle })).data,
         onSuccess: onDone,
     });
 

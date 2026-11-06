@@ -261,6 +261,50 @@ class LogicBoxesClient
         return (string) $id;
     }
 
+    /* ---------- DNS (the registrar's free DNS hosting) ---------- */
+
+    /** Record type => the name LogicBoxes uses in its add-/delete- endpoints. */
+    public const DNS_TYPES = ['A' => 'ipv4', 'AAAA' => 'ipv6', 'CNAME' => 'cname', 'MX' => 'mx', 'TXT' => 'txt'];
+
+    /** Turns on DNS hosting for the order. Harmless when it is already on. */
+    public function activateDns(string $orderId): array
+    {
+        return $this->post('dns/activate.json', ['order-id' => $orderId]);
+    }
+
+    /** @return list<array{type: string, host: string, value: string, ttl: int, priority: ?int}> */
+    public function dnsRecords(string $domain, string $type): array
+    {
+        $result = $this->get('dns/manage/search-records.json', ['domain-name' => $domain, 'type' => $type, 'no-of-records' => 50, 'page-no' => 1]);
+
+        return collect($result)
+            ->filter(fn ($row, $key) => is_numeric($key) && is_array($row))
+            ->map(fn (array $row) => [
+                'type' => strtoupper((string) ($row['type'] ?? $type)),
+                'host' => (string) ($row['host'] ?? ''),
+                'value' => (string) ($row['value'] ?? ''),
+                'ttl' => (int) ($row['timetolive'] ?? 0),
+                'priority' => isset($row['priority']) && is_numeric($row['priority']) ? (int) $row['priority'] : null,
+            ])
+            ->values()->all();
+    }
+
+    public function addDnsRecord(string $domain, string $type, string $host, string $value, int $ttl, ?int $priority = null): array
+    {
+        return $this->post('dns/manage/add-'.self::DNS_TYPES[$type].'-record.json', array_filter([
+            'domain-name' => $domain,
+            'host' => $host,
+            'value' => $value,
+            'ttl' => $ttl,
+            'priority' => $type === 'MX' ? ($priority ?? 10) : null,
+        ], fn ($v) => $v !== null));
+    }
+
+    public function deleteDnsRecord(string $domain, string $type, string $host, string $value): array
+    {
+        return $this->post('dns/manage/delete-'.self::DNS_TYPES[$type].'-record.json', ['domain-name' => $domain, 'host' => $host, 'value' => $value]);
+    }
+
     /* ---------- Transport ---------- */
 
     private function get(string $path, array $params): array

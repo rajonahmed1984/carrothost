@@ -17,8 +17,11 @@ interface ManagesAccounts
      */
     public function usage(Service $service): array;
 
-    /** A one-time link that signs straight into the account's control panel. */
-    public function loginUrl(Service $service): string;
+    /**
+     * A one-time link that signs straight into the account's control panel. $app opens one of
+     * the module's APPS (email, databases...) instead of the home page; a module without them ignores it.
+     */
+    public function loginUrl(Service $service, ?string $app = null): string;
 
     public function changePassword(Service $service, string $password): void;
 

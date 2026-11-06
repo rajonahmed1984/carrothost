@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\InvoicePaid;
 use App\Jobs\ProvisionService;
+use App\Jobs\SendInvoiceSms;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Domain;
@@ -135,6 +136,8 @@ class BillingService
                 // Credit the client already holds pays new invoices straight away. Add Funds invoices are how credit is bought, so never.
                 if (! self::isPrepayment($invoice)) {
                     app(CreditService::class)->applyToInvoice($invoice);
+                    // Queued after credit: one that credit paid in full gets only the paid SMS.
+                    SendInvoiceSms::notify($invoice->id, 'invoice_created');
                 }
             });
 
@@ -218,6 +221,7 @@ class BillingService
     {
         event(new InvoicePaid($invoice));
         DB::afterCommit(fn () => $this->mailer->paymentReceived($invoice));
+        SendInvoiceSms::notify($invoice->id, 'invoice_paid');
     }
 
     /** Item kinds that pay for something other than a service: buying credit, or other invoices at once. */

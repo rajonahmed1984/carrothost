@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\CustomerNotice;
 use App\Mail\TicketNotification;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\EmailTemplates;
+use App\Support\MailFrom;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -53,12 +56,26 @@ class TicketService
         if ($staff) {
             $recipients = [$ticket->client->email, ...$ticket->client->contacts()->where('receives_support', true)->pluck('email')];
 
-            foreach (array_unique($recipients) as $email) {
-                $this->send($email, new TicketNotification(
-                    "[Ticket #{$ticket->number}] {$ticket->subject}",
-                    "{$staff->name} replied to your ticket",
-                    $message,
-                    url("tickets/{$ticket->id}"),
+            // The Support Ticket Reply template; turned off, the customer gets no email.
+            $mail = EmailTemplates::render('ticket_reply', [
+                ...CustomerMailer::clientValues($ticket->client),
+                'ticket_number' => $ticket->number,
+                'ticket_subject' => $ticket->subject,
+                'ticket_message' => nl2br(e($message), false),
+                'ticket_status' => ucwords(str_replace('_', ' ', (string) $ticket->refresh()->status)),
+                'staff_name' => $staff->name,
+                'ticket_link' => url("tickets/{$ticket->id}"),
+            ]);
+
+            foreach ($mail ? array_unique($recipients) : [] as $email) {
+                $this->send($email, new CustomerNotice(
+                    sender: MailFrom::SUPPORT,
+                    subjectLine: $mail['subject'],
+                    heading: '',
+                    body: $mail['text'],
+                    url: url("tickets/{$ticket->id}"),
+                    button: 'View ticket',
+                    richBody: $mail['html'],
                 ));
             }
         } else {
@@ -88,7 +105,7 @@ class TicketService
     }
 
     /** A mail outage must never lose the reply itself. */
-    private function send(string $email, TicketNotification $mail): void
+    private function send(string $email, TicketNotification|CustomerNotice $mail): void
     {
         try {
             Mail::to($email)->send($mail);

@@ -93,9 +93,21 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
         ];
     }
 
-    public function loginUrl(Service $service): string
+    /** Pages a login can open straight into: our key => cPanel's app name for create_user_session. */
+    public const APPS = [
+        'email' => 'Email_Accounts',
+        'databases' => 'Database_MySQL',
+        'files' => 'FileManager_Home',
+        'backups' => 'Backups_Home',
+    ];
+
+    public function loginUrl(Service $service, ?string $app = null): string
     {
-        $url = data_get($this->call('create_user_session', ['user' => $service->remote_id, 'service' => 'cpaneld']), 'data.url');
+        $params = ['user' => $service->remote_id, 'service' => 'cpaneld'];
+        if ($app && isset(self::APPS[$app])) {
+            $params['app'] = self::APPS[$app];
+        }
+        $url = data_get($this->call('create_user_session', $params), 'data.url');
 
         if (! is_string($url) || $url === '') {
             throw new RuntimeException('WHM did not return a login link.');

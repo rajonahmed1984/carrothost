@@ -144,6 +144,33 @@ class DomainRegistrar
         ActivityLog::record('domain.registrar.contacts', $domain, ['contact_id' => $contactId]);
     }
 
+    /* ---------- DNS records ---------- */
+
+    /** @return list<array{type: string, host: string, value: string, ttl: int, priority: ?int}> */
+    public function dnsRecords(Domain $domain): array
+    {
+        $client = $this->client($domain);
+        $client->activateDns($this->requireOrderId($domain));
+
+        return collect(array_keys(LogicBoxesClient::DNS_TYPES))
+            ->flatMap(fn (string $type) => $client->dnsRecords($domain->name, $type))
+            ->values()->all();
+    }
+
+    public function addDnsRecord(Domain $domain, array $record): void
+    {
+        $client = $this->client($domain);
+        $client->activateDns($this->requireOrderId($domain));
+        $client->addDnsRecord($domain->name, $record['type'], $record['host'], $record['value'], $record['ttl'], $record['priority'] ?? null);
+        ActivityLog::record('domain.dns.added', $domain, ['type' => $record['type'], 'host' => $record['host'], 'value' => $record['value']]);
+    }
+
+    public function deleteDnsRecord(Domain $domain, array $record): void
+    {
+        $this->client($domain)->deleteDnsRecord($domain->name, $record['type'], $record['host'], $record['value']);
+        ActivityLog::record('domain.dns.deleted', $domain, ['type' => $record['type'], 'host' => $record['host'], 'value' => $record['value']]);
+    }
+
     public function requestDelete(Domain $domain): void
     {
         $this->client($domain)->delete($this->requireOrderId($domain));

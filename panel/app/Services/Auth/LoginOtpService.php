@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Support\EmailTemplates;
 use App\Mail\VerificationCode;
 use App\Support\Auth\Portal;
 use Illuminate\Database\Eloquent\Model;
@@ -50,15 +51,22 @@ class LoginOtpService
             'login_otp_expires_at' => now()->addMinutes(self::OTP_EXPIRY_MINUTES),
         ])->save();
 
+        // Customers get the Login Verification Code template; staff keep the built-in wording.
+        $template = $portal === Portal::CLIENT
+            ? EmailTemplates::render('login_code', ['client_name' => $account->name, 'client_email' => $account->email, 'code' => $code, 'expiry_minutes' => self::OTP_EXPIRY_MINUTES])
+            : null;
+
         return $this->deliver($account->email, new VerificationCode(
             code: $code,
             // No code in the subject: a plain subject and a labelled code is what mail apps recognise.
-            subjectLine: 'Your Login Verification Code',
+            subjectLine: $template['subject'] ?? 'Your Login Verification Code',
             heading: 'Your Login Verification Code',
             intro: "Someone has just entered the correct password for your {$label} account. Enter the code below to finish signing in.",
             instructions: 'This code expires in '.self::OTP_EXPIRY_MINUTES.' minutes and can only be used once.',
             footer: 'If you did not try to sign in, change your password immediately.',
             name: $account->name,
+            templateHtml: $template['html'] ?? null,
+            templateText: $template['text'] ?? null,
         ));
     }
 

@@ -359,8 +359,12 @@ class AuthTest extends TestCase
         $token = null;
         Notification::assertSentTo($client, ResetPassword::class, function (ResetPassword $notification) use (&$token, $client) {
             $token = $notification->token;
-            $this->assertStringContainsString("/reset-password/{$token}?email=", $notification->toMail($client)->actionUrl);
-            $this->assertStringNotContainsString('/admin/', $notification->toMail($client)->actionUrl);
+            // Customers get the Password Reset Validation template.
+            $mail = $notification->toMail($client);
+            $this->assertInstanceOf(\App\Mail\PasswordResetLink::class, $mail);
+            $this->assertStringContainsString("/reset-password/{$token}?email=", $mail->url);
+            $this->assertStringNotContainsString('/admin/', $mail->url);
+            $this->assertStringContainsString('reset the password', $mail->templateHtml);
 
             return true;
         });

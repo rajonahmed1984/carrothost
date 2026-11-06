@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Support\EmailTemplates;
 use App\Mail\PasswordResetLink;
 use App\Models\ActivityLog;
 use App\Models\ClientUser;
@@ -53,11 +54,21 @@ class SubUsers
             ['token' => hash('sha256', $token), 'created_at' => now()],
         );
 
+        $url = url("reset-password/{$token}").'?'.http_build_query(['email' => $user->email]);
+        $action = $user->password !== null ? 'Reset' : 'Set';
+        $template = EmailTemplates::render('account_user_password', [
+            'user_name' => $user->name, 'client_email' => $user->email, 'reset_link' => $url, 'expiry_minutes' => self::RESET_MINUTES,
+            'password_action' => $action, 'password_action_lower' => strtolower($action),
+        ]);
+
         Mail::to($user->email)->send(new PasswordResetLink(
             name: $user->name,
-            url: url("reset-password/{$token}").'?'.http_build_query(['email' => $user->email]),
+            url: $url,
             minutes: self::RESET_MINUTES,
             hasPassword: $user->password !== null,
+            templateHtml: $template['html'] ?? null,
+            templateText: $template['text'] ?? null,
+            subjectLine: $template['subject'] ?? null,
         ));
     }
 

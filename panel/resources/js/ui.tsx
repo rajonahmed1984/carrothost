@@ -93,6 +93,8 @@ const tones: Record<string, string> = {
     closed: 'bg-slate-200 text-slate-700',
     on: 'bg-emerald-100 text-emerald-700',
     off: 'bg-slate-100 text-slate-500',
+    sent: 'bg-emerald-100 text-emerald-700',
+    skipped: 'bg-slate-100 text-slate-500',
 };
 
 export function Status({ value }: { value: string }) {

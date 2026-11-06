@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import { Button, ErrorNote, Field, Input, QueryState, Select, type Branding } from '../ui';
+import { Button, ErrorNote, Field, Input, QueryState, Select, Status, type Branding } from '../ui';
+import { EmailTemplatesSection } from './email-templates';
 
 /** Integration pages listed under System in the sidebar. */
 export const settings = [
@@ -18,8 +19,17 @@ const tabs = [
     { key: 'currencies', label: 'Currencies', hint: 'Which currency new clients start in, and what 1 USD is worth in BDT.' },
     { key: 'domains', label: 'Domains', hint: 'What customers can order, and the defaults each new domain starts with.' },
     { key: 'automation', label: 'Automation', hint: 'Renewals, suspensions and support ticket clean-up.' },
-    { key: 'email', label: 'Email', hint: 'Mail goes out through the server unless an SMTP server is saved here.' },
+    { key: 'email', label: 'Email', hint: 'How mail is sent, and the templates for every email your customers receive.' },
+    { key: 'sms', label: 'SMS', hint: 'Text customers about their invoices through the 24bulksmsbd.com gateway.' },
 ];
+
+const SMS_EVENTS = [
+    { key: 'created', label: 'Send SMS when an invoice is created (payment reminder)', field: 'Invoice created message' },
+    { key: 'paid', label: 'Send SMS when an invoice is paid (payment confirmation)', field: 'Invoice paid message' },
+    { key: 'reminder', label: 'Send SMS with invoice reminders (before due date and overdue notices)', field: 'Invoice reminder message' },
+] as const;
+
+const SMS_EVENT_LABELS: Record<string, string> = { invoice_created: 'Invoice created', invoice_paid: 'Invoice paid', invoice_reminder: 'Invoice reminder', test: 'Test' };
 
 type Values = {
     company_name: string; company_email: string | null; pay_to_text: string | null; company_country: string | null; time_zone: string;
@@ -32,10 +42,19 @@ type Values = {
     termination_enabled: boolean; terminate_after_days: number; reminder_before_due_days: number; overdue_notice_1: number; overdue_notice_2: number;
     overdue_notice_3: number; domain_reminder_days: string; usage_update_enabled: boolean; domain_sync_enabled: boolean;
     cron_report_enabled: boolean; domain_sync_report_enabled: boolean; report_recipients: string | null;
+    sms_enabled: boolean; sms_api_url: string | null; sms_customer_id: string | null; sms_whitelisted_ip: string | null;
+    sms_invoice_created_enabled: boolean; sms_invoice_paid_enabled: boolean; sms_invoice_reminder_enabled: boolean;
+    sms_invoice_created_template: string; sms_invoice_paid_template: string; sms_invoice_reminder_template: string;
 };
 type Automation = { heartbeat: string | null; runs: Record<string, { at: string; count: number | null }> };
-type Secrets = { recaptcha_secret_key: boolean; recaptcha_api_key: boolean; mail_password: boolean };
-type SettingsResponse = { settings: Values; secrets: Secrets; branding: Branding; custom_logo: boolean; mailer: string; time_zones: string[]; automation?: Automation };
+type Secrets = { recaptcha_secret_key: boolean; recaptcha_api_key: boolean; mail_password: boolean; sms_api_key: boolean };
+type SettingsResponse = { settings: Values; secrets: Secrets; branding: Branding; custom_logo: boolean; mailer: string; time_zones: string[]; automation?: Automation; sms_placeholders: string[] };
+type SmsLogRow = {
+    id: number; event: string; status: string; mobile: string | null; message: string | null; response: string | null;
+    client: { id: number; name: string } | null; invoice: { id: number; number: string } | null; created_at: string | null;
+};
+
+const emptySecrets = { recaptcha_secret_key: '', recaptcha_api_key: '', mail_password: '', sms_api_key: '' };
 
 const TASKS: [string, string][] = [
     ['renewals', 'Renewal invoices'], ['suspensions', 'Suspend overdue'], ['terminations', 'Terminate'], ['invoice_reminders', 'Payment reminders'],
@@ -110,12 +129,63 @@ function TestEmail() {
     );
 }
 
+function TestSms({ onSent }: { onSent: () => void }) {
+    const [mobile, setMobile] = useState('');
+    const send = useMutation({ mutationFn: async () => (await api.post<{ message: string }>('/settings/test-sms', { mobile })).data, onSettled: onSent });
+
+    return (
+        <Section title="Test SMS">
+            <p className="text-sm text-slate-500">Save the gateway settings first, then send a test message to a Bangladeshi mobile number.</p>
+            <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="flex flex-wrap gap-2">
+                <div className="min-w-0 flex-1"><Input type="tel" required placeholder="01XXXXXXXXX" value={mobile} onChange={(e) => setMobile(e.target.value)} /></div>
+                <Button variant="ghost" disabled={send.isPending}>{send.isPending ? 'Sending...' : 'Send test SMS'}</Button>
+            </form>
+            {send.data && <p role="status" className="text-xs text-emerald-700">{send.data.message}</p>}
+            <ErrorNote error={send.error} />
+        </Section>
+    );
+}
+
+/** The latest SMS the panel tried to send, so a failing gateway or a missing phone number shows up. */
+function SmsLogs() {
+    const query = useQuery({ queryKey: ['sms-logs'], queryFn: async () => (await api.get<SmsLogRow[]>('/settings/sms-logs')).data });
+
+    return (
+        <Section title="Recent SMS" action={<button type="button" className="table-action-link text-xs" onClick={() => query.refetch()}>Refresh</button>}>
+            <QueryState query={query}>
+                {query.data && (query.data.length === 0 ? <p className="text-sm text-slate-500">No SMS sent yet.</p> : (
+                    <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                        {query.data.map((log) => (
+                            <div key={log.id} className="grid gap-1 px-4 py-3 text-sm md:grid-cols-[10rem_1fr_auto] md:gap-4">
+                                <div className="min-w-0">
+                                    <div className="font-medium text-slate-900">{SMS_EVENT_LABELS[log.event] ?? log.event}</div>
+                                    <div className="text-xs text-slate-500">{log.created_at ? new Date(log.created_at).toLocaleString() : ''}</div>
+                                </div>
+                                <div className="min-w-0 space-y-1">
+                                    <div className="flex flex-wrap gap-x-3 text-xs text-slate-600">
+                                        {log.client && <Link className="table-action-link" to={`/admin/clients/${log.client.id}`}>{log.client.name}</Link>}
+                                        {log.invoice && <Link className="table-action-link" to={`/admin/invoices/${log.invoice.id}`}>Invoice #{log.invoice.number}</Link>}
+                                        {log.mobile && <span className="tabular-nums">{log.mobile}</span>}
+                                    </div>
+                                    {log.message && <p className="break-words text-slate-700">{log.message}</p>}
+                                    {log.response && <p className="break-words text-xs text-slate-500">{log.response}</p>}
+                                </div>
+                                <div><Status value={log.status} /></div>
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </QueryState>
+        </Section>
+    );
+}
+
 function SettingsForm({ data }: { data: SettingsResponse }) {
     const qc = useQueryClient();
     const [params, setParams] = useSearchParams();
     const tab = tabs.find((t) => t.key === params.get('tab')) ?? tabs[0];
     const [values, setValues] = useState<Values>(data.settings);
-    const [secrets, setSecrets] = useState({ recaptcha_secret_key: '', recaptcha_api_key: '', mail_password: '' });
+    const [secrets, setSecrets] = useState(emptySecrets);
     const [files, setFiles] = useState<{ logo: File | null; favicon: File | null }>({ logo: null, favicon: null });
     const [remove, setRemove] = useState({ logo: false, favicon: false });
     const set = <K extends keyof Values>(key: K) => (value: Values[K]) => setValues({ ...values, [key]: value });
@@ -139,7 +209,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
             qc.invalidateQueries({ queryKey: ['auth-config'] });
             qc.invalidateQueries({ queryKey: ['meta'] });
             setValues(fresh.settings);
-            setSecrets({ recaptcha_secret_key: '', recaptcha_api_key: '', mail_password: '' });
+            setSecrets(emptySecrets);
             setFiles({ logo: null, favicon: null });
             setRemove({ logo: false, favicon: false });
         },
@@ -380,12 +450,48 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                     </div>
                 </div>
 
+                <div className={tab.key === 'sms' ? 'space-y-4' : 'hidden'}>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <Section title="SMS Gateway">
+                            <Check checked={values.sms_enabled} onChange={set('sms_enabled')} label="Enable SMS notifications" />
+                            <Field label="API URL"><Input type="url" placeholder="https://www.24bulksmsbd.com/api/smsSendApi" {...text('sms_api_url')} /></Field>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <Field label="Customer ID"><Input autoComplete="off" {...text('sms_customer_id')} /></Field>
+                                <Field label="API key" hint={secretHint('sms_api_key')}><Input type="password" autoComplete="new-password" value={secrets.sms_api_key} onChange={(e) => setSecrets({ ...secrets, sms_api_key: e.target.value })} /></Field>
+                            </div>
+                            <Field label="Whitelisted server IP" hint="For reference only. The gateway rejects requests from any other server IP."><Input placeholder="0.0.0.0" {...text('sms_whitelisted_ip')} /></Field>
+                        </Section>
+                        <TestSms onSent={() => qc.invalidateQueries({ queryKey: ['sms-logs'] })} />
+                    </div>
+                    <Section title="Invoice SMS">
+                        <p className="text-sm text-slate-500">
+                            Sent to the client's phone number. Placeholders:{' '}
+                            {data.sms_placeholders.map((p) => <code key={p} className="mr-1 inline-block rounded bg-slate-100 px-1 text-xs">{`{{${p}}}`}</code>)}
+                        </p>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {SMS_EVENTS.map((event) => (
+                                <div key={event.key} className="space-y-3">
+                                    <Check checked={values[`sms_invoice_${event.key}_enabled`]} onChange={set(`sms_invoice_${event.key}_enabled`)} label={event.label} />
+                                    <Field label={event.field}>
+                                        <textarea rows={3} maxLength={1000} className="ui-input py-2" style={{ height: 'auto' }} {...text(`sms_invoice_${event.key}_template`)} />
+                                    </Field>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-slate-500">Clear a message to go back to the default. Reminders follow the days set under Automation &gt; Billing Reminders. Clients without a Bangladeshi mobile number are skipped.</p>
+                    </Section>
+                    <SmsLogs />
+                </div>
+
                 <ErrorNote error={save.error} />
                 <div className="flex items-center justify-end gap-3 pb-2">
                     {save.isSuccess && <span role="status" className="text-xs font-semibold text-emerald-700">Settings saved.</span>}
                     <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save settings'}</Button>
                 </div>
             </form>
+
+            {/* Outside the settings form: templates save on their own. */}
+            {tab.key === 'email' && <EmailTemplatesSection />}
         </div>
     );
 }

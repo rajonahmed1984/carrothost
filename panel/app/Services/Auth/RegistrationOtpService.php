@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Support\EmailTemplates;
 use App\Mail\VerificationCode;
 use App\Support\MailFrom;
 use Illuminate\Http\Request;
@@ -68,15 +69,19 @@ class RegistrationOtpService
 
         RateLimiter::hit($this->sendKey($email), 3600);
 
+        $template = EmailTemplates::render('signup_code', ['client_name' => $pending['data']['name'] ?? '', 'client_email' => $email, 'code' => $code, 'expiry_minutes' => $minutes]);
+
         return $this->otp->deliver($email, new VerificationCode(
             code: $code,
-            subjectLine: 'Your Email Verification Code',
+            subjectLine: $template['subject'] ?? 'Your Email Verification Code',
             heading: 'Your Email Verification Code',
             intro: "Thank you for signing up with {$appName}. Enter the code below to verify your email and create your account.",
             instructions: "This code expires in {$minutes} minutes and can only be used once.",
             footer: 'If you did not try to register, you can ignore this email. No account has been created.',
             sender: MailFrom::SALES,
             name: $pending['data']['name'] ?? null,
+            templateHtml: $template['html'] ?? null,
+            templateText: $template['text'] ?? null,
         ));
     }
 

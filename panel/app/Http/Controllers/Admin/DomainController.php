@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use App\Support\DomainContact;
 
 class DomainController extends Controller
 {
@@ -62,7 +63,7 @@ class DomainController extends Controller
     {
         return [
             ...$this->atRegistrar(fn () => $registrar->info($domain)),
-            'contact_defaults' => $this->contactDefaults($domain),
+            'contact_defaults' => DomainContact::defaults($domain->client),
         ];
     }
 
@@ -78,10 +79,10 @@ class DomainController extends Controller
     public function registrarCommand(Request $request, Domain $domain, string $command, DomainRegistrar $registrar)
     {
         $message = match ($command) {
-            'register' => $this->atRegistrar(fn () => $registrar->register($domain, $this->contact($request), $request->validate(['years' => 'required|integer|min:1|max:10'])['years']))['message'],
-            'transfer' => $this->atRegistrar(fn () => $registrar->transfer($domain, $this->contact($request), $request->validate(['auth_code' => 'required|string|max:255'])['auth_code']))['message'],
+            'register' => $this->atRegistrar(fn () => $registrar->register($domain, DomainContact::validate($request), $request->validate(['years' => 'required|integer|min:1|max:10'])['years']))['message'],
+            'transfer' => $this->atRegistrar(fn () => $registrar->transfer($domain, DomainContact::validate($request), $request->validate(['auth_code' => 'required|string|max:255'])['auth_code']))['message'],
             'renew' => $this->atRegistrar(fn () => $registrar->renew($domain, $request->validate(['years' => 'required|integer|min:1|max:10'])['years']))['message'],
-            'contacts' => $this->atRegistrar(fn () => $registrar->setContacts($domain, $this->contact($request))) ?? 'Contact details updated at the registrar. Some TLDs email the registrant to approve an owner change.',
+            'contacts' => $this->atRegistrar(fn () => $registrar->setContacts($domain, DomainContact::validate($request))) ?? 'Contact details updated at the registrar. Some TLDs email the registrant to approve an owner change.',
             'delete' => $this->atRegistrar(fn () => $registrar->requestDelete($domain)) ?? 'Delete requested at the registrar.',
             'release' => $this->atRegistrar(fn () => $registrar->releaseUk($domain, $request->validate(['tag' => 'required|string|max:32|alpha_dash'])['tag'])) ?? 'Released to the new tag.',
             'privacy' => $this->toggle($request, $domain, 'id_protection', fn (bool $on) => $registrar->setPrivacy($domain, $on), 'ID protection'),
@@ -204,58 +205,6 @@ class DomainController extends Controller
         } catch (RuntimeException $e) {
             throw ValidationException::withMessages([$field => $e->getMessage()]);
         }
-    }
-
-    private function contact(Request $request): array
-    {
-        $data = $request->validate([
-            'contact.name' => 'required|string|max:255',
-            'contact.company' => 'nullable|string|max:255',
-            'contact.email' => 'required|email|max:255',
-            'contact.address' => 'required|string|max:64',
-            'contact.city' => 'required|string|max:64',
-            'contact.state' => 'required|string|max:64',
-            'contact.country' => 'required|string|size:2',
-            'contact.zipcode' => 'required|string|max:16',
-            'contact.phone_cc' => 'required|digits_between:1,3',
-            'contact.phone' => 'required|string|max:20',
-        ])['contact'];
-
-        $data['phone'] = preg_replace('/\D/', '', $data['phone']);
-        if (strlen($data['phone']) < 4) {
-            throw ValidationException::withMessages(['contact.phone' => 'Enter the phone number without the country code.']);
-        }
-
-        return [...$data, 'company' => trim((string) ($data['company'] ?? '')) ?: 'N/A', 'country' => strtoupper($data['country'])];
-    }
-
-    /** The client's profile in the shape the registrar wants, for the admin to check and complete. */
-    private function contactDefaults(Domain $domain): array
-    {
-        $client = $domain->client;
-        $country = strtoupper((string) ($client->country ?: 'BD'));
-        $raw = trim((string) $client->phone);
-        $codes = ['BD' => '880', 'IN' => '91', 'PK' => '92', 'AE' => '971', 'SA' => '966', 'US' => '1', 'CA' => '1', 'GB' => '44', 'AU' => '61', 'MY' => '60', 'SG' => '65', 'NP' => '977'];
-
-        if (preg_match('/^\+(\d{1,3})[.\s-]?(.*)$/', $raw, $m)) {
-            [$cc, $phone] = [$m[1], $m[2]];
-        } else {
-            [$cc, $phone] = [$codes[$country] ?? '', $raw];
-        }
-        $phone = ltrim(preg_replace('/\D/', '', $phone), '0');
-
-        return [
-            'name' => (string) $client->name,
-            'company' => (string) ($client->company ?? ''),
-            'email' => (string) $client->email,
-            'address' => (string) ($client->address ?? ''),
-            'city' => (string) ($client->city ?? ''),
-            'state' => (string) ($client->city ?? ''),
-            'country' => $country,
-            'zipcode' => '',
-            'phone_cc' => $cc,
-            'phone' => $phone,
-        ];
     }
 
     private function detail(Domain $domain): array

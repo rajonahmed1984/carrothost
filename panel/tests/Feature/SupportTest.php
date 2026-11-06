@@ -75,7 +75,8 @@ class SupportTest extends TestCase
         $this->actingAs($admin, 'web')->getJson('/api/badges')->assertJsonPath('awaiting_tickets', 1);
         $this->postJson("/api/tickets/{$id}/replies", ['message' => 'Refunded.'])->assertOk()->assertJsonPath('status', 'answered');
         $this->getJson('/api/badges')->assertJsonPath('awaiting_tickets', 0);
-        Mail::assertSent(TicketNotification::class, fn ($mail) => $mail->hasTo('mine@example.com'));
+        // The Support Ticket Reply template.
+        Mail::assertSent(\App\Mail\CustomerNotice::class, fn ($mail) => $mail->hasTo('mine@example.com') && str_starts_with($mail->subjectLine, '[Ticket #') && str_contains($mail->richBody, 'Refunded.'));
 
         $this->signOut();
         $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();

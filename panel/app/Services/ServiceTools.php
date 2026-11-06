@@ -56,10 +56,10 @@ class ServiceTools
         ]);
     }
 
-    public function loginUrl(Service $service): string
+    public function loginUrl(Service $service, ?string $app = null): string
     {
-        $url = $this->run(fn () => $this->module($service)->loginUrl($service));
-        ActivityLog::record('service.panel_login', $service);
+        $url = $this->run(fn () => $this->module($service)->loginUrl($service, $app));
+        ActivityLog::record('service.panel_login', $service, $app ? ['app' => $app] : []);
 
         return $url;
     }

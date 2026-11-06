@@ -91,7 +91,7 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule
         ];
     }
 
-    public function loginUrl(Service $service): string
+    public function loginUrl(Service $service, ?string $app = null): string
     {
         // Port 2003 is the enduser panel; loginAs signs in as the account with the admin key.
         $url = $this->call('sso', ['noip' => 1], 2003, ['loginAs' => $service->remote_id])['done']['url'] ?? null;
