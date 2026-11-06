@@ -61,7 +61,16 @@ Artisan::command('panel:make-admin {email} {name}', function (string $email, str
     $this->info("Admin {$email} is ready.");
 })->purpose('Create or update a panel admin');
 
-Artisan::command('portal:import-orders', function () {
+Artisan::command('portal:import-orders {database=carrothost_portal : The database holding the WHMCS tables}', function (string $database) {
+    // Database names differ between this machine and the live server, so neither is written in.
+    if (! preg_match('/^[A-Za-z0-9_]+$/', $database)) {
+        $this->error('Invalid database name.');
+
+        return 1;
+    }
+    $whmcs = $database;
+    $panel = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+
     $orders = \Illuminate\Support\Facades\DB::select("
         SELECT 
             o.id as portal_order_id,
@@ -73,13 +82,13 @@ Artisan::command('portal:import-orders', function () {
             o.amount as order_amount,
             o.invoiceid as portal_invoice_id,
             o.notes
-        FROM carrothost_portal.tblorders o
-        JOIN carrothost_portal.tblclients pc ON pc.id = o.userid
-        JOIN carrothost_panel.clients c ON c.email = pc.email
+        FROM {$whmcs}.tblorders o
+        JOIN {$whmcs}.tblclients pc ON pc.id = o.userid
+        JOIN {$panel}.clients c ON c.email = pc.email
         ORDER BY o.id ASC
     ");
 
-    $this->info('Found '.count($orders).' orders for current clients in carrothost_portal.');
+    $this->info('Found '.count($orders)." orders for current clients in {$whmcs}.");
 
     foreach ($orders as $o) {
         $status = strtolower($o->portal_status);
@@ -101,34 +110,34 @@ Artisan::command('portal:import-orders', function () {
     }
 
     \Illuminate\Support\Facades\DB::affectingStatement("
-        UPDATE carrothost_panel.services ps
-        JOIN carrothost_panel.clients pc ON pc.id = ps.client_id
-        JOIN carrothost_portal.tblclients wc ON wc.email = pc.email
-        JOIN carrothost_portal.tblhosting wh ON wh.userid = wc.id AND wh.domain = ps.domain
+        UPDATE {$panel}.services ps
+        JOIN {$panel}.clients pc ON pc.id = ps.client_id
+        JOIN {$whmcs}.tblclients wc ON wc.email = pc.email
+        JOIN {$whmcs}.tblhosting wh ON wh.userid = wc.id AND wh.domain = ps.domain
         SET ps.order_id = wh.orderid
-        WHERE wh.orderid IN (SELECT id FROM carrothost_panel.orders)
+        WHERE wh.orderid IN (SELECT id FROM {$panel}.orders)
     ");
 
     \Illuminate\Support\Facades\DB::affectingStatement("
-        UPDATE carrothost_panel.domains pd
-        JOIN carrothost_panel.clients pc ON pc.id = pd.client_id
-        JOIN carrothost_portal.tblclients wc ON wc.email = pc.email
-        JOIN carrothost_portal.tbldomains wd ON wd.userid = wc.id AND wd.domain = pd.name
+        UPDATE {$panel}.domains pd
+        JOIN {$panel}.clients pc ON pc.id = pd.client_id
+        JOIN {$whmcs}.tblclients wc ON wc.email = pc.email
+        JOIN {$whmcs}.tbldomains wd ON wd.userid = wc.id AND wd.domain = pd.name
         SET pd.order_id = wd.orderid
-        WHERE wd.orderid IN (SELECT id FROM carrothost_panel.orders)
+        WHERE wd.orderid IN (SELECT id FROM {$panel}.orders)
     ");
 
     \Illuminate\Support\Facades\DB::affectingStatement("
-        UPDATE carrothost_panel.invoices pi
-        JOIN carrothost_panel.clients pc ON pc.id = pi.client_id
-        JOIN carrothost_portal.tblclients wc ON wc.email = pc.email
-        JOIN carrothost_portal.tblorders wo ON wo.userid = wc.id AND (wo.invoiceid = pi.number OR wo.invoiceid = pi.id)
+        UPDATE {$panel}.invoices pi
+        JOIN {$panel}.clients pc ON pc.id = pi.client_id
+        JOIN {$whmcs}.tblclients wc ON wc.email = pc.email
+        JOIN {$whmcs}.tblorders wo ON wo.userid = wc.id AND (wo.invoiceid = pi.number OR wo.invoiceid = pi.id)
         SET pi.order_id = wo.id
-        WHERE wo.invoiceid > 0 AND wo.id IN (SELECT id FROM carrothost_panel.orders)
+        WHERE wo.invoiceid > 0 AND wo.id IN (SELECT id FROM {$panel}.orders)
     ");
 
     $this->info('Orders imported and linked successfully.');
-})->purpose('Import orders from carrothost_portal for current clients');
+})->purpose('Import orders from the WHMCS database for current clients');
 
 Artisan::command('registrars:sync', function (App\Services\RegistrarSync $sync) {
     foreach (App\Models\Registrar::whereNotNull('api_key')->get() as $registrar) {

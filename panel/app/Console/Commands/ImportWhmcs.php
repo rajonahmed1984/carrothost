@@ -90,8 +90,12 @@ class ImportWhmcs extends Command
         $domains = $this->whmcs->table('tbldomains')->whereIn('userid', $clients->pluck('id'))->orderBy('id')->get()->groupBy('userid');
         $invoices = $this->whmcs->table('tblinvoices')->whereIn('userid', $clients->pluck('id'))->where('status', '!=', 'Draft')->orderBy('id')->get()->groupBy('userid');
         $currencies = $this->whmcs->table('tblcurrencies')->pluck('code', 'id');
-        $servers = $this->whmcs->table('tblservers')->pluck('hostname', 'id')
-            ->map(fn ($hostname) => Server::where('hostname', $hostname)->value('id'));
+        // By hostname, else by IP: hosts move accounts to a new machine name (Hawkhost hkg112 -> sng128)
+        // while WHMCS keeps the old one, but the IP stays the same.
+        $servers = $this->whmcs->table('tblservers')->get(['id', 'hostname', 'ipaddress'])->mapWithKeys(fn ($s) => [
+            $s->id => Server::where('hostname', $s->hostname)->value('id')
+                ?? (trim((string) $s->ipaddress) !== '' ? Server::where('ip_address', trim($s->ipaddress))->value('id') : null),
+        ]);
 
         $counts = [
             'clients new' => 0, 'clients existing' => 0, 'services new' => 0, 'services updated' => 0, 'services unchanged' => 0, 'services skipped' => 0,
@@ -275,6 +279,15 @@ class ImportWhmcs extends Command
 
             if ($nextDue && $nextDue <= now()->addDays(config('billing.renewal_notice_days'))->toDateString()) {
                 $existing->renewal_invoiced_for = $nextDue;
+            }
+
+            // A service imported before its server could be matched gets it now; a server set here is never replaced.
+            if (! $existing->server_id && $serverId) {
+                $existing->server_id = $serverId;
+                if (! $existing->remote_id && in_array($status, ['active', 'suspended'], true) && $row->username && config("billing.provisioning_modules.{$product->module}.class")) {
+                    $existing->remote_id = $row->username;
+                    $existing->provision_status = 'done';
+                }
             }
 
             $existing->save();
