@@ -111,6 +111,9 @@ class ProductController extends Controller
             'module_config.client_actions' => 'nullable|array',
             'module_config.client_actions.*' => ['string', Rule::in(Product::DEFAULT_CLIENT_ACTIONS)],
             'module_config.client_upgrade' => 'nullable|boolean',
+            // What one VPS costs us a month, for VPS Profit.
+            'cost_amount' => 'nullable|numeric|min:0|max:9999999',
+            'cost_currency' => 'nullable|in:BDT,USD',
             'is_active' => 'boolean',
             'prices' => 'required|array|min:1',
             'prices.*.cycle' => ['required', 'distinct', Rule::in(array_keys(config('billing.cycles')))],
@@ -124,6 +127,10 @@ class ProductController extends Controller
         return DB::transaction(function () use ($product, $data) {
             $prices = $data['prices'];
             unset($data['prices']);
+            if (array_key_exists('cost_amount', $data)) {
+                $data['cost_amount'] = ($data['cost_amount'] ?? '') === '' ? null : $data['cost_amount'];
+                $data['cost_currency'] = $data['cost_amount'] === null ? null : ($data['cost_currency'] ?? 'BDT');
+            }
 
             $product->fill($data)->save();
             $product->prices()->delete();

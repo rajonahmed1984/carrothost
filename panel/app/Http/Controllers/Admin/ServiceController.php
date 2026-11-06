@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Server;
 use App\Models\Service;
 use App\Models\Client;
+use App\Provisioning\WebdockModule;
 use App\Services\DashboardService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
@@ -56,6 +57,12 @@ class ServiceController extends Controller
     /** Admin edits to the billing record. Changes on the server itself still go through the module commands. */
     public function update(Request $request, Service $service)
     {
+        $module = Product::find($request->input('product_id', $service->product_id))?->module;
+        // A Webdock slug is often pasted as the server's domain or dashboard link.
+        if ($module === 'webdock' && filled($request->input('remote_id'))) {
+            $request->merge(['remote_id' => WebdockModule::normalizeSlug((string) $request->input('remote_id'))]);
+        }
+
         $data = $request->validate([
             'product_id' => 'sometimes|integer|exists:products,id',
             'server_id' => 'sometimes|nullable|integer|exists:servers,id',
@@ -80,12 +87,18 @@ class ServiceController extends Controller
             'terminate_end_of_cycle' => 'sometimes|boolean',
             'terminate_reason' => 'sometimes|nullable|string|max:255',
             'admin_notes' => 'sometimes|nullable|string|max:20000',
+            // This VPS's own monthly cost, when it differs from its product's.
+            'cost_amount' => 'sometimes|nullable|numeric|min:0|max:9999999',
+            'cost_currency' => 'sometimes|nullable|in:BDT,USD',
         ]);
 
         $changes = collect($data)->except(['username', 'password', 'recalculate'])->all();
 
         if (isset($changes['domain'])) {
             $changes['domain'] = strtolower($changes['domain']);
+        }
+        if (array_key_exists('cost_amount', $changes)) {
+            $changes['cost_currency'] = $changes['cost_amount'] === null ? null : ($changes['cost_currency'] ?? 'BDT');
         }
 
         if (! ($changes['terminate_end_of_cycle'] ?? $service->terminate_end_of_cycle)) {
@@ -112,6 +125,17 @@ class ServiceController extends Controller
                 }
             }
             $changes['credentials'] = array_filter($credentials, fn ($v) => $v !== null && $v !== '') ?: null;
+        }
+
+        // A linked VPS needs its Webdock account; with only one, that is the one.
+        $serverId = array_key_exists('server_id', $changes) ? $changes['server_id'] : $service->server_id;
+        $remoteId = array_key_exists('remote_id', $changes) ? $changes['remote_id'] : $service->remote_id;
+        if ($module === 'webdock' && $remoteId && ! $serverId) {
+            $accounts = Server::where('module', 'webdock')->where('is_active', true)->pluck('id');
+            if ($accounts->count() !== 1) {
+                throw ValidationException::withMessages(['server_id' => 'Choose the Webdock account this VPS is in.']);
+            }
+            $changes['server_id'] = $accounts->first();
         }
 
         $service->update($changes);
@@ -214,6 +238,48 @@ class ServiceController extends Controller
         return $vps->overview($service, admin: true);
     }
 
+    /** The VPSes in the Webdock account, to link this service to one. */
+    public function webdockServers(Request $request, Service $service)
+    {
+        $account = $this->webdockAccount($request, $service);
+
+        try {
+            $servers = (new WebdockModule($account))->accountServers();
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['webdock' => $e->getMessage()]);
+        }
+
+        // Which ones other services already use, so the same VPS is not linked twice by mistake.
+        $linked = Service::where('server_id', $account->id)->whereNotNull('remote_id')->where('id', '!=', $service->id)
+            ->with('client:id,name')->get(['id', 'client_id', 'remote_id'])
+            ->keyBy('remote_id')->map(fn (Service $s) => ['service_id' => $s->id, 'client' => $s->client?->name]);
+
+        return [
+            'account' => ['id' => $account->id, 'name' => $account->name],
+            'accounts' => Server::where('module', 'webdock')->orderBy('name')->get(['id', 'name']),
+            'servers' => collect($servers)->map(fn ($s) => [...$s, 'linked_to' => $linked[$s['slug']] ?? null])->values(),
+        ];
+    }
+
+    /** The shell users on one Webdock VPS: the customer's login is one of them. */
+    public function webdockUsers(Request $request, Service $service, string $slug)
+    {
+        try {
+            return ['users' => (new WebdockModule($this->webdockAccount($request, $service)))->shellUsers($slug)];
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['webdock' => $e->getMessage()]);
+        }
+    }
+
+    private function webdockAccount(Request $request, Service $service): Server
+    {
+        $id = $request->query('server_id') ?: $service->server_id ?: $service->product?->server_id;
+
+        return Server::where('module', 'webdock')
+            ->when($id, fn ($q) => $q->whereKey($id), fn ($q) => $q->where('is_active', true))
+            ->first() ?? throw ValidationException::withMessages(['webdock' => 'Add your Webdock account under System > Servers first.']);
+    }
+
     public function vpsImages(Service $service, VpsTools $vps)
     {
         return $vps->images($service);
@@ -240,7 +306,7 @@ class ServiceController extends Controller
 
     private function detail(Service $service): array
     {
-        $service->load(['client:id,name,email', 'product:id,name,module,type', 'server:id,name,hostname,max_accounts', 'order:id,order_number']);
+        $service->load(['client:id,name,email', 'product:id,name,module,type,cost_amount,cost_currency', 'server:id,name,hostname,max_accounts', 'order:id,order_number']);
         $port = self::PANEL_PORTS[$service->product->module] ?? null;
 
         return [

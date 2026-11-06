@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRightLeft, ArrowUpCircle, Check, ChevronDown, CreditCard, ExternalLink, Eye, FileText, Gauge, LogIn, Mail, MonitorSmartphone, NotebookPen, Package, PauseCircle, RefreshCw, Send, Settings2, Terminal, Trash2, Undo2, User, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, ArrowUpCircle, Check, ChevronDown, CreditCard, ExternalLink, Eye, FileText, Link2, Gauge, LogIn, Mail, MonitorSmartphone, NotebookPen, Package, PauseCircle, RefreshCw, Send, Settings2, Terminal, Trash2, Undo2, User, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
@@ -10,6 +10,7 @@ import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tool
 import { alertDialog, ask } from '../dialog';
 import { VpsPanel } from './vps-panel';
 import { PanelLogo } from '../panel-logo';
+import { LinkWebdockModal } from './webdock-link';
 
 type Option = { code: string; name: string };
 
@@ -21,7 +22,8 @@ export type ServiceFull = {
     next_due_date: string | null; registered_at: string | null; termination_date: string | null; admin_notes: string | null;
     disk_usage: number | null; disk_limit: number | null; bw_usage: number | null; bw_limit: number | null; usage_updated_at: string | null;
     client: { id: number; name: string; email: string };
-    product: { id: number; name: string; module: string | null; type: string };
+    product: { id: number; name: string; module: string | null; type: string; cost_amount?: string | null; cost_currency?: string | null };
+    cost_amount: string | null; cost_currency: string | null;
     server: { id: number; name: string; hostname: string } | null;
     order: { id: number; order_number: string | null } | null;
     username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean; is_vps?: boolean;
@@ -40,6 +42,7 @@ type Form = {
     registered_at: string; quantity: number; first_payment_amount: string; recurring_amount: string; recalculate: boolean;
     next_due_date: string; termination_date: string; cycle: string; payment_method: string; subscription_id: string;
     override: boolean; override_suspend_until: string; terminate_end_of_cycle: boolean; terminate_reason: string; admin_notes: string;
+    cost_amount: string; cost_currency: string;
 };
 
 const toForm = (s: ServiceFull): Form => ({
@@ -66,6 +69,8 @@ const toForm = (s: ServiceFull): Form => ({
     terminate_end_of_cycle: s.terminate_end_of_cycle,
     terminate_reason: s.terminate_reason ?? '',
     admin_notes: s.admin_notes ?? '',
+    cost_amount: s.cost_amount ?? '',
+    cost_currency: s.cost_currency ?? 'BDT',
 });
 
 const label = (v: string) => v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -129,6 +134,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const qc = useQueryClient();
     const [form, setForm] = useState<Form>(() => toForm(s));
     const [login, setLogin] = useState(false);
+    const [linking, setLinking] = useState(false);
     const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
     const navigate = useNavigate();
@@ -157,6 +163,8 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 override_suspend_until: override && rest.override_suspend_until ? rest.override_suspend_until : null,
                 terminate_reason: rest.terminate_reason || null,
                 admin_notes: rest.admin_notes || null,
+                cost_amount: rest.cost_amount === '' ? null : rest.cost_amount,
+                cost_currency: rest.cost_amount === '' ? null : rest.cost_currency,
             };
             if (password) body.password = password;
 
@@ -325,7 +333,15 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         <Row label="Domain" htmlFor="sv-domain"><input id="sv-domain" className="ui-input" value={form.domain} onChange={(e) => set('domain', e.target.value)} /></Row>
                         <Row label="Dedicated IP" htmlFor="sv-ip"><input id="sv-ip" className="ui-input" placeholder="None" value={form.dedicated_ip} onChange={(e) => set('dedicated_ip', e.target.value)} /></Row>
                         <Row label={s.product.module === 'webdock' ? 'Webdock server slug' : 'Account ID'} htmlFor="sv-remote">
-                            <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder={s.product.module === 'webdock' ? 'e.g. acnabin (from the Webdock URL)' : 'The account username on the server'} value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />
+                            {s.product.module === 'webdock' ? (
+                                <div className="space-y-1.5">
+                                    <div className="flex gap-2">
+                                        <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder="e.g. acnabin1" value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />
+                                        <Button type="button" variant="ghost" className="shrink-0" onClick={() => setLinking(true)}><Link2 size={14} /> Find on Webdock</Button>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">Pick the VPS from your Webdock account, or paste its slug, domain or dashboard link. Save to link it.</p>
+                                </div>
+                            ) : <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder="The account username on the server" value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />}
                         </Row>
                         <Row label="Username" htmlFor="sv-user"><input id="sv-user" className="ui-input font-mono" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} /></Row>
                         <Row label="Password" htmlFor="sv-pass">
@@ -366,6 +382,17 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                                 {s.options.payment_methods.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
                             </select>
                         </Row>
+                        {s.product.type === 'vps' && (
+                            <Row label="Monthly Cost" htmlFor="sv-cost">
+                                <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                        <input id="sv-cost" type="number" step="0.01" min="0" className="ui-input max-w-40" placeholder={s.product.cost_amount ? `${s.product.cost_amount} (product)` : 'Not set'} value={form.cost_amount} onChange={(e) => set('cost_amount', e.target.value)} />
+                                        <select aria-label="Cost currency" className="ui-input max-w-24" value={form.cost_currency} onChange={(e) => set('cost_currency', e.target.value)}><option value="BDT">BDT</option><option value="USD">USD</option></select>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">{s.product.cost_amount ? `Blank uses the product's ${s.product.cost_currency ?? 'BDT'} ${s.product.cost_amount} a month.` : 'What this VPS costs you a month. Set a default on the product.'} Used for VPS Profit.</p>
+                                </div>
+                            </Row>
+                        )}
                         <Row label="Subscription ID" htmlFor="sv-sub"><input id="sv-sub" className="ui-input" placeholder="None" value={form.subscription_id} onChange={(e) => set('subscription_id', e.target.value)} /></Row>
                     </div>
                 </Section>
@@ -497,6 +524,17 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
             </div>
 
             {login && <LoginDetails id={s.id} onClose={() => setLogin(false)} />}
+            {linking && (
+                <LinkWebdockModal
+                    serviceId={s.id}
+                    current={form.remote_id}
+                    onClose={() => setLinking(false)}
+                    onPick={(l) => {
+                        setForm((f) => ({ ...f, server_id: l.server_id, remote_id: l.remote_id, dedicated_ip: l.dedicated_ip || f.dedicated_ip, username: l.username || f.username }));
+                        setNotice(`Selected ${l.remote_id}${l.username ? ` with login ${l.username}` : ''}. Press Save Changes to link it.`);
+                    }}
+                />
+            )}
             {dialog === 'upgrade' && (
                 <UpgradeModal
                     service={s}

@@ -195,6 +195,7 @@ Route::prefix('api')->group(function () {
         Route::post('tlds/bulk-add', [Admin\TldController::class, 'bulkAdd']);
         Route::apiResource('tlds', Admin\TldController::class)->except('show');
         Route::get('servers/profit', [Admin\ServerController::class, 'profit']);
+        Route::get('vps/profit', [Admin\VpsProfitController::class, 'index']);
         Route::get('servers/{server}/costs', [Admin\ServerController::class, 'costs']);
         Route::post('servers/{server}/costs', [Admin\ServerController::class, 'storeCost']);
         Route::delete('servers/{server}/costs/{cost}', [Admin\ServerController::class, 'destroyCost']);
@@ -257,6 +258,8 @@ Route::prefix('api')->group(function () {
         Route::get('services/{service}/vps', [Admin\ServiceController::class, 'vps']);
         Route::get('services/{service}/vps/images', [Admin\ServiceController::class, 'vpsImages']);
         Route::get('services/{service}/vps/profiles', [Admin\ServiceController::class, 'vpsProfiles']);
+        Route::get('services/{service}/webdock/servers', [Admin\ServiceController::class, 'webdockServers']);
+        Route::get('services/{service}/webdock/servers/{slug}/users', [Admin\ServiceController::class, 'webdockUsers'])->where('slug', '[A-Za-z0-9._-]+');
         Route::post('services/{service}/vps/{action}', [Admin\ServiceController::class, 'vpsAction'])
             ->whereIn('action', \App\Services\VpsTools::ADMIN_ACTIONS)->middleware('throttle:30,1');
 

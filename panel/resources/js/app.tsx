@@ -12,6 +12,7 @@ import { InvoicesPage } from './pages/invoices';
 import { TransactionsPage } from './pages/transactions';
 import { DomainsPage, ServicesPage } from './pages/fulfilment';
 import { ProductEditPage, ProductsPage, ServersPage, TldsPage } from './pages/catalog';
+import { VpsProfitPage } from './pages/vps-profit';
 import { RegistrarsPage } from './pages/registrars';
 import { SettingsPage, settings } from './pages/settings';
 import { CustomerArea } from './pages/customer';
@@ -60,6 +61,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
         items: [
             { to: '/admin/products-pricing', label: 'Products' },
             { to: '/admin/domain-pricing', label: 'Domain Pricing' },
+            { to: '/admin/vps-profit', label: 'VPS Profit' },
         ],
     },
     {
@@ -242,6 +244,7 @@ function Shell({ name }: { name: string }) {
                         <Route path="/admin/products-pricing/new" element={<ProductEditPage />} />
                         <Route path="/admin/products-pricing/:id" element={<ProductEditPage />} />
                         <Route path="/admin/domain-pricing" element={<TldsPage />} />
+                        <Route path="/admin/vps-profit" element={<VpsProfitPage />} />
                         <Route path="/admin/products/*" element={<MovedTo from="/admin/products" to="/admin/products-pricing" />} />
                         <Route path="/admin/tlds" element={<MovedTo from="/admin/tlds" to="/admin/domain-pricing" />} />
                         <Route path="/admin/tickets" element={<TicketsPage />} />

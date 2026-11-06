@@ -57,6 +57,7 @@ type Product = {
     id: number; product_group_id: number | null; name: string; type: string; description: string | null; module: string | null; module_package: string | null;
     server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string; price_usd?: string | null; setup_fee_usd?: string | null }[];
     module_config?: Partial<VpsConfig> | null;
+    cost_amount?: string | null; cost_currency?: string | null;
 };
 type Package = { id: string; name: string };
 type OsImage = { slug: string; name: string };
@@ -69,6 +70,56 @@ const VPS_ACTIONS: [string, string, string][] = [
 const vpsDefaults = (c?: Partial<VpsConfig> | null): VpsConfig => ({
     default_image: c?.default_image ?? '', images: c?.images ?? [], client_actions: c?.client_actions ?? VPS_ACTIONS.map(([key]) => key), client_upgrade: c?.client_upgrade ?? true,
 });
+
+/** What one VPS of this product costs a month, and the profit each billing cycle leaves. */
+function VpsCost({ cost, onChange, prices, cycles, usdRate }: {
+    cost: { amount: string; currency: string }; onChange: (c: { amount: string; currency: string }) => void;
+    prices: { cycle: string; price: string }[]; cycles?: Record<string, number>; usdRate: number | null;
+}) {
+    const months = (cycle: string) => cycles?.[cycle] ?? ({ monthly: 1, quarterly: 3, semiannually: 6, annually: 12, biennially: 24, triennially: 36 } as Record<string, number>)[cycle] ?? 1;
+    const monthlyBdt = cost.amount === '' ? null : Number(cost.amount) * (cost.currency === 'USD' ? usdRate ?? 0 : 1);
+
+    return (
+        <div className="mt-2 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
+            <div>
+                <h3 className="text-sm font-semibold text-slate-900">VPS Cost</h3>
+                <p className="text-xs text-slate-500">What one VPS of this product costs you a month (for example the Webdock price). Used for VPS Profit. A VPS with its own price can override it on its service page.</p>
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+                <Field label="Monthly cost"><Input type="number" min="0" step="0.01" placeholder="Not set" value={cost.amount} onChange={(e) => onChange({ ...cost, amount: e.target.value })} /></Field>
+                <Field label="Currency">
+                    <Select value={cost.currency} onChange={(e) => onChange({ ...cost, currency: e.target.value })}><option value="BDT">BDT</option><option value="USD">USD</option></Select>
+                </Field>
+                {cost.currency === 'USD' && monthlyBdt !== null && <p className="pb-2.5 text-xs text-slate-500">= BDT {monthlyBdt.toFixed(2)} a month at {usdRate ?? '?'} BDT/USD</p>}
+            </div>
+            {monthlyBdt !== null && (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                    <table className="w-full min-w-[30rem] text-sm">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase"><tr><th className="px-3 py-2">Cycle</th><th className="px-3 py-2 text-right">Sale price</th><th className="px-3 py-2 text-right">Cost</th><th className="px-3 py-2 text-right">Profit</th><th className="px-3 py-2 text-right">Per month</th><th className="px-3 py-2 text-right">Margin</th></tr></thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {prices.filter((p) => p.price !== '').map((p) => {
+                                const sale = Number(p.price);
+                                const c = monthlyBdt * months(p.cycle);
+                                const profit = sale - c;
+
+                                return (
+                                    <tr key={p.cycle}>
+                                        <td className="px-3 py-2 capitalize">{p.cycle}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{sale.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{c.toFixed(2)}</td>
+                                        <td className={`px-3 py-2 text-right font-semibold tabular-nums ${profit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{profit.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{(profit / months(p.cycle)).toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{sale > 0 ? `${((profit / sale) * 100).toFixed(1)}%` : '-'}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
 
 /** Webdock: the OS a new VPS gets, the OS choices customers see, and what customers may do. */
 export function VpsOptions({ module, serverId, value, onChange }: { module: string; serverId: string; value: VpsConfig; onChange: (value: VpsConfig) => void }) {
@@ -194,6 +245,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
         description: product?.description ?? '', is_active: product?.is_active ?? true,
     });
     const [vps, setVps] = useState<VpsConfig>(() => vpsDefaults(product?.module_config));
+    const [cost, setCost] = useState({ amount: product?.cost_amount ?? '', currency: product?.cost_currency ?? 'BDT' });
     const [prices, setPrices] = useState(product?.prices.map((p) => ({ ...p })) ?? [{ cycle: 'annually', price: '', setup_fee: '0' }]);
     const moduleServers = servers.data?.filter((sv) => sv.module === form.module) ?? [];
     const connected = meta.data?.modules.find((m) => m.code === form.module)?.connected ?? false;
@@ -204,6 +256,8 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
                 ...form, product_group_id: form.product_group_id ? Number(form.product_group_id) : null, description: form.description || null,
                 module: form.module || null, module_package: form.module ? form.module_package || null : null, server_id: form.module && form.server_id ? Number(form.server_id) : null, prices,
                 module_config: form.module === 'webdock' ? { ...vps, default_image: vps.default_image || null } : null,
+                cost_amount: form.type === 'vps' && cost.amount !== '' ? cost.amount : null,
+                cost_currency: form.type === 'vps' && cost.amount !== '' ? cost.currency : null,
             };
 
             return (product ? await api.put<Product>(`/products/${product.id}`, body) : await api.post<Product>('/products', body)).data;
@@ -289,6 +343,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
                     );
                 })}
                 <Button type="button" variant="ghost" onClick={() => setPrices([...prices, { cycle: 'monthly', price: '', setup_fee: '0' }])}><Plus size={14} /> Add cycle</Button>
+                {form.type === 'vps' && <VpsCost cost={cost} onChange={setCost} prices={prices} usdRate={meta.data?.usd_rate ?? null} />}
             </div>
 
             <div className={tab.key === 'module' ? 'space-y-4' : 'hidden'}>

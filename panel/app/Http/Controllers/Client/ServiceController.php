@@ -51,6 +51,7 @@ class ServiceController extends Controller
         $live = in_array($service->status, ['active', 'suspended'], true);
         $hasTools = $live && ServiceTools::hasTools($service);
         $pending = $tools->pendingUpgrade($service);
+        $isVps = VpsTools::supports($service);
 
         return [
             ...$this->present($service),
@@ -70,7 +71,8 @@ class ServiceController extends Controller
                 'amount_due' => $pending->amount_due,
             ] : null,
             'registered_at' => ($service->registered_at ?? $service->created_at)?->toDateString(),
-            'server' => $live && $service->server ? ['hostname' => $service->server->hostname, 'ip' => $service->server->ip_address] : null,
+            // A VPS is its own server; for hosting it is the shared server the account lives on.
+            'server' => ! $live ? null : ($isVps ? ['hostname' => $service->domain ?: $service->remote_id, 'ip' => $service->dedicated_ip] : ($service->server ? ['hostname' => $service->server->hostname, 'ip' => $service->server->ip_address] : null)),
             'usage' => [
                 'disk_used' => $service->disk_usage,
                 'disk_limit' => $service->disk_limit,
@@ -80,8 +82,8 @@ class ServiceController extends Controller
                 'updated_at' => $service->usage_updated_at?->toIso8601String(),
             ],
             // Where to point the domain: the hosting server's nameservers and IP.
-            'nameservers' => collect($service->server?->nameservers ?? [])->pluck('host')->filter()->values(),
-            'server_ip' => $service->server?->ip_address,
+            'nameservers' => $isVps ? [] : collect($service->server?->nameservers ?? [])->pluck('host')->filter()->values(),
+            'server_ip' => $isVps ? $service->dedicated_ip : $service->server?->ip_address,
             'invoices' => Invoice::whereHas('items', fn ($q) => $q->where('service_id', $service->id))
                 ->where('client_id', $service->client_id)
                 ->latest()

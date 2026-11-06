@@ -249,6 +249,52 @@ class WebdockModule implements ManagesAccounts, ManagesVps, ProvisioningModule
         $this->request('post', "/servers/{$this->slug($service)}/actions/resize", ['profileSlug' => $profile]);
     }
 
+    /* ---------- Linking an existing VPS ---------- */
+
+    /** Every VPS in the Webdock account, to link one to a customer's service. */
+    public function accountServers(): array
+    {
+        return collect($this->list($this->request('get', '/servers')))
+            ->filter(fn ($s) => ! empty($s['slug']))
+            ->map(fn ($s) => [
+                'slug' => (string) $s['slug'],
+                'name' => (string) ($s['name'] ?? $s['slug']),
+                'status' => strtolower((string) ($s['status'] ?? 'unknown')),
+                'ipv4' => $s['ipv4'] ?? null,
+                'location' => $s['location'] ?? null,
+                'profile' => $s['profile'] ?? null,
+                'image' => $s['image'] ?? null,
+                'aliases' => array_values(array_filter((array) ($s['aliases'] ?? []))),
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+    }
+
+    /** The shell users on one VPS; the customer's login is one of them. */
+    public function shellUsers(string $slug): array
+    {
+        return collect($this->list($this->request('get', '/servers/'.self::normalizeSlug($slug).'/shellUsers')))
+            ->map(fn ($u) => ['id' => $u['id'] ?? null, 'username' => (string) ($u['username'] ?? ''), 'group' => $u['group'] ?? null])
+            ->filter(fn ($u) => $u['username'] !== '')->values()->all();
+    }
+
+    /**
+     * A slug from whatever was pasted: "acnabin1", "acnabin1.vps.webdock.cloud" or a dashboard link
+     * like https://webdock.io/en/dash/server/acnabin1.
+     */
+    public static function normalizeSlug(string $value): string
+    {
+        $value = strtolower(trim($value));
+
+        if (preg_match('#/server/([a-z0-9-]+)#', $value, $m)) {
+            return $m[1];
+        }
+
+        $value = preg_replace('#^[a-z]+://#', '', $value);
+        $value = preg_replace('#\.vps\.webdock\.(cloud|io)\b.*$#', '', $value);
+
+        return trim(preg_replace('#[/?].*$#', '', $value), '.');
+    }
+
     /* ---------- Setup after boot ---------- */
 
     /** Webdock's own status for the VPS, e.g. provisioning, running, stopped. */

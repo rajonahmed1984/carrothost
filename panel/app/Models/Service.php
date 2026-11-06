@@ -35,6 +35,7 @@ class Service extends Model
             'usage_updated_at' => 'datetime',
             'usage_metrics' => 'array',
             'module_options' => 'array',
+            'cost_amount' => 'decimal:2',
             'renewal_invoiced_for' => 'date:Y-m-d',
         ];
     }

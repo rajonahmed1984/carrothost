@@ -12,7 +12,7 @@ class Product extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'module_config' => 'array'];
+        return ['is_active' => 'boolean', 'module_config' => 'array', 'cost_amount' => 'decimal:2'];
     }
 
     public const SETUP_MODES = ['order', 'payment', 'accept', 'manual'];
