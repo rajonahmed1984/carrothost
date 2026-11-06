@@ -77,9 +77,11 @@ class RegistrarLedgerTest extends TestCase
         ]),
             'httpapi.com/api/billing/reseller-balance.json*' => Http::response(['sellingcurrencybalance' => '42.75', 'lockedbalance' => '0']),
             'httpapi.com/api/products/category-keys-mapping.json*' => Http::response(['domorder' => [['domcno' => ['com']]]]),
-            'httpapi.com/api/products/reseller-price.json*' => Http::response(['domcno' => [
+            // Our cost, nested one level down as some brands send it. The selling list must not be used.
+            'httpapi.com/api/products/reseller-cost-price.json*' => Http::response(['DOMCNO' => ['pricing' => [
                 'addnewdomain' => ['1' => '9.00'], 'renewdomain' => ['1' => '10.00'], 'addtransferdomain' => ['1' => '8.00'],
-            ]]),
+            ]]]),
+            'httpapi.com/api/products/reseller-price.json*' => Http::response(['domcno' => ['addnewdomain' => ['1' => '99.00']]]),
         ]);
 
         $first = $this->postJson('/api/registrars/stargate/sync')->assertOk()->json('message');
@@ -113,6 +115,28 @@ class RegistrarLedgerTest extends TestCase
         $this->deleteJson("/api/registrars/stargate/charges/{$synced->id}")->assertJsonValidationErrors('charge');
         $this->putJson("/api/registrars/stargate/charges/{$synced->id}", ['domain_id' => $domain->id, 'action' => 'other', 'amount' => 999])->assertOk();
         $this->assertSame(['2.00', $domain->id], [$synced->fresh()->amount, $synced->fresh()->domain_id], 'A synced amount cannot be changed.');
+    }
+
+    public function test_tld_prices_fall_back_to_the_reseller_price_list_and_report_when_unreadable(): void
+    {
+        Http::preventStrayRequests();
+        $tldSync = app(\App\Services\RegistrarTldSync::class);
+        $registrar = Registrar::where('code', 'stargate')->first();
+        $mapping = ['httpapi.com/api/products/category-keys-mapping.json*' => Http::response(['domorder' => [['dotnet' => ['net']]]])];
+
+        // Neither list readable: nothing priced, and a sample goes to the log.
+        \Illuminate\Support\Facades\Log::spy();
+        Http::fake([...$mapping, 'httpapi.com/api/products/reseller-cost-price.json*' => Http::sequence()->push(['unexpected' => 'shape'])->push([]),
+            'httpapi.com/api/products/reseller-price.json*' => Http::sequence()->push(['unexpected' => 'shape'])->push(['dotnet' => ['addnewdomain' => ['2' => '24.00']]])]);
+        $result = $tldSync->sync($registrar);
+        $this->assertSame([0, null], [$result['priced'], $result['source']]);
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->withArgs(fn ($message) => str_contains($message, 'no cost prices could be read'));
+
+        // An empty cost list falls back to the reseller price list.
+        $result = $tldSync->sync($registrar);
+        $this->assertSame([1, 'reseller price'], [$result['priced'], $result['source']]);
+        // Sold for 2 years at least: the cost per year.
+        $this->assertSame('12.00', \App\Models\RegistrarTld::where('tld', '.net')->value('register_cost'));
     }
 
     public function test_a_blocked_registrar_reports_the_reason(): void

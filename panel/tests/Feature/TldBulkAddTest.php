@@ -57,6 +57,17 @@ class TldBulkAddTest extends TestCase
         $this->assertFalse(Tld::where('tld', '.io')->exists());
     }
 
+    public function test_a_whole_registrar_list_fits_in_one_go(): void
+    {
+        $tlds = array_map(fn ($i) => ".t{$i}", range(1, 600));
+        $tlds[] = '.*.name'; // registrars list wildcard entries; those are not TLDs
+
+        $result = $this->postJson('/api/tlds/bulk-add', ['tlds' => $tlds, 'mode' => 'fixed', 'register_price' => 1, 'renew_price' => 1, 'transfer_price' => 1])->assertOk()->json();
+
+        $this->assertCount(600, $result['added']);
+        $this->assertSame(['.*.name'], $result['invalid']);
+    }
+
     public function test_markup_rounds_up_and_needs_a_registrar_and_rate(): void
     {
         $this->postJson('/api/tlds/bulk-add', ['tlds' => ['.net'], 'mode' => 'markup', 'markup_percent' => 10])->assertJsonValidationErrors('registrar');

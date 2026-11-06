@@ -86,7 +86,10 @@ class TldController extends Controller
             throw ValidationException::withMessages(['registrar' => $e->getMessage()]);
         }
 
-        return ['message' => "Synced {$result['tlds']} TLDs from ".config("billing.registrars.{$code}.name").", {$result['priced']} with a price.".($result['removed'] ? " {$result['removed']} no longer sold were removed from the list." : '')];
+        return ['message' => "Synced {$result['tlds']} TLDs from ".config("billing.registrars.{$code}.name").", {$result['priced']} with a cost price."
+            .($result['removed'] ? " {$result['removed']} no longer sold were removed from the list." : '')
+            .($result['source'] === 'reseller price' ? ' Prices came from the reseller price list, as the cost price list was empty.' : '')
+            .($result['sample'] ? " The price list could not be read. What the registrar sent: {$result['sample']}" : '')];
     }
 
     public function updateLookup(Request $request)
@@ -162,7 +165,8 @@ class TldController extends Controller
     public function bulkAdd(Request $request)
     {
         $data = $request->validate([
-            'tlds' => 'required|array|min:1|max:500',
+            // A registrar's whole list (ResellCube sells 500+) fits in one go.
+            'tlds' => 'required|array|min:1|max:2000',
             'tlds.*' => 'required|string|max:63',
             'registrar' => ['nullable', Rule::in(array_keys(config('billing.registrars')))],
             'mode' => 'required|in:fixed,markup',

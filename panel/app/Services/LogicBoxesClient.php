@@ -64,10 +64,16 @@ class LogicBoxesClient
         return $this->get('products/category-keys-mapping.json', []);
     }
 
-    /** What each product costs this reseller, keyed by product key, then action, then years. */
+    /** The selling prices set for sub-resellers, keyed by product key, then action, then years. A fallback for cost prices. */
     public function resellerPrices(): array
     {
         return $this->get('products/reseller-price.json', ['reseller-id' => $this->registrar->reseller_id]);
+    }
+
+    /** What each product costs this account at its parent (the registrar), keyed by product key, then action, then years. */
+    public function resellerCostPrices(): array
+    {
+        return $this->get('products/reseller-cost-price.json', []);
     }
 
     /* ---------- Domains: lookups ---------- */

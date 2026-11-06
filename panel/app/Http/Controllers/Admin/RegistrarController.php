@@ -161,7 +161,12 @@ class RegistrarController extends Controller
         // TLD cost prices price every domain the transactions do not cover.
         try {
             $tlds = $tldSync->sync($registrar->refresh());
-            $message .= " TLD cost prices: {$tlds['priced']} of {$tlds['tlds']} TLDs priced.";
+            $message .= " TLD cost prices: {$tlds['priced']} of {$tlds['tlds']} TLDs priced"
+                .match ($tlds['source']) {
+                    'reseller price' => ' (from the reseller price list, as the cost price list was empty).',
+                    null => ". The registrar's price list could not be read. What it sent: {$tlds['sample']}",
+                    default => '.',
+                };
         } catch (Throwable $e) {
             $message .= ' TLD cost prices could not be fetched: '.$e->getMessage();
         }
