@@ -21,7 +21,8 @@ const ranges = [{ months: 1, label: 'This month' }, { months: 3, label: '3 month
 /** Admin > Products/Services > VPS Profit: each VPS's monthly cost against what its customer paid. */
 export function VpsProfitPage() {
     const [to, setTo] = useState(thisMonth());
-    const [span, setSpan] = useState(1);
+    // Opens on the last 12 months, so a yearly VPS shows a full year of sales against cost.
+    const [span, setSpan] = useState(12);
     const [productId, setProductId] = useState('');
     const [spread, setSpread] = useState(true);
     const [month, setMonth] = useState<string | null>(null);
