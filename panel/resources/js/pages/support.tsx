@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ChevronLeft, ChevronRight, Clock, CreditCard, ExternalLink, Eye, FileText, MessageSquare, Paperclip, Plus, Reply, Search, Send, Server, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, basePath } from '../api';
+import { api, background, basePath } from '../api';
 import { Button, Card, ErrorNote, Field, Input, PagedTable, QueryState, Select, Status, Table, useBranding } from '../ui';
 import { ask } from '../dialog';
 
@@ -640,7 +640,7 @@ export function ChatsPage() {
     const [search, setSearch] = useState('');
     const list = useQuery({
         queryKey: ['chats', search],
-        queryFn: async () => (await api.get<{ data: Conversation[] }>('/chats', { params: search ? { search } : {} })).data.data,
+        queryFn: async () => (await api.get<{ data: Conversation[] }>('/chats', { ...background, params: search ? { search } : {} })).data.data,
         refetchInterval: 10000,
     });
 

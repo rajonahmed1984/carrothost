@@ -86,6 +86,8 @@ class ServiceController extends Controller
             'remote_id' => ['sometimes', 'nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/'],
             'username' => 'sometimes|nullable|string|max:64',
             'password' => 'sometimes|nullable|string|max:255',
+            // A hand-made VPS's SSH port, kept with its login.
+            'ssh_port' => 'sometimes|nullable|integer|between:1,65535',
             'status' => ['sometimes', Rule::in(self::STATUSES)],
             'registered_at' => 'sometimes|nullable|date',
             'quantity' => 'sometimes|integer|min:1|max:1000',
@@ -117,7 +119,7 @@ class ServiceController extends Controller
         $oldRemote = $service->remote_id;
         $serverAction = $this->statusAction($service, $data['status'] ?? $service->status, $data['apply_to_server'] ?? true);
 
-        $changes = collect($data)->except(['username', 'password', 'recalculate', 'apply_to_server', 'change_package'])->all();
+        $changes = collect($data)->except(['username', 'password', 'ssh_port', 'recalculate', 'apply_to_server', 'change_package'])->all();
 
         if (isset($changes['domain'])) {
             $changes['domain'] = strtolower($changes['domain']);
@@ -141,18 +143,28 @@ class ServiceController extends Controller
             $changes['recurring_amount'] = bcmul($price->priceIn($service->client->currencyCode()), (string) ($changes['quantity'] ?? $service->quantity), 2);
         }
 
+        // A hand-made VPS is known by its hostname: a new hostname carries over to an ID that matched the old.
+        $manualVps = (bool) Product::find($changes['product_id'] ?? $service->product_id)?->isManualVps();
+        if ($manualVps && array_key_exists('domain', $changes) && $changes['domain'] && ! array_key_exists('remote_id', $data)
+            && in_array($service->remote_id, [null, '', $service->domain], true)) {
+            $changes['remote_id'] = strtolower($changes['domain']);
+        }
+
         // The account ID and the login username are the same name on cPanel and Webuzo: renaming the
         // account carries over to a username that still matched it.
         $storedUser = $service->credentials['username'] ?? null;
-        if (array_key_exists('remote_id', $changes) && $changes['remote_id'] && $changes['remote_id'] !== $oldRemote
+        if (! $manualVps && array_key_exists('remote_id', $changes) && $changes['remote_id'] && $changes['remote_id'] !== $oldRemote
             && in_array($storedUser, [null, '', $oldRemote], true) && in_array($data['username'] ?? $storedUser, [null, '', $oldRemote], true)) {
             $data['username'] = $changes['remote_id'];
         }
 
         // Login details kept in the panel. They do not change the password on the server.
-        if (array_key_exists('username', $data) || array_key_exists('password', $data)) {
+        if (array_key_exists('ssh_port', $data)) {
+            $data['port'] = $data['ssh_port'];
+        }
+        if (array_key_exists('username', $data) || array_key_exists('password', $data) || array_key_exists('port', $data)) {
             $credentials = $service->credentials?->toArray() ?? [];
-            foreach (['username', 'password'] as $field) {
+            foreach (['username', 'password', 'port'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $credentials[$field] = $data[$field];
                 }
@@ -468,6 +480,8 @@ class ServiceController extends Controller
             ...$service->toArray(),
             'username' => $service->credentials['username'] ?? null,
             'has_password' => filled($service->credentials['password'] ?? null),
+            'manual_vps' => $service->product->isManualVps(),
+            'ssh_port' => isset($service->credentials['port']) ? (int) $service->credentials['port'] : null,
             'panel_url' => $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
             'has_tools' => ServiceTools::hasTools($service),
             'is_vps' => VpsTools::supports($service),

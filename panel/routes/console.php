@@ -145,11 +145,70 @@ Artisan::command('reports:cron-activity {--date= : The day to report on (Y-m-d);
     $this->info($reports->sendCronActivity($day) ? 'Cron Job Activity report emailed.' : 'Cron Job Activity report could not be sent.');
 })->purpose('Email the admins what the daily jobs did');
 
+Artisan::command('audit:verify', function () {
+    // Walks the audit trail's hash chain. A changed row fails its own hash; a removed one breaks the link.
+    $prev = null;
+    $checked = 0;
+    $problems = [];
+    ActivityLog::query()->whereNotNull('hash')->orderBy('id')->chunk(1000, function ($rows) use (&$prev, &$checked, &$problems) {
+        foreach ($rows as $row) {
+            if (! hash_equals($row->hash, $row->computeHash())) {
+                $problems[] = "#{$row->id} {$row->action}: changed after it was written";
+            } elseif ($prev !== null && $row->prev_hash !== $prev) {
+                $problems[] = "#{$row->id} {$row->action}: an entry before it was removed or changed";
+            }
+            $prev = $row->hash;
+            $checked++;
+        }
+    });
+
+    if ($problems) {
+        Illuminate\Support\Facades\Log::channel('audit')->critical('Audit trail failed verification', ['problems' => array_slice($problems, 0, 50)]);
+        foreach (array_slice($problems, 0, 50) as $p) {
+            $this->error($p);
+        }
+
+        return 1;
+    }
+    $this->info("Audit trail intact: {$checked} entries checked.");
+
+    return 0;
+})->purpose('Check that no audit log entry was changed or removed');
+
+Artisan::command('security:check', function () {
+    // Settings that must hold on the live site. Run after every deploy.
+    $session = config('session');
+    $checks = [
+        'APP_ENV is production' => app()->isProduction(),
+        'APP_DEBUG is off' => ! config('app.debug'),
+        'APP_URL uses https' => str_starts_with((string) config('app.url'), 'https://'),
+        'Session cookie is HTTPS-only' => (bool) $session['secure'],
+        'Session cookie is hidden from scripts' => (bool) $session['http_only'],
+        'Sessions are encrypted' => (bool) $session['encrypt'],
+        'Content-Security-Policy is enforced' => config('security.csp') === 'enforce',
+        'Admin idle sign-out is on' => config('security.admin_idle_minutes') > 0 && config('security.admin_idle_minutes') <= 60,
+        'Log level is not debug' => ! in_array(config('logging.channels.daily.level'), ['debug'], true) && ! in_array(config('logging.channels.single.level'), ['debug'], true),
+        'PHP does not announce itself (expose_php = Off)' => ! filter_var(ini_get('expose_php'), FILTER_VALIDATE_BOOLEAN),
+        '.env is not readable by other users' => PHP_OS_FAMILY === 'Windows' || ! (fileperms(base_path('.env')) & 0004),
+        'No database dumps left in storage' => collect(glob(storage_path('app/private/backups/*.sql')) ?: [])->isEmpty(),
+    ];
+    $failed = 0;
+    foreach ($checks as $label => $ok) {
+        $ok ? $this->line("  <info>PASS</info>  {$label}") : $this->line("  <error>FAIL</error>  {$label}");
+        $failed += $ok ? 0 : 1;
+    }
+    $this->newLine();
+    $failed ? $this->warn("{$failed} check(s) failed.") : $this->info('All checks passed.');
+
+    return $failed ? 1 : 0;
+})->purpose('Check the live security settings');
+
 // Proves cron is calling the scheduler; Settings > Automation warns when this goes stale.
 Schedule::call(fn () => Illuminate\Support\Facades\Cache::put('scheduler.heartbeat', now()->toISOString(), now()->addDay()))->everyMinute()->name('scheduler-heartbeat');
 
 // Midnight: first the report on the day that just ended, then the domain sync and its report.
 Schedule::command('reports:cron-activity')->dailyAt('00:00');
+Schedule::command('audit:verify')->dailyAt('04:30');
 Schedule::command('domains:sync')->dailyAt('00:00')->withoutOverlapping();
 Schedule::command('billing:renewals')->dailyAt('01:00');
 Schedule::command('billing:expire-domains')->dailyAt('01:15');

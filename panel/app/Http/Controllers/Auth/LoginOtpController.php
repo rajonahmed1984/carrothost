@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\ClientUser;
 use App\Services\Auth\LoginOtpService;
 use App\Services\Auth\LoginService;
@@ -46,6 +47,7 @@ class LoginOtpController extends Controller
 
         if (! $this->otp->verify($user ?? $account, $data['otp'])) {
             RateLimiter::hit($throttleKey, 120);
+            ActivityLog::record('login.otp_failed', context: ['portal' => $pending['portal'], 'email' => $user->email ?? $account->email]);
 
             throw ValidationException::withMessages(['otp' => 'Invalid or expired verification code.']);
         }

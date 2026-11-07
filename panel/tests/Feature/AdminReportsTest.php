@@ -31,7 +31,11 @@ class AdminReportsTest extends TestCase
 
     private function log(string $action, array $context, string $at): void
     {
-        ActivityLog::record($action, context: $context)->forceFill(['created_at' => $at])->save();
+        // Audit entries cannot be backdated, so the clock is moved instead.
+        $now = now();
+        $this->travelTo($at);
+        ActivityLog::record($action, context: $context);
+        $this->travelTo($now);
     }
 
     public function test_cron_activity_reports_yesterdays_tasks_failures_and_missing_runs(): void

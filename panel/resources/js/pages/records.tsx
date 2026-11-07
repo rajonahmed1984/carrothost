@@ -75,11 +75,12 @@ type OrderDetail = {
         status: string;
         provision_status: string;
         remote_id: string | null;
+        dedicated_ip?: string | null;
         product: { id: number; name: string; type: string; module: string | null };
         server: { id: number; name: string } | null;
     }[];
     /** Suggested login per service id, for accounts not created yet. */
-    setup?: Record<number, { username: string; password: string; server_id: number | null; module: string | null }>;
+    setup?: Record<number, { username: string; password: string; server_id: number | null; module: string | null; port?: number; manual_vps?: boolean }>;
     domains: {
         id: number;
         name: string;
@@ -169,6 +170,10 @@ export function OrderDetailPage() {
     const [serviceUsernames, setServiceUsernames] = useState<Record<number, string>>({});
     const [servicePasswords, setServicePasswords] = useState<Record<number, string>>({});
     const [serviceServers, setServiceServers] = useState<Record<number, number>>({});
+    // A VPS's hostname, IP and SSH port, starting from what the order holds.
+    const [serviceHosts, setServiceHosts] = useState<Record<number, string>>({});
+    const [servicePorts, setServicePorts] = useState<Record<number, string>>({});
+    const [serviceIps, setServiceIps] = useState<Record<number, string>>({});
 
     const serversQuery = useQuery({
         queryKey: ['servers'],
@@ -181,21 +186,34 @@ export function OrderDetailPage() {
         password: servicePasswords[id] ?? o?.setup?.[id]?.password ?? '',
         server_id: serviceServers[id] ?? o?.setup?.[id]?.server_id ?? null,
     });
+    const vpsFields = (id: number) => {
+        const s = o?.services.find((x) => x.id === id);
+
+        if (s?.product.type !== 'vps') return {};
+        const port = servicePorts[id] ?? String(o?.setup?.[id]?.port ?? 22);
+
+        return {
+            hostname: (serviceHosts[id] ?? s.domain ?? '').trim() || null,
+            dedicated_ip: (serviceIps[id] ?? s.dedicated_ip ?? '').trim() || null,
+            ...(o?.setup?.[id]?.manual_vps ? { port: port ? Number(port) : null } : {}),
+        };
+    };
 
     const accept = useMutation({
         mutationFn: async () => (await api.post<OrderDetail>(`/orders/${o?.id}/accept`, {
             run_module_create: runModuleCreate,
             send_welcome_email: sendWelcomeEmail,
-            services: Object.keys(o?.setup ?? {}).map((id) => ({ id: Number(id), ...login(Number(id)) })),
+            services: Object.keys(o?.setup ?? {}).map((id) => ({ id: Number(id), ...login(Number(id)), ...vpsFields(Number(id)) })),
             domains: (o?.domains ?? []).map((d) => ({ id: d.id, registrar: registrarOf(d) || null })),
         })).data,
+        // The services and domains are active now (accounts are created in the background), so
+        // the admin goes back to the orders still waiting.
         onSuccess: (fresh) => {
             qc.setQueryData(['/orders', String(fresh.id)], fresh);
             qc.invalidateQueries({ queryKey: ['/orders'] });
-            setServiceUsernames({});
-            setServicePasswords({});
-            setServiceServers({});
-            setDomainRegistrars({});
+            qc.invalidateQueries({ queryKey: ['/services'] });
+            qc.invalidateQueries({ queryKey: ['/domains'] });
+            navigate('/admin/pending-orders');
         },
         onError: (e) => alertDialog(errorMessage(e)),
     });
@@ -447,19 +465,21 @@ export function OrderDetailPage() {
                                                 {o.setup?.[s.id] ? (() => {
                                                     const l = login(s.id);
                                                     const choices = servers.filter((srv) => !s.product.module || srv.module === s.product.module);
+                                                    // Bought from a provider and set up by hand: enter its login; nothing is created.
+                                                    const manualVps = !!o.setup[s.id].manual_vps;
 
                                                     return (
                                                 <tr className="bg-slate-50/60 border-b border-slate-200">
                                                     <td colSpan={6} className="px-4 py-3">
                                                         <div className="flex flex-wrap items-center gap-3 text-xs">
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="text-slate-600 font-medium">Username:</span>
+                                                                <span className="text-slate-600 font-medium">{manualVps ? 'User:' : 'Username:'}</span>
                                                                 <input
                                                                     value={l.username}
-                                                                    maxLength={16}
+                                                                    maxLength={manualVps ? 32 : 16}
                                                                     spellCheck={false}
                                                                     autoComplete="off"
-                                                                    onChange={(e) => setServiceUsernames({ ...serviceUsernames, [s.id]: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
+                                                                    onChange={(e) => setServiceUsernames({ ...serviceUsernames, [s.id]: manualVps ? e.target.value.replace(/[^A-Za-z0-9._-]/g, '') : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
                                                                     className="ui-input py-1 px-2 text-xs w-28 font-mono"
                                                                 />
                                                             </div>
@@ -467,16 +487,58 @@ export function OrderDetailPage() {
                                                                 <span className="text-slate-600 font-medium">Password:</span>
                                                                 <input
                                                                     value={l.password}
+                                                                    placeholder={manualVps ? 'Root password from provider' : undefined}
                                                                     spellCheck={false}
                                                                     autoComplete="new-password"
                                                                     data-lpignore="true"
                                                                     onChange={(e) => setServicePasswords({ ...servicePasswords, [s.id]: e.target.value })}
-                                                                    className="ui-input py-1 px-2 text-xs w-36 font-mono"
+                                                                    className={`ui-input py-1 px-2 text-xs font-mono ${manualVps ? 'w-48' : 'w-36'}`}
                                                                 />
                                                                 <button type="button" title="New random password" aria-label="New random password" className="cursor-pointer rounded p-1 text-slate-400 hover:text-slate-700" onClick={() => setServicePasswords({ ...servicePasswords, [s.id]: randomPassword() })}>
                                                                     <RefreshCw size={13} />
                                                                 </button>
                                                             </div>
+                                                            {s.product.type === 'vps' && (
+                                                                <>
+                                                                    <label className="flex items-center gap-1.5">
+                                                                        <span className="text-slate-600 font-medium">Hostname:</span>
+                                                                        <input
+                                                                            value={serviceHosts[s.id] ?? s.domain ?? ''}
+                                                                            placeholder="vps.example.com"
+                                                                            spellCheck={false}
+                                                                            autoComplete="off"
+                                                                            onChange={(e) => setServiceHosts({ ...serviceHosts, [s.id]: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                                                                            className="ui-input py-1 px-2 text-xs w-44 font-mono"
+                                                                        />
+                                                                    </label>
+                                                                    <label className="flex items-center gap-1.5">
+                                                                        <span className="text-slate-600 font-medium">IP:</span>
+                                                                        <input
+                                                                            value={serviceIps[s.id] ?? s.dedicated_ip ?? ''}
+                                                                            placeholder="Blank: set later"
+                                                                            spellCheck={false}
+                                                                            autoComplete="off"
+                                                                            inputMode="decimal"
+                                                                            onChange={(e) => setServiceIps({ ...serviceIps, [s.id]: e.target.value.replace(/\s/g, '') })}
+                                                                            className="ui-input py-1 px-2 text-xs w-36 font-mono"
+                                                                        />
+                                                                    </label>
+                                                                    {manualVps && (
+                                                                        <label className="flex items-center gap-1.5">
+                                                                            <span className="text-slate-600 font-medium">Port:</span>
+                                                                            <input
+                                                                                type="number"
+                                                                                min={1}
+                                                                                max={65535}
+                                                                                value={servicePorts[s.id] ?? String(o.setup[s.id].port ?? 22)}
+                                                                                onChange={(e) => setServicePorts({ ...servicePorts, [s.id]: e.target.value })}
+                                                                                className="ui-input py-1 px-2 text-xs w-20 font-mono"
+                                                                            />
+                                                                        </label>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                            {!manualVps && (<>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-slate-600 font-medium">Server:</span>
                                                                 <select
@@ -501,6 +563,7 @@ export function OrderDetailPage() {
                                                                 />
                                                                 <span title="Unticked: the account is only marked active, for one you set up by hand">Run Module Create</span>
                                                             </label>
+                                                            </>)}
                                                             <label className="flex items-center gap-1.5 text-slate-700 cursor-pointer select-none">
                                                                 <input
                                                                     type="checkbox"
@@ -508,7 +571,7 @@ export function OrderDetailPage() {
                                                                     onChange={(e) => setSendWelcomeEmail(e.target.checked)}
                                                                     className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                                                 />
-                                                                <span>Send Welcome Email</span>
+                                                                <span title={manualVps ? 'Emails the client the hostname, IP, port, user and password' : undefined}>Send Welcome Email</span>
                                                             </label>
                                                         </div>
                                                     </td>

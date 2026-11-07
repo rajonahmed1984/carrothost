@@ -23,6 +23,18 @@ api.interceptors.response.use(undefined, async (error: AxiosError) => {
     return api(config);
 });
 
+/** Sent with requests the page makes by itself, so they do not count as the admin being active. */
+export const background = { headers: { 'X-Background': '1' } };
+
+// An admin signed out for being idle goes back to the login page, then returns here.
+api.interceptors.response.use(undefined, (error: AxiosError) => {
+    const path = window.location.pathname.slice(basePath.length);
+    if (error.response?.status === 401 && path.startsWith('/admin') && !path.startsWith('/admin/login') && error.config?.url !== '/me') {
+        window.location.assign(`${basePath}/admin/login?redirect=${encodeURIComponent(path + window.location.search)}`);
+    }
+    throw error;
+});
+
 export function errorMessage(error: unknown): string {
     const data = (error as AxiosError<{ message?: string; errors?: Record<string, string[]> }>).response?.data;
     const first = data?.errors && Object.values(data.errors)[0]?.[0];

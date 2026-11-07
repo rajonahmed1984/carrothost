@@ -58,6 +58,71 @@ class ProductModuleTest extends TestCase
         Queue::assertPushed(ProvisionService::class, 1);
     }
 
+    public function test_accepting_sets_a_vps_hostname_and_ip(): void
+    {
+        Queue::fake();
+        $product = Product::create(['name' => 'BDIX VPS', 'type' => 'vps', 'module' => null, 'setup_mode' => 'accept']);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '2500.00']);
+        $client = Client::create(['name' => 'A', 'email' => 'a@example.com']);
+        $order = app(BillingService::class)->createOrder($client, [['product_id' => $product->id, 'cycle' => 'monthly', 'domain' => 'vps.a.com']]);
+        $service = $order->services()->sole();
+        $admin = $this->actingAs($this->admin());
+
+        $admin->postJson("/api/orders/{$order->id}/accept", ['run_module_create' => false, 'services' => [['id' => $service->id, 'hostname' => 'bad host']]])
+            ->assertJsonValidationErrors('services.0.hostname');
+
+        $admin->postJson("/api/orders/{$order->id}/accept", ['run_module_create' => false, 'send_welcome_email' => false, 'services' => [
+            ['id' => $service->id, 'username' => 'enhanced', 'hostname' => 'Server1.A.com', 'dedicated_ip' => '103.10.20.30'],
+        ]])->assertOk();
+
+        $service->refresh();
+        $this->assertSame(['server1.a.com', '103.10.20.30', 'active'], [$service->domain, $service->dedicated_ip, $service->status]);
+    }
+
+    public function test_a_hand_made_vps_is_accepted_with_its_ssh_login_and_emailed_to_the_client(): void
+    {
+        Queue::fake();
+        \Illuminate\Support\Facades\Mail::fake();
+        $product = Product::create(['name' => 'BDIX Enhanced', 'type' => 'vps', 'module' => null, 'setup_mode' => 'accept']);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '2500.00']);
+        $client = Client::create(['name' => 'Rajon', 'email' => 'r@example.com']);
+        $orders = [];
+        foreach (['vps.a.com', 'vps.b.com'] as $host) {
+            $orders[] = app(BillingService::class)->createOrder($client, [['product_id' => $product->id, 'cycle' => 'monthly', 'domain' => $host]]);
+        }
+        [$first, $second] = $orders;
+        $service = $first->services()->sole();
+        $admin = $this->actingAs($this->admin());
+
+        $setup = $admin->getJson("/api/orders/{$first->id}")->assertOk()->json("setup.{$service->id}");
+        $this->assertSame(['root', '', 22, true], [$setup['username'], $setup['password'], $setup['port'], $setup['manual_vps']]);
+
+        // The email is the client's copy of the login, so it needs the IP and password.
+        $admin->postJson("/api/orders/{$first->id}/accept", ['services' => [['id' => $service->id, 'hostname' => 'vps.a.com']]])
+            ->assertJsonValidationErrors("services.{$service->id}.dedicated_ip");
+
+        $admin->postJson("/api/orders/{$first->id}/accept", ['run_module_create' => true, 'send_welcome_email' => true, 'services' => [
+            ['id' => $service->id, 'username' => 'root', 'password' => 'zWxQvH6dlZLM8w45CEZe', 'port' => 2222, 'hostname' => 'vps.a.com', 'dedicated_ip' => '103.159.37.159'],
+        ]])->assertOk();
+
+        $service->refresh();
+        Queue::assertNothingPushed();
+        $this->assertSame(['active', 'done', 'vps.a.com', '103.159.37.159'], [$service->status, $service->provision_status, $service->remote_id, $service->dedicated_ip]);
+        $this->assertSame(['username' => 'root', 'password' => 'zWxQvH6dlZLM8w45CEZe', 'port' => 2222], $service->credentials->toArray());
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\CustomerNotice::class, fn ($m) => $m->subjectLine === 'Your server vps.a.com is ready'
+            && str_contains($m->richBody, '103.159.37.159') && str_contains($m->richBody, '2222') && str_contains($m->richBody, 'zWxQvH6dlZLM8w45CEZe'));
+
+        // Many VPSes share the user root.
+        $other = $second->services()->sole();
+        $admin->postJson("/api/orders/{$second->id}/accept", ['send_welcome_email' => false, 'services' => [['id' => $other->id, 'username' => 'root', 'dedicated_ip' => '103.159.37.160']]])->assertOk();
+
+        // The client sees the same login on the service page; the admin can change the port there.
+        $admin->putJson("/api/services/{$service->id}", ['ssh_port' => 22, 'domain' => 'server1.a.com'])->assertOk()
+            ->assertJsonPath('ssh_port', 22)->assertJsonPath('remote_id', 'server1.a.com');
+        $this->actingAs($client, 'client')->getJson("/api/client/services/{$service->id}")->assertOk()
+            ->assertJsonPath('ssh', ['hostname' => 'server1.a.com', 'ip' => '103.159.37.159', 'port' => 22, 'username' => 'root']);
+    }
+
     public function test_plans_are_loaded_live_from_the_server(): void
     {
         Http::fake(['*' => Http::response(['plans' => [

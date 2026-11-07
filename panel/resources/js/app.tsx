@@ -3,7 +3,7 @@ import { Boxes, ChevronDown, KeyRound, LayoutDashboard, LogOut, Menu, MoreHorizo
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { api, basePath, setDefaultCurrency } from './api';
+import { api, background, basePath, setDefaultCurrency } from './api';
 import { ActivityPage, AddonsPage } from './pages/system';
 import { GatewaysPage } from './pages/gateways';
 import { ClientsPage, OrdersPage } from './pages/sales';
@@ -138,7 +138,7 @@ function Shell({ name }: { name: string }) {
         }
     });
     const brand = useBranding().name;
-    const badges = useQuery({ queryKey: ['badges'], queryFn: async () => (await api.get<Badges>('/badges')).data, refetchInterval: 30000 });
+    const badges = useQuery({ queryKey: ['badges'], queryFn: async () => (await api.get<Badges>('/badges', background)).data, refetchInterval: 30000 });
     const badge = (item: NavItem) => {
         const count = item.badge ? badges.data?.[item.badge] ?? 0 : 0;
 

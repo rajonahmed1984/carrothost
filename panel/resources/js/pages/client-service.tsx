@@ -16,6 +16,7 @@ type Metric = { key: string; label: string; used: string; limit: string | null; 
 type Detail = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string; registered_at: string | null;
     product_id: number; product: { name: string; type: string; module: string | null; group: string | null }; description: string | null;
+    ssh?: { hostname: string | null; ip: string | null; port: number; username: string } | null;
     username: string | null; panel_url: string | null; has_password: boolean; is_vps?: boolean; vps_actions?: string[] | null; has_tools: boolean; panel_apps: string[];
     can_upgrade: boolean; pending_upgrade: { invoice_id: number | null; new_product: string | null; new_cycle: string; amount_due: string } | null;
     server: { hostname: string; ip: string | null } | null; nameservers: string[]; server_ip: string | null;
@@ -391,6 +392,36 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                             </div>
                             {s.description && <p className="mt-3 border-t border-slate-100 pt-3 text-xs whitespace-pre-line text-slate-500">{s.description}</p>}
                         </SectionCard>
+
+                        {s.ssh && (
+                            <SectionCard icon={<Server size={18} />} title="Server Login" subtitle="Connect to your VPS over SSH with these details.">
+                                <div className="divide-y divide-slate-100">
+                                    <InfoRow icon={<Globe size={15} />} name="Hostname" actions={<CopyButton value={s.ssh.hostname} what="hostname" />}>{s.ssh.hostname ?? '-'}</InfoRow>
+                                    <InfoRow icon={<Network size={15} />} name="IP Address" actions={<CopyButton value={s.ssh.ip} what="IP address" />}><span className="font-mono">{s.ssh.ip ?? 'Being set up'}</span></InfoRow>
+                                    <InfoRow icon={<Link2 size={15} />} name="SSH Port"><span className="font-mono">{s.ssh.port}</span></InfoRow>
+                                    <InfoRow icon={<KeyRound size={15} />} name="User" actions={<CopyButton value={s.ssh.username} what="user" />}><span className="font-mono">{s.ssh.username}</span></InfoRow>
+                                    <InfoRow
+                                        icon={<ShieldCheck size={15} />}
+                                        name="Password"
+                                        actions={s.has_password && canManage ? (
+                                            <>
+                                                <button type="button" className="icon-btn h-8 w-8" disabled={reveal.isPending} aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={revealPassword}>{showPassword ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                {showPassword && <CopyButton value={reveal.data?.password} what="password" />}
+                                            </>
+                                        ) : undefined}
+                                    >
+                                        <span className="font-mono">{showPassword && reveal.data ? (reveal.data.password ?? 'Not stored') : s.has_password ? '••••••••••••' : 'Not stored'}</span>
+                                    </InfoRow>
+                                </div>
+                                {s.ssh.ip && (
+                                    <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-900 px-3 py-2.5 font-mono text-xs text-slate-100">
+                                        <span className="break-all">ssh {s.ssh.username}@{s.ssh.ip}{s.ssh.port !== 22 ? ` -p ${s.ssh.port}` : ''}</span>
+                                        <CopyButton value={`ssh ${s.ssh.username}@${s.ssh.ip}${s.ssh.port !== 22 ? ` -p ${s.ssh.port}` : ''}`} what="SSH command" />
+                                    </div>
+                                )}
+                                <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-900"><Info size={14} className="mt-0.5 shrink-0" /> Change the password after your first login. We do not see a password you set yourself.</p>
+                            </SectionCard>
+                        )}
 
                         {hosting && (
                             <SectionCard icon={<Link2 size={18} />} title="Connection Details" subtitle="Use these to reach your account by control panel or FTP.">

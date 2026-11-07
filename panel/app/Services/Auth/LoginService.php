@@ -33,15 +33,20 @@ class LoginService
     {
         RateLimiter::for('login', function (Request $request) {
             $portal = $request->is('api/client/*') ? Portal::CLIENT : Portal::ADMIN;
+            $blocked = function (string $by) use ($request, $portal) {
+                ActivityLog::record('login.locked_out', context: ['portal' => $portal, 'email' => (string) $request->input('email', ''), 'by' => $by]);
+
+                return response()->json(['message' => 'Too many login attempts. Please try again in 60 seconds.'], 429);
+            };
 
             return [
                 Limit::perMinute(self::LOGIN_MAX_ATTEMPTS)
                     ->by(self::limiterKey($request, $portal, (string) $request->input('email', '')))
-                    ->response(fn () => response()->json(['message' => 'Too many login attempts. Please try again in 60 seconds.'], 429)),
+                    ->response(fn () => $blocked('account')),
                 // Stops one address guessing a common password across many accounts.
                 Limit::perMinute(self::LOGIN_MAX_ATTEMPTS * 6)
                     ->by('ip|'.$request->ip())
-                    ->response(fn () => response()->json(['message' => 'Too many login attempts. Please try again in 60 seconds.'], 429)),
+                    ->response(fn () => $blocked('ip')),
             ];
         });
     }
@@ -127,6 +132,7 @@ class LoginService
     public function logout(Request $request): void
     {
         $impersonating = $request->session()->has(self::IMPERSONATOR);
+        ActivityLog::record('logout', context: array_filter(['admin' => Auth::guard('web')->id(), 'client' => Auth::guard('client')->id(), 'impersonating' => $impersonating ?: null]));
 
         foreach (Portal::guards() as $guard) {
             // logout() also cycles the remember token, which would sign the customer out of their own devices.

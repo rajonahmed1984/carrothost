@@ -58,6 +58,13 @@ class ServiceController extends Controller
             'product_id' => $service->product_id,
             'description' => $service->product->description,
             'has_password' => ! empty($service->credentials['password'] ?? null),
+            // A VPS set up by hand: the SSH login the admin entered. The password is revealed on request.
+            'ssh' => $live && $service->product->isManualVps() ? [
+                'hostname' => $service->domain,
+                'ip' => $service->dedicated_ip,
+                'port' => (int) ($service->credentials['port'] ?? 22),
+                'username' => $service->credentials['username'] ?? 'root',
+            ] : null,
             'is_vps' => VpsTools::supports($service),
             'vps_actions' => VpsTools::supports($service) ? VpsTools::clientActions($service) : null,
             // One-click login, password change and live usage go through the server module.

@@ -156,7 +156,7 @@ Route::prefix('api')->group(function () {
         });
     });
 
-    Route::middleware(['auth:web', 'admin'])->group(function () {
+    Route::middleware(['auth:web', 'admin', 'admin.idle'])->group(function () {
         Route::post('logout', [Admin\AuthController::class, 'logout']);
         Route::get('me', [Admin\AuthController::class, 'me']);
         Route::post('password', [Auth\PasswordController::class, 'change'])->defaults('portal', Portal::ADMIN)->middleware('throttle:5,1');

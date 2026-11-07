@@ -61,6 +61,18 @@ class CustomerMailer
     public function serviceWelcome(Service $service): void
     {
         $service->loadMissing('client', 'product', 'server');
+        if ($service->product->isManualVps()) {
+            $this->send('vps_welcome', $service->client, MailFrom::SUPPORT, [
+                ...$this->serviceValues($service),
+                'vps_hostname' => $service->domain ?: '-',
+                'vps_ip' => $service->dedicated_ip ?: '-',
+                'vps_port' => (string) ($service->credentials['port'] ?? 22),
+                'vps_username' => $service->credentials['username'] ?? 'root',
+                'vps_password' => $service->credentials['password'] ?? '-',
+            ], url("services/{$service->id}"), 'Open your server');
+
+            return;
+        }
         $ports = ['cpanel' => 2083, 'webuzo' => 2003];
         $port = $ports[$service->product->module] ?? null;
 

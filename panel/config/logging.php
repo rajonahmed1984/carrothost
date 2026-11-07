@@ -54,7 +54,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -68,8 +68,21 @@ return [
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            // Debug output can carry customer data; production keeps warnings and up unless told otherwise.
+            'level' => env('LOG_LEVEL', env('APP_ENV') === 'production' ? 'warning' : 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 30),
+            'permission' => 0640,
+            'replace_placeholders' => true,
+        ],
+
+        // A copy of every audit trail entry, one file a day, kept a year. Point AUDIT_LOG_PATH
+        // at a disk outside the web account, or ship it with a log forwarder, to keep it off-host.
+        'audit' => [
+            'driver' => 'daily',
+            'path' => env('AUDIT_LOG_PATH', storage_path('logs/audit.log')),
+            'level' => 'info',
+            'days' => env('AUDIT_LOG_DAYS', 365),
+            'permission' => 0640,
             'replace_placeholders' => true,
         ],
 

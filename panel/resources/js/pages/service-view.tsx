@@ -27,6 +27,8 @@ export type ServiceFull = {
     server: { id: number; name: string; hostname: string } | null;
     order: { id: number; order_number: string | null } | null;
     username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean; is_vps?: boolean;
+    /** A VPS set up by hand (no module): hostname, IP, SSH port and root login are entered here. */
+    manual_vps?: boolean; ssh_port?: number | null;
     usage_metrics: { key: string; label: string; used: string; limit: string | null; percent: number | null }[] | null;
     pending_upgrade: { id: number; invoice_id: number | null; new_cycle: string; amount_due: string; new_product: { id: number; name: string } | null } | null;
     client_services: { id: number; name: string; status: string }[];
@@ -46,7 +48,7 @@ type ServerState = {
 type Saved = ServiceFull & { notices?: string[] };
 
 type Form = {
-    product_id: number; server_id: string; domain: string; dedicated_ip: string; remote_id: string; username: string; password: string; status: string;
+    product_id: number; server_id: string; domain: string; dedicated_ip: string; remote_id: string; username: string; password: string; ssh_port: string; status: string;
     registered_at: string; quantity: number; first_payment_amount: string; recurring_amount: string; recalculate: boolean;
     next_due_date: string; termination_date: string; cycle: string; payment_method: string; subscription_id: string;
     override: boolean; override_suspend_until: string; terminate_end_of_cycle: boolean; terminate_reason: string; admin_notes: string;
@@ -62,6 +64,7 @@ const toForm = (s: ServiceFull): Form => ({
     remote_id: s.remote_id ?? '',
     username: s.username ?? '',
     password: '',
+    ssh_port: s.manual_vps ? String(s.ssh_port ?? 22) : '',
     status: s.status,
     registered_at: s.registered_at ?? '',
     quantity: s.quantity,
@@ -98,7 +101,9 @@ function productPrice(s: ServiceFull, productId: number, cycle: string, quantity
  */
 function linked(s: ServiceFull, f: Form, key: keyof Form, value: Form[keyof Form]): Form {
     const next = { ...f, [key]: value } as Form;
-    const sameName = s.product.module !== 'webdock';
+    const sameName = s.product.module !== 'webdock' && !s.manual_vps;
+    // A hand-made VPS is known by its hostname.
+    if (s.manual_vps && key === 'domain' && (f.remote_id === '' || f.remote_id === f.domain)) next.remote_id = String(value).toLowerCase();
 
     if (sameName && key === 'remote_id' && (f.username === '' || f.username === f.remote_id)) next.username = String(value);
     if (sameName && key === 'username' && (f.remote_id === '' || f.remote_id === f.username) && s.remote_id === null) next.remote_id = String(value);
@@ -262,7 +267,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
 
     const save = useMutation({
         mutationFn: async () => {
-            const { override, password, server_id, apply_to_server, change_package, ...rest } = form;
+            const { override, password, server_id, apply_to_server, change_package, ssh_port, ...rest } = form;
             const body: Record<string, unknown> = {
                 ...rest,
                 server_id: server_id ? Number(server_id) : null,
@@ -270,6 +275,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 dedicated_ip: rest.dedicated_ip || null,
                 remote_id: rest.remote_id.trim() || null,
                 username: rest.username || null,
+                ...(s.manual_vps ? { ssh_port: ssh_port ? Number(ssh_port) : null } : {}),
                 registered_at: rest.registered_at || null,
                 next_due_date: rest.next_due_date || null,
                 termination_date: rest.termination_date || null,
@@ -460,9 +466,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                                 {s.options.servers.map((sv) => <option key={sv.id} value={sv.id}>{sv.name} ({sv.services_count}/{sv.max_accounts || '∞'} Accounts)</option>)}
                             </select>
                         </Row>
-                        <Row label="Domain" htmlFor="sv-domain"><input id="sv-domain" className="ui-input" value={form.domain} onChange={(e) => set('domain', e.target.value)} /></Row>
-                        <Row label="Dedicated IP" htmlFor="sv-ip"><input id="sv-ip" className="ui-input" placeholder="None" value={form.dedicated_ip} onChange={(e) => set('dedicated_ip', e.target.value)} /></Row>
-                        <Row label={s.product.module === 'webdock' ? 'Webdock server slug' : 'Account ID'} htmlFor="sv-remote">
+                        <Row label={s.manual_vps ? 'Hostname' : 'Domain'} htmlFor="sv-domain"><input id="sv-domain" className="ui-input" placeholder={s.manual_vps ? 'vps.example.com' : undefined} value={form.domain} onChange={(e) => set('domain', e.target.value)} /></Row>
+                        <Row label={s.manual_vps ? 'IP Address' : 'Dedicated IP'} htmlFor="sv-ip"><input id="sv-ip" className="ui-input font-mono" placeholder={s.manual_vps ? 'The VPS IP from the provider' : 'None'} value={form.dedicated_ip} onChange={(e) => set('dedicated_ip', e.target.value)} /></Row>
+                        <Row label={s.product.module === 'webdock' ? 'Webdock server slug' : s.manual_vps ? 'Server ID' : 'Account ID'} htmlFor="sv-remote">
                             {s.product.module === 'webdock' ? (
                                 <div className="space-y-1.5">
                                     <div className="flex gap-2">
@@ -471,12 +477,19 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                                     </div>
                                     <p className="text-[11px] text-slate-500">Pick the VPS from your Webdock account, or paste its slug, domain or dashboard link. Save to link it.</p>
                                 </div>
-                            ) : <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder="The account username on the server" value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />}
+                            ) : <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder={s.manual_vps ? 'Follows the hostname' : 'The account username on the server'} value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />}
                         </Row>
                         <Row label="Username" htmlFor="sv-user">
                             <input id="sv-user" className="ui-input font-mono" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} />
-                            {s.product.module !== 'webdock' && <p className="mt-1 text-[11px] text-slate-500">Follows the Account ID while they match. Kept in the panel only; Change Password updates the server.</p>}
+                            {s.manual_vps
+                                ? <p className="mt-1 text-[11px] text-slate-500">The SSH user the provider gave, usually root. Sent in the VPS welcome email.</p>
+                                : s.product.module !== 'webdock' && <p className="mt-1 text-[11px] text-slate-500">Follows the Account ID while they match. Kept in the panel only; Change Password updates the server.</p>}
                         </Row>
+                        {s.manual_vps && (
+                            <Row label="SSH Port" htmlFor="sv-port">
+                                <input id="sv-port" type="number" min={1} max={65535} className="ui-input w-32 font-mono" value={form.ssh_port} onChange={(e) => set('ssh_port', e.target.value)} />
+                            </Row>
+                        )}
                         <Row label="Password" htmlFor="sv-pass">
                             <div className="flex gap-2">
                                 <input id="sv-pass" className="ui-input font-mono" autoComplete="new-password" placeholder={s.has_password ? '•••••••• (stored, type to replace)' : 'Not stored'} value={form.password} onChange={(e) => set('password', e.target.value)} />

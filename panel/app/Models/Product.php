@@ -25,6 +25,15 @@ class Product extends Model
      *
      * @return array{default_image: ?string, images: list<array{slug: string, name: string}>, client_actions: list<string>, client_upgrade: bool}
      */
+    /**
+     * A VPS bought from a provider and set up by hand: the admin enters its hostname, IP, SSH port
+     * and root login, and the client gets them by email.
+     */
+    public function isManualVps(): bool
+    {
+        return $this->type === 'vps' && ! config("billing.provisioning_modules.{$this->module}.class");
+    }
+
     public function vpsConfig(): array
     {
         $c = $this->module_config ?? [];

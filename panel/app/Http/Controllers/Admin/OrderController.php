@@ -64,6 +64,17 @@ class OrderController extends Controller
             // A service waiting for accept was never created, even when it has a username: the
             // username is only the one planned for it, so it is offered for editing.
             'setup' => $order->services->filter(fn (Service $s) => ! $s->remote_id || $s->provision_status === 'awaiting_accept')->mapWithKeys(function (Service $s) use (&$used) {
+                // A hand-made VPS: the provider's root login, entered by the admin.
+                if ($s->product->isManualVps()) {
+                    return [$s->id => [
+                        'username' => $s->credentials['username'] ?? 'root',
+                        'password' => $s->credentials['password'] ?? '',
+                        'port' => (int) ($s->credentials['port'] ?? 22),
+                        'server_id' => null,
+                        'module' => $s->product->module,
+                        'manual_vps' => true,
+                    ]];
+                }
                 $username = $s->credentials['username'] ?? ($s->provision_status === 'awaiting_accept' ? $s->remote_id : null);
                 if (! $username) {
                     $username = AccountCredentials::username((string) ($s->domain ?: $s->product->name), $s->id);
@@ -95,14 +106,22 @@ class OrderController extends Controller
             'send_welcome_email' => 'boolean',
             'services' => 'array',
             'services.*.id' => 'required|integer',
-            'services.*.username' => ['nullable', 'string', 'max:16', 'regex:'.AccountCredentials::USERNAME_PATTERN],
-            'services.*.password' => 'nullable|string|min:8|max:64',
+            // Hosting usernames are checked below; a VPS login can be root, ubuntu, Administrator...
+            'services.*.username' => ['nullable', 'string', 'max:32', 'regex:/^[A-Za-z_][A-Za-z0-9._-]*$/'],
+            'services.*.password' => 'nullable|string|min:6|max:128',
+            'services.*.port' => 'nullable|integer|between:1,65535',
             // The registrar each domain goes to; null means none (handled by hand).
             'domains' => 'array',
             'domains.*.id' => 'required|integer',
             'domains.*.registrar' => ['nullable', Rule::in(array_keys(config('billing.registrars')))],
             'services.*.server_id' => 'nullable|integer|exists:servers,id',
-        ], ['services.*.username.regex' => 'A username starts with a letter and has only lowercase letters and digits.']);
+            // A VPS's hostname and IP, set while accepting.
+            'services.*.hostname' => ['nullable', 'string', 'max:253', 'regex:/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i'],
+            'services.*.dedicated_ip' => 'nullable|ip',
+        ], [
+            'services.*.username.regex' => 'A username starts with a letter and has only letters, digits, dots, dashes and underscores.',
+            'services.*.hostname.regex' => 'Enter a hostname like vps.example.com.',
+        ]);
         $runModule = $request->boolean('run_module_create', true);
         $welcome = $request->boolean('send_welcome_email', true);
         $chosen = collect($data['services'] ?? [])->keyBy('id');
@@ -123,6 +142,18 @@ class OrderController extends Controller
 
         foreach ($waiting as $service) {
             $username = $chosen[$service->id]['username'] ?? null;
+            if ($service->product->isManualVps()) {
+                // The welcome email is the client's only copy of the login, so it must be complete.
+                $pick = $chosen[$service->id] ?? [];
+                if ($welcome && (empty($pick['dedicated_ip'] ?? $service->dedicated_ip) || empty($pick['password'] ?? $service->credentials['password'] ?? null))) {
+                    throw ValidationException::withMessages(["services.{$service->id}.dedicated_ip" => "Enter the VPS's IP and root password before sending the welcome email, or untick Send Welcome Email."]);
+                }
+
+                continue;
+            }
+            if ($username && ! preg_match(AccountCredentials::USERNAME_PATTERN, $username)) {
+                throw ValidationException::withMessages(["services.{$service->id}.username" => 'A username starts with a letter and has only lowercase letters and digits.']);
+            }
             if ($username && AccountCredentials::taken($username, $service->id)) {
                 throw ValidationException::withMessages(["services.{$service->id}.username" => "The username {$username} is already used by another account."]);
             }
@@ -132,8 +163,13 @@ class OrderController extends Controller
 
         foreach ($waiting as $service) {
             $pick = $chosen[$service->id] ?? [];
+            $manualVps = $service->product->isManualVps();
             // A planned username is only a plan until the account is created.
-            $credentials = array_filter(['username' => $pick['username'] ?? $service->remote_id, 'password' => $pick['password'] ?? null]);
+            $credentials = array_filter([
+                'username' => $pick['username'] ?? ($manualVps ? 'root' : $service->remote_id),
+                'password' => $pick['password'] ?? null,
+                'port' => $manualVps ? (int) ($pick['port'] ?? 22) : null,
+            ]);
             $changes = ['status' => 'active'];
             // Accepted before payment: it falls due with the order's invoice, as with set-up-on-order
             // products, so overdue suspension catches it if that invoice is never paid. Paying it moves the date on.
@@ -147,14 +183,22 @@ class OrderController extends Controller
             if (! empty($pick['server_id'])) {
                 $changes['server_id'] = $pick['server_id'];
             }
+            if (! empty($pick['hostname'])) {
+                $changes['domain'] = strtolower($pick['hostname']);
+            }
+            if (array_key_exists('dedicated_ip', $pick)) {
+                $changes['dedicated_ip'] = $pick['dedicated_ip'] ?: null;
+            }
 
-            if ($runModule) {
+            if ($runModule && ! $manualVps) {
                 // Cleared so the create job runs: it skips accounts that already have a remote id.
                 $service->update([...$changes, 'remote_id' => null, 'provision_status' => 'queued']);
                 ProvisionService::dispatch($service->id, 'create', $welcome);
             } else {
-                // Set up by hand: keep the login given here as the account's.
-                $service->update([...$changes, 'provision_status' => 'done', 'remote_id' => $credentials['username'] ?? $service->remote_id]);
+                // Set up by hand: keep the login given here as the account's. A VPS is known by its
+                // hostname (many share the user root).
+                $remote = $manualVps ? ($changes['domain'] ?? $service->domain ?: $changes['dedicated_ip'] ?? $service->dedicated_ip) : null;
+                $service->update([...$changes, 'provision_status' => 'done', 'remote_id' => $remote ?: ($credentials['username'] ?? $service->remote_id)]);
                 if ($welcome && $credentials) {
                     $mailer->serviceWelcome($service->refresh());
                 }
