@@ -24,7 +24,7 @@ function Switch({ on, disabled, onChange, name }: { on: boolean; disabled?: bool
     );
 }
 
-/** Admin > Settings > Email: every email a customer receives, grouped as in WHMCS. */
+/** Admin > Settings > Email: every email a customer receives, grouped by kind. */
 export function EmailTemplatesSection() {
     const qc = useQueryClient();
     const query = useQuery({ queryKey: ['email-templates'], queryFn: async () => (await api.get<{ groups: Group[] }>('/settings/email-templates')).data.groups });

@@ -97,7 +97,7 @@ class SmsService
 
     /**
      * Bangladeshi mobile numbers in any common shape (01XXXXXXXXX, +8801XXXXXXXXX,
-     * +880.1XXX-XXXXXX from WHMCS, 1XXXXXXXXX) become 8801XXXXXXXXX. Anything else is
+     * +880.1XXX-XXXXXX, 1XXXXXXXXX) become 8801XXXXXXXXX. Anything else is
      * rejected, since the gateway only delivers locally.
      */
     public function normalizeMobile(?string $mobile): ?string

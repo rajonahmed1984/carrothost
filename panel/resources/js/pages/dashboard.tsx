@@ -374,7 +374,7 @@ export function DashboardPage() {
                         <Tile to="/admin/pending-orders" value={d.pending_orders} label="Pending Orders" Icon={ShoppingCart} color="#17733f" />
                         <Tile to="/admin/overdue-invoices" value={d.overdue_invoices} label="Overdue Invoices" Icon={FileWarning} color="#be123c" />
                         <Tile to="/admin/products-services?status=suspended" value={d.suspended_services} label="Suspended Services" Icon={Ban} color="#b34400" />
-                        {/* Services marked to terminate at the end of their cycle: WHMCS's cancellation requests. */}
+                        {/* Services marked to terminate at the end of their cycle: cancellation requests. */}
                         <Tile to="/admin/products-services?status=pending_cancellation" value={d.pending_cancellations ?? 0} label="Pending Cancellations" Icon={XCircle} color="#0f2233" />
                     </div>
 

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->decimal('fee', 12, 2)->default(0)->after('amount'); // what the gateway kept
         });
 
-        // Payments imported from WHMCS kept their fee in meta until now.
+        // Older payments kept their fee in meta until now.
         DB::table('payments')->where('meta', 'like', '%"fees"%')->orderBy('id')->each(function ($payment) {
             $fee = json_decode((string) $payment->meta, true)['fees'] ?? null;
             if (is_numeric($fee)) {

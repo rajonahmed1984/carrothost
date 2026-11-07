@@ -4,17 +4,20 @@ namespace App\Services;
 
 use App\Jobs\ProvisionService;
 use App\Jobs\SendInvoiceSms;
+use App\Models\ActivityLog;
 use App\Models\Domain;
 use App\Models\DomainReminder;
 use App\Models\Invoice;
 use App\Models\Registrar;
 use App\Models\Service;
+use App\Provisioning\ReportsAccountStatus;
 use Illuminate\Support\Carbon;
 use Throwable;
 
 /**
- * The daily jobs WHMCS runs from its cron besides renewals and suspension: payment reminders,
- * overdue notices, domain expiry reminders, expiring domains, termination, usage and domain sync.
+ * The daily jobs the panel runs from its cron besides renewals and suspension: payment reminders,
+ * overdue notices, domain expiry reminders, expiring domains, termination, usage, domain sync and
+ * keeping each server's suspensions matched to the panel.
  * Each is safe to run more than once a day; nothing is sent or done twice.
  */
 class AutomationService
@@ -161,6 +164,68 @@ class AutomationService
         }
 
         return $count;
+    }
+
+    /**
+     * The panel decides whether a hosting account is suspended. Every account the panel shows as
+     * suspended but the server still runs is suspended on the server. Returns how many were.
+     */
+    public function enforceSuspensions(): int
+    {
+        $count = 0;
+        foreach ($this->serverStatus() as $row) {
+            if ($row['server_suspended'] !== false) {
+                continue;
+            }
+            $service = $row['service'];
+            try {
+                $this->statusModule($service)->suspend($service, $service->auto_suspended ? 'Overdue invoice' : 'Suspended in CarrotHost Panel');
+                $service->update(['provision_status' => 'done', 'provision_error' => null]);
+                ActivityLog::record('service.suspend', $service, ['description' => 'Suspended on the server to match the panel']);
+                $count++;
+            } catch (Throwable $e) {
+                $service->update(['provision_status' => 'failed', 'provision_error' => $e->getMessage()]);
+                ActivityLog::record('service.suspend.failed', $service, ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Each suspended hosting account with what its server says: server_suspended is true, false,
+     * or null when the server could not be read (error then says why).
+     *
+     * @return list<array{service: Service, server_suspended: bool|null, error: string|null}>
+     */
+    public function serverStatus(): array
+    {
+        $rows = [];
+        $services = Service::with(['product', 'server', 'client'])->where('status', 'suspended')
+            ->whereNotNull('remote_id')->whereNotNull('server_id')
+            ->whereNotIn('provision_status', ['queued', 'running'])
+            ->orderBy('id')->get();
+
+        foreach ($services as $service) {
+            $class = config("billing.provisioning_modules.{$service->product?->module}.class");
+            if (! $class || ! is_subclass_of($class, ReportsAccountStatus::class)) {
+                continue;
+            }
+            try {
+                $rows[] = ['service' => $service, 'server_suspended' => $this->statusModule($service)->accountInfo($service)['suspended'], 'error' => null];
+            } catch (Throwable $e) {
+                $rows[] = ['service' => $service, 'server_suspended' => null, 'error' => $e->getMessage()];
+            }
+        }
+
+        return $rows;
+    }
+
+    public function statusModule(Service $service): ReportsAccountStatus
+    {
+        $class = config("billing.provisioning_modules.{$service->product->module}.class");
+
+        return new $class($service->server);
     }
 
     /** Refreshes disk, bandwidth and other usage for every active account a module can read. */

@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /** WHM API 1. Prefer an API token; password login is for accounts that cannot create one. */
-class CpanelModule implements ManagesAccounts, ProvisioningModule
+class CpanelModule implements ManagesAccounts, ProvisioningModule, ReportsAccountStatus
 {
     use GeneratesUsername;
 
@@ -78,6 +78,22 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
     public function unsuspend(Service $service): void
     {
         $this->call('unsuspendacct', ['user' => $service->remote_id]);
+    }
+
+    public function accountInfo(Service $service): array
+    {
+        $acct = data_get($this->call('accountsummary', ['user' => $service->remote_id], 30), 'data.acct.0');
+
+        if (! is_array($acct)) {
+            throw new RuntimeException("WHM has no account named {$service->remote_id}.");
+        }
+
+        return [
+            'domain' => filled($acct['domain'] ?? null) ? strtolower((string) $acct['domain']) : null,
+            'ip' => filled($acct['ip'] ?? null) ? (string) $acct['ip'] : null,
+            'package' => filled($acct['plan'] ?? null) ? (string) $acct['plan'] : null,
+            'suspended' => (bool) ($acct['suspended'] ?? false),
+        ];
     }
 
     public function terminate(Service $service): void
@@ -234,7 +250,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule
                 default => str_replace('_', ' ', (string) $reason),
             };
 
-            throw new RuntimeException("WHM login failed (HTTP {$response->status()}): {$reason}. Check the username and password, that the account has no two-factor login, that cPHulk has not blocked this panel's IP after failed tries, and that the hostname is the server your account is on now (hosts move accounts; compare with the IP WHMCS uses). An API token avoids password problems.");
+            throw new RuntimeException("WHM login failed (HTTP {$response->status()}): {$reason}. Check the username and password, that the account has no two-factor login, that cPHulk has not blocked this panel's IP after failed tries, and that the hostname is the server your account is on now (hosts move accounts). An API token avoids password problems.");
         }
 
         return ['token' => '/'.ltrim($token, '/'), 'cookie' => $cookie];

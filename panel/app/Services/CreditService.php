@@ -76,7 +76,7 @@ class CreditService
 
     /**
      * Uses as much credit as the invoice still needs. It shows on the invoice as a
-     * "Credit applied" line that lowers the total, as on invoices imported from WHMCS.
+     * "Credit applied" line that lowers the total.
      * Returns the amount used.
      */
     public function applyToInvoice(Invoice $invoice, ?string $limit = null): string

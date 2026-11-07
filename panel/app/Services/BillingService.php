@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Tld;
+use App\Support\PaymentMethods;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -277,17 +278,23 @@ class BillingService
 
             if ($item->kind === 'upgrade') {
                 if ($item->service) {
+                    $item->service->update(PaymentMethods::isGateway($gateway) ? ['payment_method' => $gateway] : []);
                     app(ServiceTools::class)->applyPaid($item->service, $invoice);
                 }
 
                 continue;
             }
 
+            // The gateway the client last paid with becomes the record's payment method.
+            $paidWith = PaymentMethods::isGateway($gateway) ? ['payment_method' => $gateway] : [];
+
             if ($item->service) {
+                $item->service->update($paidWith);
                 $item->kind === 'renewal' ? $this->renewService($item->service) : $this->activateService($item->service);
             }
 
             if ($item->domain) {
+                $item->domain->update($paidWith);
                 $item->kind === 'renewal' ? $this->renewDomain($item->domain) : $this->activateDomain($item->domain);
             }
         }

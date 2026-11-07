@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\Gateway;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
@@ -25,6 +26,8 @@ class AdminServiceTest extends TestCase
             'client_id' => $client->id, 'product_id' => $product->id, 'domain' => 'acme.com', 'cycle' => 'monthly',
             'recurring_amount' => 400, 'status' => 'active', 'credentials' => ['username' => 'acme', 'password' => 'old-secret'],
         ]);
+        // Only gateways that are on can be picked as the payment method.
+        Gateway::create(['code' => 'bkash', 'is_enabled' => true, 'config' => []]);
         $this->actingAs($admin);
 
         $this->getJson("/api/services/{$service->id}")->assertOk()

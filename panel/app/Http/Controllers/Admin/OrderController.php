@@ -60,9 +60,9 @@ class OrderController extends Controller
             ...$order->toArray(),
             // Orders placed before the amount was saved fall back to their invoices.
             'amount' => (float) $order->amount > 0 ? $order->amount : number_format((float) $order->invoices->sum('total'), 2, '.', ''),
-            // A fresh, unique username and a strong password for each account not yet created, as WHMCS offers.
-            // A service waiting for accept was never created, even when it has a username: orders
-            // imported from WHMCS carry the one WHMCS planned to use, so it is offered for editing.
+            // A fresh, unique username and a strong password for each account not yet created.
+            // A service waiting for accept was never created, even when it has a username: the
+            // username is only the one planned for it, so it is offered for editing.
             'setup' => $order->services->filter(fn (Service $s) => ! $s->remote_id || $s->provision_status === 'awaiting_accept')->mapWithKeys(function (Service $s) use (&$used) {
                 $username = $s->credentials['username'] ?? ($s->provision_status === 'awaiting_accept' ? $s->remote_id : null);
                 if (! $username) {
@@ -107,13 +107,13 @@ class OrderController extends Controller
         $welcome = $request->boolean('send_welcome_email', true);
         $chosen = collect($data['services'] ?? [])->keyBy('id');
 
-        // As in WHMCS, accepting sets up everything not set up yet, paid or not: services waiting for
+        // Accepting sets up everything not set up yet, paid or not: services waiting for
         // acceptance, and ones still waiting on the first payment or on an admin. Paying later does not
         // create them twice, since a service already queued or created is skipped then.
         $waiting = $order->services()
             ->whereIn('status', ['pending', 'active'])
             ->where(fn ($q) => $q->where('provision_status', 'awaiting_accept')
-                // An imported WHMCS service may carry its planned username before the account exists.
+                // A service may carry its planned username before the account exists.
                 ->orWhere(fn ($q) => $q->whereNull('remote_id')->whereIn('provision_status', ['none', 'manual_required', 'failed'])))
             ->get();
 
@@ -132,7 +132,7 @@ class OrderController extends Controller
 
         foreach ($waiting as $service) {
             $pick = $chosen[$service->id] ?? [];
-            // A username carried over from WHMCS is only a plan until the account is created.
+            // A planned username is only a plan until the account is created.
             $credentials = array_filter(['username' => $pick['username'] ?? $service->remote_id, 'password' => $pick['password'] ?? null]);
             $changes = ['status' => 'active'];
             // Accepted before payment: it falls due with the order's invoice, as with set-up-on-order

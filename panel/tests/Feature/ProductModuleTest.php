@@ -36,13 +36,13 @@ class ProductModuleTest extends TestCase
         return [$order, $order->services()->sole(), $order->invoices()->sole()];
     }
 
-    public function test_accepting_an_unpaid_order_sets_it_up_now_like_whmcs(): void
+    public function test_accepting_an_unpaid_order_sets_it_up_now(): void
     {
         Queue::fake();
         Server::create(['name' => 'Webuzo 1', 'module' => 'webuzo', 'hostname' => 'wz.test', 'username' => 'admin', 'credentials' => 'key']);
         [$order, $service, $invoice] = $this->orderFor('payment');
 
-        $this->assertMatchesRegularExpression('/^\d{10}$/', (string) $order->order_number, 'A WHMCS-style number, not the ID.');
+        $this->assertMatchesRegularExpression('/^\d{10}$/', (string) $order->order_number, 'A random 10-digit number, not the ID.');
         $this->assertNotSame((string) $order->id, $order->order_number);
         $this->assertSame('unpaid', $invoice->status);
 
@@ -134,7 +134,7 @@ class ProductModuleTest extends TestCase
     {
         Queue::fake();
         [$order, $service] = $this->orderFor('accept');
-        // As imported from WHMCS: pending, waiting for accept, with the username WHMCS planned.
+        // Pending, waiting for accept, with a planned username.
         $service->update(['provision_status' => 'awaiting_accept', 'remote_id' => 'borhanud']);
         $domain = \App\Models\Domain::create(['client_id' => $service->client_id, 'order_id' => $order->id, 'name' => 'borhan.com', 'action' => 'register', 'registrar' => 'resellcube', 'recurring_amount' => 1600]);
 

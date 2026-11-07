@@ -30,54 +30,6 @@ return new class extends Migration
             $table->unique(['client_id', 'email']);
         });
 
-        // Import existing WHMCS users from carrothost_portal if available
-        try {
-            $portalCheck = DB::select("SHOW DATABASES LIKE 'carrothost_portal'");
-            if (!empty($portalCheck)) {
-                $whmcsUsers = DB::select("
-                    SELECT 
-                        c.id as client_id,
-                        u.first_name,
-                        u.last_name,
-                        u.email,
-                        COALESCE(NULLIF(u.language, ''), 'English') as language,
-                        CASE WHEN u.second_factor IS NOT NULL AND u.second_factor != '' THEN 1 ELSE 0 END as two_factor,
-                        uc.owner as is_owner,
-                        uc.permissions,
-                        'active' as status,
-                        u.email_verified_at,
-                        COALESCE(uc.last_login, u.last_login) as last_login_at,
-                        u.created_at,
-                        u.updated_at
-                    FROM carrothost_portal.tblusers_clients uc
-                    JOIN carrothost_portal.tblusers u ON u.id = uc.auth_user_id
-                    JOIN carrothost_portal.tblclients wc ON wc.id = uc.client_id
-                    JOIN carrothost_panel.clients c ON c.email = wc.email
-                ");
-
-                foreach ($whmcsUsers as $u) {
-                    DB::table('client_users')->updateOrInsert(
-                        ['client_id' => $u->client_id, 'email' => strtolower($u->email)],
-                        [
-                            'first_name' => $u->first_name,
-                            'last_name' => $u->last_name,
-                            'language' => $u->language ?: 'English',
-                            'two_factor' => (bool) $u->two_factor,
-                            'is_owner' => (bool) $u->is_owner,
-                            'permissions' => $u->permissions,
-                            'status' => 'active',
-                            'email_verified_at' => $u->email_verified_at,
-                            'last_login_at' => $u->last_login_at,
-                            'created_at' => $u->created_at ?: now(),
-                            'updated_at' => $u->updated_at ?: now(),
-                        ]
-                    );
-                }
-            }
-        } catch (\Throwable $e) {
-            // Silently continue if cross-database query is not permitted
-        }
-
         // For any clients in carrothost_panel that don't have an owner user yet, create one
         $clientsWithoutOwner = DB::select("
             SELECT c.id, c.name, c.email, c.phone, c.last_login_at, c.created_at, c.updated_at

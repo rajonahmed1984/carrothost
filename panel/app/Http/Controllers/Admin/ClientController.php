@@ -135,7 +135,7 @@ class ClientController extends Controller
         ];
     }
 
-    /** Everything logged about the client and its invoices, services and domains, including imported WHMCS history. */
+    /** Everything logged about the client and its invoices, services and domains, including its earlier history. */
     public function log(Client $client)
     {
         $invoiceIds = $client->invoices()->select('id');

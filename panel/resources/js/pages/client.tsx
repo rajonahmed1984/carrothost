@@ -60,7 +60,7 @@ export type TransactionRow = { id: number; gateway: string; gateway_name: string
 export type TicketRow = { id: number; number: string; department_name: string; subject: string; status: string; priority: string; created_at: string; last_reply_at: string | null };
 export type EmailRow = { id: number; to: string; subject: string; body: string | null; created_at: string };
 
-function formatWhmcsDate(iso: string | null) {
+function formatPanelDate(iso: string | null) {
     if (!iso) return 'Never';
     const d = new Date(iso);
     const day = String(d.getDate()).padStart(2, '0');
@@ -205,7 +205,7 @@ function ManageCredits({ client, onClose }: { client: Detail; onClose: () => voi
                     noun="entries"
                     empty="No credit history yet."
                     columns={[
-                        { header: 'Date', cell: (r) => <span className="whitespace-nowrap">{formatWhmcsDate(r.created_at)}</span> },
+                        { header: 'Date', cell: (r) => <span className="whitespace-nowrap">{formatPanelDate(r.created_at)}</span> },
                         { header: 'Description', cell: (r) => r.invoice ? <Link className="table-action-link" to={`/admin/paid-invoices/${r.invoice.id}`}>{r.description}</Link> : r.description },
                         { header: 'By', cell: (r) => r.user?.name ?? 'System' },
                         { header: 'Amount', cell: (r) => <span className={Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(r.amount, client.currency)}</span>, align: 'right' },
@@ -304,7 +304,7 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
 
 
 const PERMISSION_COLUMNS = [
-    // Column 1 (Left column in WHMCS screenshot)
+    // Column 1 (left)
     [
         { key: 'profile', label: 'Modify Master Account Profile' },
         { key: 'products', label: 'View Products & Services' },
@@ -314,7 +314,7 @@ const PERMISSION_COLUMNS = [
         { key: 'affiliates', label: 'View & Manage Affiliate Account' },
         { key: 'orders', label: 'Place New Orders/Upgrades/Cancellations' },
     ],
-    // Column 2 (Right column in WHMCS screenshot)
+    // Column 2 (right)
     [
         { key: 'contacts', label: 'View & Manage Contacts' },
         { key: 'manageproducts', label: 'View & Modify Product Passwords' },
@@ -404,7 +404,7 @@ function ManageUserModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-2xl">
-                {/* WHMCS style modal header */}
+                {/* Modal header */}
                 <div className="flex items-center justify-between bg-[#1a365d] px-5 py-3 text-white">
                     <h3 className="text-base font-semibold">Manage User: {user.email}</h3>
                     <button type="button" onClick={onClose} className="text-white/80 hover:text-white">
@@ -483,7 +483,7 @@ function ManageUserModal({
                             </div>
                         </div>
 
-                        {/* Permissions Grid matching WHMCS Screenshot 2 */}
+                        {/* Permissions grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2">
                             <label className="md:text-right font-medium text-slate-700 pt-1">Permissions</label>
                             <div className="md:col-span-2 space-y-3">
@@ -747,8 +747,8 @@ function UsersTab({
                     },
                     { header: 'Permissions', cell: (u) => (u.is_owner ? 'Full access' : `${u.permissions_list.length} of ${ALL_PERMISSION_KEYS.length}`) },
                     { header: 'Location', cell: () => [client.city, client.country].filter(Boolean).join(', ') || '-' },
-                    { header: 'Added', cell: (u) => formatWhmcsDate(u.created_at).slice(0, 10), sort: (u) => u.created_at },
-                    { header: 'Last Login', cell: (u) => formatWhmcsDate(u.last_login_at) },
+                    { header: 'Added', cell: (u) => formatPanelDate(u.created_at).slice(0, 10), sort: (u) => u.created_at },
+                    { header: 'Last Login', cell: (u) => formatPanelDate(u.last_login_at) },
                     {
                         header: '',
                         align: 'right',

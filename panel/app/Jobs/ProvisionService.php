@@ -21,8 +21,11 @@ class ProvisionService implements ShouldQueue
 
     public int $timeout = 420;
 
-    /** $welcome: email the login details after a create. */
-    public function __construct(public int $serviceId, public string $action, public bool $welcome = true) {}
+    /**
+     * $welcome: email the login details after a create.
+     * $billing: a suspension for an unpaid bill (tells the client); false when an admin suspends by hand.
+     */
+    public function __construct(public int $serviceId, public string $action, public bool $welcome = true, public bool $billing = true) {}
 
     public function handle(): void
     {
@@ -86,9 +89,9 @@ class ProvisionService implements ShouldQueue
 
     private function suspend(ProvisioningModule $module, Service $service): array
     {
-        $module->suspend($service, 'Overdue invoice');
+        $module->suspend($service, $this->billing ? 'Overdue invoice' : 'Suspended by staff');
 
-        return ['status' => 'suspended', 'auto_suspended' => true];
+        return ['status' => 'suspended', 'auto_suspended' => $this->billing];
     }
 
     private function unsuspend(ProvisioningModule $module, Service $service): array

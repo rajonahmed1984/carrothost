@@ -37,49 +37,6 @@ return new class extends Migration
             'payment_method' => DB::table('orders')->select('payment_method')->whereColumn('orders.id', 'services.order_id'),
         ]);
 
-        $this->importFromWhmcs();
-    }
-
-    /** Copies what WHMCS kept for each hosting account, when its database sits on the same server. */
-    private function importFromWhmcs(): void
-    {
-        try {
-            if (DB::getDriverName() !== 'mysql' || empty(DB::select("SHOW DATABASES LIKE 'carrothost_portal'"))) {
-                return;
-            }
-
-            $date = fn ($value) => $value && $value > '1970' ? substr($value, 0, 10) : null;
-
-            foreach (DB::table('services')->get(['id', 'domain', 'order_id', 'remote_id', 'credentials']) as $service) {
-                $row = DB::table('carrothost_portal.tblhosting')
-                    ->where(fn ($q) => $q->where('orderid', (int) $service->order_id)->when($service->domain, fn ($w) => $w->orWhere('domain', $service->domain)))
-                    ->orderByRaw('orderid = ? desc, domain = ? desc', [(int) $service->order_id, (string) $service->domain])
-                    ->first();
-
-                if (! $row || ($service->domain && strtolower(trim($row->domain)) !== $service->domain)) {
-                    continue;
-                }
-
-                DB::table('services')->where('id', $service->id)->update(array_filter([
-                    'registered_at' => $date($row->regdate),
-                    'termination_date' => $date($row->termination_date),
-                    'quantity' => max(1, (int) ($row->qty ?? 1)),
-                    'first_payment_amount' => $row->firstpaymentamount,
-                    'payment_method' => $row->paymentmethod ?: null,
-                    'subscription_id' => $row->subscriptionid ?: null,
-                    'dedicated_ip' => $row->dedicatedip ?: null,
-                    'override_suspend_until' => $row->overideautosuspend ? $date($row->overidesuspenduntil) : null,
-                    'admin_notes' => $row->notes ?: null,
-                    'disk_usage' => (int) $row->diskusage,
-                    'disk_limit' => (int) $row->disklimit,
-                    'bw_usage' => (int) $row->bwusage,
-                    'bw_limit' => (int) $row->bwlimit,
-                    'usage_updated_at' => $row->lastupdate && $row->lastupdate > '1970' ? $row->lastupdate : null,
-                ], fn ($v) => $v !== null));
-            }
-        } catch (\Throwable) {
-            // Cross-database reads not allowed here; the defaults above stand.
-        }
     }
 
     public function down(): void

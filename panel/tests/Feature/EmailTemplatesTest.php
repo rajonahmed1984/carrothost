@@ -30,7 +30,7 @@ class EmailTemplatesTest extends TestCase
         return app(BillingService::class)->createInvoice($client, [['description' => 'Hosting <b>Plan</b>', 'amount' => '500.00']], now()->addDays(7));
     }
 
-    public function test_templates_are_listed_in_whmcs_groups(): void
+    public function test_templates_are_listed_in_groups(): void
     {
         $groups = collect($this->getJson('/api/settings/email-templates')->assertOk()->json('groups'));
 

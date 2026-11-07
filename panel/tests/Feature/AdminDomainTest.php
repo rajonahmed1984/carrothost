@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Client;
 use App\Models\Domain;
+use App\Models\Gateway;
 use App\Models\DomainReminder;
 use App\Models\Tld;
 use App\Models\User;
@@ -22,6 +23,7 @@ class AdminDomainTest extends TestCase
         $domain = Domain::create(['client_id' => $client->id, 'name' => 'acme.com', 'action' => 'register', 'recurring_amount' => '1600.00', 'status' => 'active', 'expires_at' => '2027-02-16']);
         DomainReminder::create(['domain_id' => $domain->id, 'type' => 1, 'recipients' => 'acme@example.com', 'days_before_expiry' => 30, 'sent_on' => '2027-01-17']);
         Tld::create(['tld' => '.com', 'register_price' => 1500, 'renew_price' => 1700, 'transfer_price' => 1500]);
+        Gateway::create(['code' => 'bkash', 'is_enabled' => true, 'config' => []]);
         $this->actingAs($admin);
 
         $this->getJson("/api/domains/{$domain->id}")->assertOk()

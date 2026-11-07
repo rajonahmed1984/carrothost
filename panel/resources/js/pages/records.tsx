@@ -123,7 +123,7 @@ function formatOrderDateTime(iso: string | null | undefined) {
     return `${day}/${month}/${year} ${hours}:${mins}`;
 }
 
-function formatWhmcsCurrency(value: string | number | null | undefined) {
+function formatPanelCurrency(value: string | number | null | undefined) {
     const num = Number(value) || 0;
     return `৳${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}BDT`;
 }

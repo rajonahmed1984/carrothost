@@ -10,7 +10,9 @@ use App\Models\Product;
 use App\Models\Server;
 use App\Models\Service;
 use App\Models\Client;
+use App\Provisioning\ReportsAccountStatus;
 use App\Provisioning\WebdockModule;
+use App\Services\AutomationService;
 use App\Services\DashboardService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
@@ -18,6 +20,7 @@ use App\Support\PaymentMethods;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ServiceController extends Controller
 {
@@ -61,8 +64,12 @@ class ServiceController extends Controller
         return $this->detail($service);
     }
 
-    /** Admin edits to the billing record. Changes on the server itself still go through the module commands. */
-    public function update(Request $request, Service $service)
+    /**
+     * Admin edits to the service. Status and product changes are carried to the server too, unless
+     * the admin turns that off: suspending or unsuspending the account, and moving it to the
+     * product's package.
+     */
+    public function update(Request $request, Service $service, ServiceTools $tools)
     {
         $module = Product::find($request->input('product_id', $service->product_id))?->module;
         // A Webdock slug is often pasted as the server's domain or dashboard link.
@@ -83,7 +90,8 @@ class ServiceController extends Controller
             'registered_at' => 'sometimes|nullable|date',
             'quantity' => 'sometimes|integer|min:1|max:1000',
             'first_payment_amount' => 'sometimes|numeric|min:0|max:9999999',
-            'recurring_amount' => 'sometimes|numeric|min:0|max:9999999',
+            // Blank uses the product's price for the cycle and quantity.
+            'recurring_amount' => 'sometimes|nullable|numeric|min:0|max:9999999',
             'recalculate' => 'sometimes|boolean',
             'next_due_date' => 'sometimes|nullable|date',
             'termination_date' => 'sometimes|nullable|date',
@@ -97,9 +105,19 @@ class ServiceController extends Controller
             // This VPS's own monthly cost, when it differs from its product's.
             'cost_amount' => 'sometimes|nullable|numeric|min:0|max:9999999',
             'cost_currency' => 'sometimes|nullable|in:BDT,USD',
+            'apply_to_server' => 'sometimes|boolean',
+            'change_package' => 'sometimes|boolean',
         ]);
 
-        $changes = collect($data)->except(['username', 'password', 'recalculate'])->all();
+        if (array_key_exists('recurring_amount', $data) && $data['recurring_amount'] === null) {
+            unset($data['recurring_amount']);
+            $data['recalculate'] = true;
+        }
+        $oldProduct = $service->product_id;
+        $oldRemote = $service->remote_id;
+        $serverAction = $this->statusAction($service, $data['status'] ?? $service->status, $data['apply_to_server'] ?? true);
+
+        $changes = collect($data)->except(['username', 'password', 'recalculate', 'apply_to_server', 'change_package'])->all();
 
         if (isset($changes['domain'])) {
             $changes['domain'] = strtolower($changes['domain']);
@@ -121,6 +139,14 @@ class ServiceController extends Controller
                 throw ValidationException::withMessages(['recurring_amount' => "{$product->name} has no {$cycle} price, so the amount cannot be recalculated."]);
             }
             $changes['recurring_amount'] = bcmul($price->priceIn($service->client->currencyCode()), (string) ($changes['quantity'] ?? $service->quantity), 2);
+        }
+
+        // The account ID and the login username are the same name on cPanel and Webuzo: renaming the
+        // account carries over to a username that still matched it.
+        $storedUser = $service->credentials['username'] ?? null;
+        if (array_key_exists('remote_id', $changes) && $changes['remote_id'] && $changes['remote_id'] !== $oldRemote
+            && in_array($storedUser, [null, '', $oldRemote], true) && in_array($data['username'] ?? $storedUser, [null, '', $oldRemote], true)) {
+            $data['username'] = $changes['remote_id'];
         }
 
         // Login details kept in the panel. They do not change the password on the server.
@@ -148,7 +174,129 @@ class ServiceController extends Controller
         $service->update($changes);
         ActivityLog::record('service.updated', $service, ['fields' => array_keys($changes)]);
 
-        return $this->detail($service->refresh());
+        $notices = [];
+        if ($serverAction) {
+            $notices[] = $this->sendStatus($service, $serverAction);
+        }
+
+        if (($data['change_package'] ?? false) && $service->product_id !== $oldProduct && ServiceTools::hasTools($service->load('product', 'server'))) {
+            try {
+                $tools->changePackage($service);
+                $notices[] = "Package changed on the server to {$service->product->module_package}.";
+            } catch (Throwable $e) {
+                $message = $e instanceof ValidationException ? collect($e->errors())->flatten()->first() : $e->getMessage();
+                $notices[] = "Saved, but the package was not changed on the server: {$message}";
+            }
+        }
+
+        return [...$this->detail($service->refresh()), 'notices' => $notices];
+    }
+
+    /**
+     * The module command that brings the server in line with a status change: suspend or
+     * unsuspend. Termination is never automatic, as it deletes the customer's data.
+     */
+    private function statusAction(Service $service, string $status, bool $apply): ?string
+    {
+        if (! $apply || $status === $service->status || ! $service->remote_id || ! config("billing.provisioning_modules.{$service->product?->module}.class")) {
+            return null;
+        }
+
+        $action = match (true) {
+            $status === 'suspended' && $service->status === 'active' => 'suspend',
+            $status === 'active' && $service->status === 'suspended' => 'unsuspend',
+            default => null,
+        };
+
+        if ($action && in_array($service->provision_status, ['queued', 'running'], true)) {
+            throw ValidationException::withMessages(['status' => 'Another server action is in progress. Try again when it finishes.']);
+        }
+
+        return $action;
+    }
+
+    /** Queues a staff suspend or unsuspend (the client gets no overdue notice) and says so. */
+    private function sendStatus(Service $service, string $action): string
+    {
+        $service->update(['provision_status' => 'queued']);
+        ProvisionService::dispatch($service->id, $action, true, false);
+        ActivityLog::record("service.{$action}.requested", $service);
+
+        return ucfirst($action)." of {$service->remote_id} sent to the server.";
+    }
+
+    /** The account as the server has it, beside what the panel holds, with every difference. */
+    public function serverState(Service $service, AutomationService $automation)
+    {
+        return $this->compareWithServer($service->load('product', 'server'), $automation);
+    }
+
+    /**
+     * Settles the differences the admin picked. Domain and IP are read from the server into the
+     * panel; status and package belong to the panel, so the server is changed to match.
+     */
+    public function applyServerState(Request $request, Service $service, AutomationService $automation, ServiceTools $tools)
+    {
+        $use = $request->validate(['use' => 'required|array|min:1', 'use.*' => 'in:domain,dedicated_ip,status,package'])['use'];
+        $state = $this->compareWithServer($service->load('product', 'server'), $automation);
+        $notices = [];
+
+        $pull = array_filter(
+            array_intersect_key(['domain' => $state['server']['domain'], 'dedicated_ip' => $state['server']['ip']], array_flip($use)),
+            fn ($v) => $v !== null,
+        );
+        if ($pull) {
+            $service->update($pull);
+            ActivityLog::record('service.updated', $service, ['fields' => array_keys($pull), 'from' => 'server']);
+            $notices[] = 'Copied the '.implode(' and ', array_map(fn ($k) => $k === 'dedicated_ip' ? 'IP' : $k, array_keys($pull))).' from the server.';
+        }
+
+        if (in_array('status', $use, true) && $state['differences']['status']) {
+            if (in_array($service->provision_status, ['queued', 'running'], true)) {
+                throw ValidationException::withMessages(['use' => 'Another server action is in progress. Try again when it finishes.']);
+            }
+            $notices[] = $this->sendStatus($service, $service->status === 'suspended' ? 'suspend' : 'unsuspend');
+        }
+
+        if (in_array('package', $use, true) && $state['differences']['package']) {
+            $tools->changePackage($service);
+            $notices[] = "Package changed on the server to {$service->product->module_package}.";
+        }
+
+        return [...$this->detail($service->refresh()), 'notices' => $notices];
+    }
+
+    /**
+     * @return array{server: array{domain: ?string, ip: ?string, package: ?string, suspended: bool},
+     *     panel: array{domain: ?string, ip: ?string, package: ?string, status: string}, differences: array<string, bool>}
+     */
+    private function compareWithServer(Service $service, AutomationService $automation): array
+    {
+        $class = config("billing.provisioning_modules.{$service->product->module}.class");
+        if (! $service->remote_id || ! $service->server || ! $class || ! is_subclass_of($class, ReportsAccountStatus::class)) {
+            throw ValidationException::withMessages(['service' => 'This service has no cPanel or Webuzo account to read.']);
+        }
+
+        try {
+            $server = $automation->statusModule($service)->accountInfo($service);
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages(['service' => $e->getMessage()]);
+        }
+
+        $package = $service->product->module_package;
+
+        return [
+            'server' => $server,
+            'panel' => ['domain' => $service->domain, 'ip' => $service->dedicated_ip, 'package' => $package, 'status' => $service->status],
+            'differences' => [
+                'domain' => $server['domain'] !== null && strcasecmp((string) $service->domain, $server['domain']) !== 0,
+                // A shared account sits on the server's main IP; only a dedicated IP set here is compared.
+                'dedicated_ip' => $server['ip'] !== null && $service->dedicated_ip !== null && $service->dedicated_ip !== $server['ip'],
+                // Only active and suspended have a server side; the panel's status wins.
+                'status' => in_array($service->status, ['active', 'suspended'], true) && ($service->status === 'suspended') !== $server['suspended'],
+                'package' => $package !== null && $server['package'] !== null && strcasecmp($package, $server['package']) !== 0,
+            ],
+        ];
     }
 
     public function refreshUsage(Service $service, ServiceTools $tools)
@@ -327,7 +475,11 @@ class ServiceController extends Controller
             'client_services' => $service->client->services()->with('product:id,name')->orderByDesc('id')->get(['id', 'product_id', 'domain', 'status'])
                 ->map(fn (Service $s) => ['id' => $s->id, 'name' => $s->product->name.($s->domain ? " - {$s->domain}" : ''), 'status' => $s->status]),
             'options' => [
-                'products' => Product::orderBy('name')->get(['id', 'name', 'module']),
+                // Each product's prices in the client's currency, for the Recurring Amount placeholder.
+                'products' => Product::with('prices')->orderBy('name')->get(['id', 'name', 'module'])->map(fn (Product $p) => [
+                    'id' => $p->id, 'name' => $p->name, 'module' => $p->module,
+                    'prices' => $p->prices->mapWithKeys(fn ($price) => [$price->cycle => $price->priceIn($service->client->currencyCode())]),
+                ]),
                 'servers' => Server::withCount('services')->orderBy('name')->get(['id', 'name', 'module', 'max_accounts']),
                 'payment_methods' => PaymentMethods::options($service->payment_method),
                 'cycles' => array_keys(config('billing.cycles')),
@@ -353,7 +505,8 @@ class ServiceController extends Controller
         }
 
         $service->update(['provision_status' => 'queued']);
-        ProvisionService::dispatch($service->id, $action);
+        // Suspended here by staff, not for an unpaid bill: the client gets no overdue notice.
+        ProvisionService::dispatch($service->id, $action, true, false);
         ActivityLog::record("service.{$action}.requested", $service);
 
         return $service;

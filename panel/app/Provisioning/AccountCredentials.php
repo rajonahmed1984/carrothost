@@ -6,7 +6,7 @@ use App\Models\Service;
 use Illuminate\Support\Str;
 
 /**
- * Hosting account usernames and passwords, the way WHMCS makes them: the first 8 letters
+ * Hosting account usernames and passwords: the first 8 letters
  * of the domain, made unique with a number at the end, and a strong random password.
  */
 class AccountCredentials

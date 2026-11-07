@@ -26,8 +26,8 @@ return [
     // Days after the order that its first invoice falls due.
     'invoice_due_days' => 0,
 
-    // Invoices made in the panel are numbered from here on (plain numbers, like WHMCS's).
-    // Imported WHMCS invoices keep their WHMCS id as the number, so this sits well above it.
+    // Invoices made in the panel are numbered from here on (plain numbers).
+    // Older invoices keep their own numbers, so this sits well above them.
     'invoice_number_start' => (int) env('INVOICE_NUMBER_START', 10001),
 
     'cycles' => [
@@ -66,7 +66,7 @@ return [
     'usage_update_enabled' => true,
     'domain_sync_enabled' => true,
 
-    // Admin emails sent at midnight, like WHMCS: what the daily jobs did the day before, and
+    // Admin emails sent at midnight: what the daily jobs did the day before, and
     // what the domain sync changed. recipients: comma separated; blank means every admin.
     'reports' => [
         'cron_activity' => true,

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * The admin emails WHMCS sends from its cron: the daily Cron Job Activity report
+ * The admin emails the panel sends from its cron: the daily Cron Job Activity report
  * and the Domain Synchronisation Cron Report.
  */
 class AdminReports
@@ -33,6 +33,7 @@ class AdminReports
         'ticket_auto_close' => 'Tickets auto-closed',
         'domain_sync' => 'Domains synced with registrars',
         'usage' => 'Service usage updated',
+        'enforce_suspensions' => 'Suspensions applied on servers',
         'invoice_reminders' => 'Payment reminders sent',
         'domain_reminders' => 'Domain renewal notices sent',
     ];

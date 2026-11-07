@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Every email the panel sends a customer, grouped as in WHMCS. The defaults live here; Admin >
+ * Every email the panel sends a customer, grouped by kind. The defaults live here; Admin >
  * Settings > Email saves only what an admin changes, so a reset brings the default straight back.
  *
  * Merge fields are written {$name}. Text values are escaped in the body; the few listed in

@@ -6,7 +6,7 @@ import { Button, Dropdown, ErrorNote, Field, Input, QueryState, Status, useBrand
 import { day, dayTime, EditInvoiceForm, Notice, OpenLink, ViewHeader } from './client-tabs';
 import { alertDialog, ask } from '../dialog';
 
-/* One invoice inside the client's Invoices tab, laid out like WHMCS's invoice page in the panel's own look. */
+/* One invoice inside the client's Invoices tab, in the panel's own look. */
 
 type Payment = { id: number; gateway: string; gateway_name: string; transaction_id: string; amount: string; fee: string; currency: string; created_at: string; refund_of: number | null };
 

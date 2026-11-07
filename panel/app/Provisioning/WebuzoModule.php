@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /** Webuzo Admin API. Authenticates with the Access Hash (API key), not the root password. */
-class WebuzoModule implements ManagesAccounts, ProvisioningModule
+class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccountStatus
 {
     use GeneratesUsername;
 
@@ -62,6 +62,20 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule
     public function unsuspend(Service $service): void
     {
         $this->call('users', ['unsuspend' => $service->remote_id, 'skip' => 1]);
+    }
+
+    public function accountInfo(Service $service): array
+    {
+        $user = $this->account($service);
+        $ip = $user['ip'] ?? $user['ipv4'] ?? (is_array($user['ips'] ?? null) ? reset($user['ips']) : null);
+
+        return [
+            'domain' => filled($user['domain'] ?? null) ? strtolower((string) $user['domain']) : null,
+            'ip' => is_string($ip) && $ip !== '' ? $ip : null,
+            'package' => filled($user['plan'] ?? null) ? (string) $user['plan'] : null,
+            // Webuzo lists a suspended account with status "suspended" (older builds set a suspended flag).
+            'suspended' => strcasecmp((string) ($user['status'] ?? ''), 'suspended') === 0 || ! empty($user['suspended']),
+        ];
     }
 
     public function terminate(Service $service): void

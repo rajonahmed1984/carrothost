@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-/** Admin > Settings > Email > Email Templates: every email a customer receives, grouped as in WHMCS. */
+/** Admin > Settings > Email > Email Templates: every email a customer receives, grouped by kind. */
 class EmailTemplateController extends Controller
 {
     public function index()

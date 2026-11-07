@@ -256,6 +256,8 @@ Route::prefix('api')->group(function () {
         Route::post('services/{service}/sso', [Admin\ServiceController::class, 'sso'])->middleware('throttle:20,1');
         Route::post('services/{service}/password', [Admin\ServiceController::class, 'changePassword'])->middleware('throttle:10,1');
         Route::post('services/{service}/package', [Admin\ServiceController::class, 'changePackage'])->middleware('throttle:10,1');
+        Route::get('services/{service}/server-state', [Admin\ServiceController::class, 'serverState'])->middleware('throttle:30,1');
+        Route::post('services/{service}/server-state', [Admin\ServiceController::class, 'applyServerState'])->middleware('throttle:10,1');
         Route::get('services/{service}/upgrade', [Admin\ServiceController::class, 'upgradeQuote']);
         Route::post('services/{service}/upgrade', [Admin\ServiceController::class, 'upgrade']);
         Route::post('services/{service}/transfer', [Admin\ServiceController::class, 'transfer']);

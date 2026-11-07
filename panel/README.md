@@ -54,7 +54,7 @@ myapptimatic does, so on cPanel nothing else is needed. Senders (`config/system_
 
 An SMTP server saved under Settings → Email replaces sendmail.
 
-**Currencies** (BDT and USD), like WHMCS: each client has a currency, chosen at sign-up or
+**Currencies** (BDT and USD): each client has a currency, chosen at sign-up or
 on their admin profile, and their store prices, orders, invoices, renewals, upgrades and
 credit are all in it. Prices are entered in BDT; a USD client pays a product's or TLD's fixed
 USD price when one is set, else the BDT price divided by the rate in Settings → Currencies.
@@ -63,7 +63,7 @@ bKash and SSLCommerz charge a USD invoice in BDT at that rate; PayPal charges US
 Changing a client's currency converts their renewal amounts and credit, and needs their
 unpaid invoices paid or cancelled first.
 
-**Admin reports**, like WHMCS: at midnight the admins get the **Cron Job Activity** email
+**Admin reports**: at midnight the admins get the **Cron Job Activity** email
 (what the daily jobs did the day before, plus errors and tasks that did not run), then the
 domain sync runs and sends the **Domain Synchronisation Cron Report**. Turn them off or choose
 recipients under Settings → Automation → Admin Reports. Send one by hand with

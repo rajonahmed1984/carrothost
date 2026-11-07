@@ -41,54 +41,6 @@ return new class extends Migration
             'payment_method' => DB::table('orders')->select('payment_method')->whereColumn('orders.id', 'domains.order_id'),
         ]);
 
-        $this->importFromWhmcs();
-    }
-
-    /** Copies the fields WHMCS kept for each domain, when its database sits on the same server. */
-    private function importFromWhmcs(): void
-    {
-        try {
-            if (DB::getDriverName() !== 'mysql' || empty(DB::select("SHOW DATABASES LIKE 'carrothost_portal'"))) {
-                return;
-            }
-
-            $map = []; // WHMCS domain id => panel domain id
-            foreach (DB::table('domains')->get(['id', 'name', 'order_id', 'expires_at']) as $domain) {
-                $row = DB::table('carrothost_portal.tbldomains')->where('domain', $domain->name)
-                    ->orderByRaw('orderid = ? desc, expirydate = ? desc', [(int) $domain->order_id, (string) $domain->expires_at])
-                    ->first();
-
-                if (! $row) {
-                    continue;
-                }
-
-                $map[$row->id] = $domain->id;
-                $date = fn ($value) => $value && $value !== '0000-00-00' ? $value : null;
-                DB::table('domains')->where('id', $domain->id)->update(array_filter([
-                    'registered_at' => $date($row->registrationdate),
-                    'next_due_date' => $date($row->nextduedate),
-                    'first_payment_amount' => $row->firstpaymentamount,
-                    'payment_method' => $row->paymentmethod ?: null,
-                    'subscription_id' => $row->subscriptionid ?: null,
-                    'dns_management' => (bool) $row->dnsmanagement,
-                    'email_forwarding' => (bool) $row->emailforwarding,
-                    'id_protection' => (bool) $row->idprotection,
-                ], fn ($v) => $v !== null));
-            }
-
-            foreach (array_chunk(array_keys($map), 200) as $ids) {
-                $rows = DB::table('carrothost_portal.tbldomainreminders')->whereIn('domain_id', $ids)->get();
-                DB::table('domain_reminders')->insert($rows->map(fn ($r) => [
-                    'domain_id' => $map[$r->domain_id],
-                    'type' => $r->type,
-                    'recipients' => $r->recipients,
-                    'days_before_expiry' => $r->days_before_expiry,
-                    'sent_on' => $r->date,
-                ])->all());
-            }
-        } catch (\Throwable) {
-            // Cross-database reads not allowed here; the defaults above stand.
-        }
     }
 
     public function down(): void

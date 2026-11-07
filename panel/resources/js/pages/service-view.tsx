@@ -22,7 +22,7 @@ export type ServiceFull = {
     next_due_date: string | null; registered_at: string | null; termination_date: string | null; admin_notes: string | null;
     disk_usage: number | null; disk_limit: number | null; bw_usage: number | null; bw_limit: number | null; usage_updated_at: string | null;
     client: { id: number; name: string; email: string };
-    product: { id: number; name: string; module: string | null; type: string; cost_amount?: string | null; cost_currency?: string | null };
+    product: { id: number; name: string; module: string | null; type: string; module_package?: string | null; cost_amount?: string | null; cost_currency?: string | null };
     cost_amount: string | null; cost_currency: string | null;
     server: { id: number; name: string; hostname: string } | null;
     order: { id: number; order_number: string | null } | null;
@@ -31,11 +31,19 @@ export type ServiceFull = {
     pending_upgrade: { id: number; invoice_id: number | null; new_cycle: string; amount_due: string; new_product: { id: number; name: string } | null } | null;
     client_services: { id: number; name: string; status: string }[];
     options: {
-        products: { id: number; name: string; module: string | null }[];
+        products: { id: number; name: string; module: string | null; prices: Record<string, string> }[];
         servers: { id: number; name: string; module: string; max_accounts: number; services_count: number }[];
         payment_methods: Option[]; cycles: string[]; statuses: string[];
     };
 };
+
+type ServerState = {
+    server: { domain: string | null; ip: string | null; package: string | null; suspended: boolean };
+    panel: { domain: string | null; ip: string | null; package: string | null; status: string };
+    differences: Record<'domain' | 'dedicated_ip' | 'status' | 'package', boolean>;
+};
+
+type Saved = ServiceFull & { notices?: string[] };
 
 type Form = {
     product_id: number; server_id: string; domain: string; dedicated_ip: string; remote_id: string; username: string; password: string; status: string;
@@ -43,6 +51,7 @@ type Form = {
     next_due_date: string; termination_date: string; cycle: string; payment_method: string; subscription_id: string;
     override: boolean; override_suspend_until: string; terminate_end_of_cycle: boolean; terminate_reason: string; admin_notes: string;
     cost_amount: string; cost_currency: string;
+    apply_to_server: boolean; change_package: boolean;
 };
 
 const toForm = (s: ServiceFull): Form => ({
@@ -71,7 +80,37 @@ const toForm = (s: ServiceFull): Form => ({
     admin_notes: s.admin_notes ?? '',
     cost_amount: s.cost_amount ?? '',
     cost_currency: s.cost_currency ?? 'BDT',
+    apply_to_server: true,
+    change_package: true,
 });
+
+/** The product's price for a cycle and quantity in the client's currency, or null when it has none. */
+function productPrice(s: ServiceFull, productId: number, cycle: string, quantity: number): string | null {
+    const price = s.options.products.find((p) => p.id === productId)?.prices?.[cycle];
+
+    return price === undefined ? null : (Number(price) * Math.max(1, quantity || 1)).toFixed(2);
+}
+
+/**
+ * One edit can fill the fields tied to it: the Account ID and the Username are the same name on
+ * cPanel and Webuzo, and a Recurring Amount that follows the product price moves with the product,
+ * cycle and quantity. A field typed to its own value is left alone.
+ */
+function linked(s: ServiceFull, f: Form, key: keyof Form, value: Form[keyof Form]): Form {
+    const next = { ...f, [key]: value } as Form;
+    const sameName = s.product.module !== 'webdock';
+
+    if (sameName && key === 'remote_id' && (f.username === '' || f.username === f.remote_id)) next.username = String(value);
+    if (sameName && key === 'username' && (f.remote_id === '' || f.remote_id === f.username) && s.remote_id === null) next.remote_id = String(value);
+
+    if (key === 'product_id' || key === 'cycle' || key === 'quantity') {
+        const before = productPrice(s, f.product_id, f.cycle, f.quantity);
+        const after = productPrice(s, next.product_id, next.cycle, next.quantity);
+        if (after !== null && (f.recurring_amount === '' || (before !== null && Number(f.recurring_amount) === Number(before)))) next.recurring_amount = after;
+    }
+
+    return next;
+}
 
 const label = (v: string) => v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 const size = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`);
@@ -117,6 +156,76 @@ function LoginDetails({ id, onClose }: { id: number; onClose: () => void }) {
 }
 
 /**
+ * Reads the account from cPanel or Webuzo and lists where it differs from the panel. Domain and
+ * IP can be copied from the server; status and package are the panel's, so the server is changed.
+ */
+function ServerCheck({ s, onDone }: { s: ServiceFull; onDone: (data: ServiceFull, notices: string[]) => void }) {
+    const [state, setState] = useState<ServerState | null>(null);
+    const [use, setUse] = useState<string[]>([]);
+    const read = useMutation({
+        mutationFn: async () => (await api.get<ServerState>(`/services/${s.id}/server-state`)).data,
+        onSuccess: (data) => {
+            setState(data);
+            setUse((Object.keys(data.differences) as (keyof ServerState['differences'])[]).filter((k) => data.differences[k]));
+        },
+    });
+    const apply = useMutation({
+        mutationFn: async () => (await api.post<Saved>(`/services/${s.id}/server-state`, { use })).data,
+        onSuccess: ({ notices, ...data }) => { setState(null); onDone(data, notices ?? []); },
+    });
+    const rows: { key: keyof ServerState['differences']; label: string; panel: string; server: string; fix: string }[] = state ? [
+        { key: 'status', label: 'Status', panel: label(state.panel.status), server: state.server.suspended ? 'Suspended' : 'Active', fix: `${state.panel.status === 'suspended' ? 'Suspend' : 'Unsuspend'} on the server` },
+        { key: 'package', label: 'Package', panel: state.panel.package ?? '-', server: state.server.package ?? '-', fix: 'Change package on the server' },
+        { key: 'domain', label: 'Domain', panel: state.panel.domain ?? '-', server: state.server.domain ?? '-', fix: 'Copy to the panel' },
+        { key: 'dedicated_ip', label: 'Dedicated IP', panel: state.panel.ip ?? 'None (shared)', server: state.server.ip ?? '-', fix: 'Copy to the panel' },
+    ] : [];
+    const differs = rows.filter((r) => state?.differences[r.key]);
+
+    return (
+        <div className="space-y-2 border-t border-slate-100 pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+                <button type="button" disabled={read.isPending} onClick={() => read.mutate()} className="ui-btn ui-btn-secondary h-8 px-3 text-xs">
+                    <RefreshCw size={13} className={read.isPending ? 'animate-spin' : ''} /> {read.isPending ? 'Reading server...' : 'Check with server'}
+                </button>
+                {state && !differs.length && <span role="status" className="flex items-center gap-1 text-xs font-semibold text-emerald-700"><Check size={13} /> Panel and server match.</span>}
+            </div>
+            <ErrorNote error={read.error ?? apply.error} />
+            {state && (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full min-w-[30rem] text-xs">
+                        <thead className="bg-slate-50 text-left font-semibold text-slate-500">
+                            <tr><th className="px-3 py-2">Field</th><th className="px-3 py-2">Panel</th><th className="px-3 py-2">Server</th><th className="px-3 py-2">Fix</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {rows.map((r) => (
+                                <tr key={r.key} className={state.differences[r.key] ? 'bg-amber-50/60' : undefined}>
+                                    <td className="px-3 py-2 font-medium text-slate-700">{r.label}</td>
+                                    <td className="px-3 py-2 font-mono">{r.panel}</td>
+                                    <td className="px-3 py-2 font-mono">{r.server}</td>
+                                    <td className="px-3 py-2">
+                                        {state.differences[r.key] ? (
+                                            <label className="inline-flex cursor-pointer items-center gap-1.5">
+                                                <input type="checkbox" checked={use.includes(r.key)} onChange={(e) => setUse((u) => (e.target.checked ? [...u, r.key] : u.filter((k) => k !== r.key)))} />
+                                                {r.fix}
+                                            </label>
+                                        ) : <span className="text-slate-400">Matches</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            {differs.length > 0 && (
+                <Button type="button" disabled={!use.length || apply.isPending} onClick={() => apply.mutate()}>
+                    {apply.isPending ? 'Applying...' : `Apply ${use.length} fix${use.length === 1 ? '' : 'es'}`}
+                </Button>
+            )}
+        </div>
+    );
+}
+
+/**
  * The admin's full view of one product/service: account, billing, module commands, usage and notes.
  * Used on its own page and inside the client profile's Services tab.
  */
@@ -138,16 +247,22 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
     const navigate = useNavigate();
-    const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
+    const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => linked(s, f, key, value));
     const dirty = JSON.stringify(form) !== JSON.stringify(toForm(s));
     const refresh = () => {
-        qc.invalidateQueries({ queryKey: ['/services', String(s.id)] });
+        // The same service shows in the client's Services tab and in Products/Services: refresh both.
+        qc.invalidateQueries({ queryKey: ['/services'] });
         qc.invalidateQueries({ queryKey: ['/clients', String(s.client_id)] });
     };
+    const statusAction = form.status === s.status || !s.remote_id || !s.product.module ? null
+        : form.status === 'suspended' && s.status === 'active' ? 'suspend'
+            : form.status === 'active' && s.status === 'suspended' ? 'unsuspend' : null;
+    const productChanged = form.product_id !== s.product_id && s.has_tools;
+    const listPrice = productPrice(s, form.product_id, form.cycle, form.quantity);
 
     const save = useMutation({
         mutationFn: async () => {
-            const { override, password, server_id, ...rest } = form;
+            const { override, password, server_id, apply_to_server, change_package, ...rest } = form;
             const body: Record<string, unknown> = {
                 ...rest,
                 server_id: server_id ? Number(server_id) : null,
@@ -165,15 +280,21 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 admin_notes: rest.admin_notes || null,
                 cost_amount: rest.cost_amount === '' ? null : rest.cost_amount,
                 cost_currency: rest.cost_amount === '' ? null : rest.cost_currency,
+                // Blank follows the product's price.
+                recurring_amount: rest.recurring_amount === '' ? null : rest.recurring_amount,
+                apply_to_server: statusAction ? apply_to_server : false,
+                change_package: productChanged ? change_package : false,
             };
             if (password) body.password = password;
 
-            return (await api.put<ServiceFull>(`/services/${s.id}`, body)).data;
+            return (await api.put<Saved>(`/services/${s.id}`, body)).data;
         },
-        onSuccess: (fresh) => {
+        onSuccess: ({ notices, ...fresh }) => {
             qc.setQueryData(['/services', String(s.id)], fresh);
+            qc.invalidateQueries({ queryKey: ['/services'] });
             qc.invalidateQueries({ queryKey: ['/clients', String(s.client_id)] });
             setForm(toForm(fresh));
+            if (notices?.length) setNotice(notices.join(' '));
         },
     });
 
@@ -190,6 +311,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     };
     const fresh = (data: ServiceFull) => {
         qc.setQueryData(['/services', String(s.id)], data);
+        qc.invalidateQueries({ queryKey: ['/services'] });
         qc.invalidateQueries({ queryKey: ['/clients'] });
     };
     const changePackage = useMutation({
@@ -320,9 +442,17 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                             {s.order ? <span className="text-sm text-slate-800">{s.order.id} - <Link className="table-action-link" to={`/admin/orders/${s.order.id}`}>View Order</Link></span> : <span className="text-sm text-slate-400">No order</span>}
                         </Row>
                         <Row label="Product/Service" htmlFor="sv-product">
-                            <select id="sv-product" className="ui-input" value={form.product_id} onChange={(e) => set('product_id', Number(e.target.value))}>
-                                {s.options.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
+                            <div className="space-y-1.5">
+                                <select id="sv-product" className="ui-input" value={form.product_id} onChange={(e) => set('product_id', Number(e.target.value))}>
+                                    {s.options.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                                {productChanged && (
+                                    <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                                        <input type="checkbox" checked={form.change_package} onChange={(e) => set('change_package', e.target.checked)} />
+                                        Also move {s.remote_id} to the new product's package on the server
+                                    </label>
+                                )}
+                            </div>
                         </Row>
                         <Row label="Server" htmlFor="sv-server">
                             <select id="sv-server" className="ui-input" value={form.server_id} onChange={(e) => set('server_id', e.target.value)}>
@@ -343,7 +473,10 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                                 </div>
                             ) : <input id="sv-remote" className="ui-input font-mono" autoComplete="off" placeholder="The account username on the server" value={form.remote_id} onChange={(e) => set('remote_id', e.target.value)} />}
                         </Row>
-                        <Row label="Username" htmlFor="sv-user"><input id="sv-user" className="ui-input font-mono" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} /></Row>
+                        <Row label="Username" htmlFor="sv-user">
+                            <input id="sv-user" className="ui-input font-mono" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} />
+                            {s.product.module !== 'webdock' && <p className="mt-1 text-[11px] text-slate-500">Follows the Account ID while they match. Kept in the panel only; Change Password updates the server.</p>}
+                        </Row>
                         <Row label="Password" htmlFor="sv-pass">
                             <div className="flex gap-2">
                                 <input id="sv-pass" className="ui-input font-mono" autoComplete="new-password" placeholder={s.has_password ? '•••••••• (stored, type to replace)' : 'Not stored'} value={form.password} onChange={(e) => set('password', e.target.value)} />
@@ -351,9 +484,20 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                             </div>
                         </Row>
                         <Row label="Status" htmlFor="sv-status">
-                            <select id="sv-status" className="ui-input" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                                {s.options.statuses.map((v) => <option key={v} value={v}>{label(v)}</option>)}
-                            </select>
+                            <div className="space-y-1.5">
+                                <select id="sv-status" className="ui-input" value={form.status} onChange={(e) => set('status', e.target.value)}>
+                                    {s.options.statuses.map((v) => <option key={v} value={v}>{label(v)}</option>)}
+                                </select>
+                                {statusAction && (
+                                    <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                                        <input type="checkbox" checked={form.apply_to_server} onChange={(e) => set('apply_to_server', e.target.checked)} />
+                                        Also {statusAction} {s.remote_id} on the server
+                                    </label>
+                                )}
+                                {form.status === 'terminated' && s.status !== 'terminated' && s.remote_id && (
+                                    <p className="text-[11px] text-amber-700">Saving only marks it terminated here. Use Terminate under Module Commands to delete the account from the server.</p>
+                                )}
+                            </div>
                         </Row>
                     </div>
                 </Section>
@@ -364,9 +508,13 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         <Row label="Quantity" htmlFor="sv-qty"><input id="sv-qty" type="number" min="1" className="ui-input max-w-28" value={form.quantity} onChange={(e) => set('quantity', Number(e.target.value))} /></Row>
                         <Row label="First Payment Amount" htmlFor="sv-first"><input id="sv-first" type="number" step="0.01" min="0" className="ui-input max-w-40" value={form.first_payment_amount} onChange={(e) => set('first_payment_amount', e.target.value)} /></Row>
                         <Row label="Recurring Amount" htmlFor="sv-rec">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <input id="sv-rec" type="number" step="0.01" min="0" disabled={form.recalculate} className="ui-input max-w-40 disabled:opacity-60" value={form.recurring_amount} onChange={(e) => set('recurring_amount', e.target.value)} />
-                                <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={form.recalculate} onChange={(e) => set('recalculate', e.target.checked)} /> Recalculate on save</label>
+                            <div className="space-y-1">
+                                <input id="sv-rec" type="number" step="0.01" min="0" className="ui-input max-w-40" placeholder={listPrice ? `${listPrice} (product)` : 'No product price'} value={form.recurring_amount} onChange={(e) => set('recurring_amount', e.target.value)} />
+                                <p className="text-[11px] text-slate-500">
+                                    {listPrice
+                                        ? <>Blank uses the product price, {listPrice} for {form.quantity} × {label(form.cycle)}. It follows product, cycle and quantity changes until you type your own amount.</>
+                                        : `The product has no ${label(form.cycle)} price, so enter the amount.`}
+                                </p>
                             </div>
                         </Row>
                         <Row label="Next Due Date" htmlFor="sv-due"><input id="sv-due" type="date" className="ui-input max-w-52" value={form.next_due_date} onChange={(e) => set('next_due_date', e.target.value)} /></Row>
@@ -421,6 +569,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                             <Status value={s.provision_status} />
                         </div>
                         {s.provision_error && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{s.provision_error}</p>}
+                        {s.remote_id && (s.product.module === 'cpanel' || s.product.module === 'webuzo') && (
+                            <ServerCheck s={s} onDone={(data, notices) => { fresh(data); setForm(toForm(data)); if (notices.length) setNotice(notices.join(' ')); }} />
+                        )}
                     </div>
                 </Section>
 

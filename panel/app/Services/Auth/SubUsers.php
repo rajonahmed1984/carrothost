@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
- * Users of a client account other than its owner, as in WHMCS. They sign in to the client's
+ * Users of a client account other than its owner. They sign in to the client's
  * account with their own password, and the session remembers which user they are so their
  * permissions apply. The owner signs in as the client itself and has no such session key.
  */

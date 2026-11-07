@@ -12,7 +12,7 @@ class Order extends Model
 
     protected static function booted(): void
     {
-        // A random 10-digit number like WHMCS's, so it is not the same as the ID and does not reveal the order count.
+        // A random 10-digit number so it is not the same as the ID and does not reveal the order count.
         static::creating(function (Order $order) {
             $order->order_number ??= self::newNumber();
         });
