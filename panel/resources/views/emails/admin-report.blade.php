@@ -1,4 +1,7 @@
-<div style="font-family: Arial, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; color: #334155;">
+@extends('emails.layout', ['admin' => true])
+
+@section('content')
+<div style="color: #334155;">
     <h2 style="color: #0f172a; margin: 0 0 4px;">{{ $heading }}</h2>
     <p style="margin: 0 0 16px; font-size: 13px; color: #64748b;">{{ $period }}</p>
 
@@ -30,5 +33,6 @@
         @endif
     @endforeach
 
-    <p style="margin: 24px 0 0;"><a href="{{ $url }}" style="display: inline-block; background: #c2410c; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: bold;">Open Admin Panel</a></p>
+    @include('emails.partials.button', ['url' => $url, 'label' => 'Open Admin Panel'])
 </div>
+@endsection

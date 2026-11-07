@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Order;
 use App\Models\Service;
 use App\Provisioning\AccountCredentials;
+use App\Services\AdminNotifier;
 use App\Services\BillingService;
 use App\Services\CustomerMailer;
 use App\Services\InvoiceActions;
@@ -215,6 +216,7 @@ class OrderController extends Controller
 
         ActivityLog::record('order.accepted', $order);
         $mailer->orderAccepted($order);
+        app(AdminNotifier::class)->orderAccepted($order);
 
         return $this->show($order);
     }
@@ -228,6 +230,7 @@ class OrderController extends Controller
         $order->update(['status' => 'cancelled']);
         $order->invoices()->where('status', 'unpaid')->update(['status' => 'cancelled']);
         ActivityLog::record('order.cancelled', $order);
+        app(AdminNotifier::class)->orderCancelled($order);
 
         return $this->show($order);
     }
@@ -278,10 +281,12 @@ class OrderController extends Controller
                 $order->update(['status' => 'active']);
                 ActivityLog::record('order.accepted', $order);
                 $mailer->orderAccepted($order);
+                app(AdminNotifier::class)->orderAccepted($order);
             } elseif ($data['action'] === 'cancel') {
                 $order->update(['status' => 'cancelled']);
                 $order->invoices()->where('status', 'unpaid')->update(['status' => 'cancelled']);
                 ActivityLog::record('order.cancelled', $order);
+                app(AdminNotifier::class)->orderCancelled($order);
             } elseif ($data['action'] === 'delete') {
                 // The same as deleting one order: its invoices, services and domains go too, with the same checks.
                 try {

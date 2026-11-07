@@ -51,6 +51,7 @@ const serviceColumns = [
 type OrderDetail = {
     id: number;
     order_number?: string | null;
+    ip_address?: string | null;
     status: string;
     amount?: string;
     payment_method?: string | null;
@@ -389,7 +390,7 @@ export function OrderDetailPage() {
                                 ) : '-'],
                                 ['IP Address', (
                                     <span className="font-mono text-xs text-slate-700">
-                                        {o.client.last_login_ip || '37.111.194.218'}
+                                        {o.ip_address || o.client.last_login_ip || '-'}
                                     </span>
                                 )],
                                 ['Affiliate / Promo', 'None - Manual Assign'],

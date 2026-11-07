@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\ProductPrice;
 use App\Models\Tld;
+use App\Services\AdminNotifier;
 use App\Services\BillingService;
 use App\Services\DomainLookup;
 use Illuminate\Http\Request;
@@ -126,6 +127,7 @@ class StoreController extends Controller
             ['product_id' => $product->id, 'cycle' => $data['cycle'], 'domain' => $domain, 'module_options' => $image ? ['image' => $image] : null],
         ], $domains);
         ActivityLog::record('order.created', $order, ['by' => 'client']);
+        $this->placed($order, $request);
 
         return response()->json(['invoice_id' => $order->invoices()->value('id')], 201);
     }
@@ -146,8 +148,16 @@ class StoreController extends Controller
 
         $order = $billing->createOrder($request->user('client'), [], [$data]);
         ActivityLog::record('order.created', $order, ['by' => 'client']);
+        $this->placed($order, $request);
 
         return response()->json(['invoice_id' => $order->invoices()->value('id')], 201);
+    }
+
+    /** The address the order came from, for the order page and the admins' new order email. */
+    private function placed(\App\Models\Order $order, Request $request): void
+    {
+        $order->update(['ip_address' => $request->ip()]);
+        app(AdminNotifier::class)->newOrder($order, $request->ip());
     }
 
     /** A transfer needs the EPP code when its TLD says so; only transfers keep one. */

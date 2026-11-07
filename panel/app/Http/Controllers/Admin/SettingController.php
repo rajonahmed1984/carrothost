@@ -52,6 +52,10 @@ class SettingController extends Controller
                 'cron_report_enabled' => (bool) config('billing.reports.cron_activity'),
                 'domain_sync_report_enabled' => (bool) config('billing.reports.domain_sync'),
                 'report_recipients' => config('billing.reports.recipients'),
+                'notify_new_order' => (bool) config('billing.admin_notifications.new_order'),
+                'notify_invoice_created' => (bool) config('billing.admin_notifications.invoice_created'),
+                'notify_invoice_paid' => (bool) config('billing.admin_notifications.invoice_paid'),
+                'notify_order_status' => (bool) config('billing.admin_notifications.order_status'),
                 'domain_allow_register' => (bool) config('billing.domains.allow_register'),
                 'domain_allow_transfer' => (bool) config('billing.domains.allow_transfer'),
                 'domain_allow_own' => (bool) config('billing.domains.allow_own'),
@@ -133,6 +137,10 @@ class SettingController extends Controller
             'domain_sync_enabled' => 'boolean',
             'cron_report_enabled' => 'boolean',
             'domain_sync_report_enabled' => 'boolean',
+            'notify_new_order' => 'boolean',
+            'notify_invoice_created' => 'boolean',
+            'notify_invoice_paid' => 'boolean',
+            'notify_order_status' => 'boolean',
             'report_recipients' => ['sometimes', 'nullable', 'string', 'max:500', function ($attribute, $value, $fail) {
                 foreach (\App\Services\AdminReports::parseRecipients($value) as $email) {
                     if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {

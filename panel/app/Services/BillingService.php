@@ -133,8 +133,12 @@ class BillingService
             ]);
 
             $invoice->items()->createMany($items);
-            DB::afterCommit(function () use ($invoice) {
+            DB::afterCommit(function () use ($invoice, $order) {
                 $this->mailer->invoiceCreated($invoice);
+                // An order's invoice is in the admins' new order email already.
+                if (! $order) {
+                    app(AdminNotifier::class)->invoiceCreated($invoice);
+                }
                 // Credit the client already holds pays new invoices straight away. Add Funds invoices are how credit is bought, so never.
                 if (! self::isPrepayment($invoice)) {
                     app(CreditService::class)->applyToInvoice($invoice);
@@ -223,6 +227,7 @@ class BillingService
     {
         event(new InvoicePaid($invoice));
         DB::afterCommit(fn () => $this->mailer->paymentReceived($invoice));
+        DB::afterCommit(fn () => app(AdminNotifier::class)->invoicePaid($invoice));
         SendInvoiceSms::notify($invoice->id, 'invoice_paid');
     }
 

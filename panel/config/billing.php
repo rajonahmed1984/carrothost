@@ -74,6 +74,14 @@ return [
         'recipients' => null,
     ],
 
+    // Admin emails as things happen, to the report recipients above. Settings > Automation.
+    'admin_notifications' => [
+        'new_order' => true,
+        'invoice_created' => true,
+        'invoice_paid' => true,
+        'order_status' => true,
+    ],
+
     // Add Funds limits, in the billing currency. Admin > Settings overrides these.
     'credit' => [
         'min_deposit' => '100.00',

@@ -1,13 +1,15 @@
-<div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+@extends('emails.layout', ['mailSubject' => $subjectLine ?? null])
+
+@section('content')
     @if ($heading !== '')
-        <h2 style="color: #0f172a; margin: 0 0 16px;">{{ $heading }}</h2>
+        <h2 style="margin:0 0 16px;font-size:20px;color:#0f172a;">{{ $heading }}</h2>
     @endif
     @if ($richBody)
-        <div style="font-size: 14px; color: #334155; line-height: 1.5;">{!! $richBody !!}</div>
+        <div style="font-size:14px;line-height:1.6;color:#334155;">{!! $richBody !!}</div>
     @else
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-line;">{{ $body }}</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;font-size:14px;line-height:1.6;color:#334155;white-space:pre-line;">{{ $body }}</div>
     @endif
     @if ($button !== '' && $url !== '')
-        <p style="margin: 20px 0 0;"><a href="{{ $url }}" style="display: inline-block; background: #c2410c; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: bold;">{{ $button }}</a></p>
+        @include('emails.partials.button', ['url' => $url, 'label' => $button])
     @endif
-</div>
+@endsection

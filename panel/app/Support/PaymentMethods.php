@@ -35,6 +35,12 @@ class PaymentMethods
         return collect(self::all($current))->map(fn ($name, $code) => ['code' => $code, 'name' => $name])->values()->all();
     }
 
+    /** The name shown for a method, on or off. */
+    public static function label(?string $code): ?string
+    {
+        return $code ? self::name($code, Gateway::where('code', $code)->first()) : null;
+    }
+
     /** True for a code a payment can be recorded under and a record can carry. */
     public static function isGateway(string $code): bool
     {
