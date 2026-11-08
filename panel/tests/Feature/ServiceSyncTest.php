@@ -90,6 +90,33 @@ class ServiceSyncTest extends TestCase
         $this->assertStringContainsString('still shows the account as suspended', $this->service->provision_error);
     }
 
+    public function test_webuzo_unsuspend_never_sends_the_sub_users_only_skip(): void
+    {
+        Sleep::fake();
+        $server = Server::create(['name' => 'W1', 'module' => 'webuzo', 'hostname' => 'earth.test', 'username' => 'root', 'credentials' => 'key']);
+        $product = Product::create(['name' => 'Web', 'type' => 'shared_hosting', 'module' => 'webuzo', 'module_package' => 'starter']);
+        $this->service->update(['status' => 'suspended', 'server_id' => $server->id, 'product_id' => $product->id, 'remote_id' => 'probashix']);
+
+        // Like the real server: skip=1 answers done but leaves the account suspended.
+        $suspended = true;
+        Http::fake(function ($request) use (&$suspended) {
+            if (isset($request['unsuspend'])) {
+                if (($request['skip'] ?? null) != 1) {
+                    $suspended = false;
+                }
+
+                return Http::response(['done' => ['msg' => 'The user has been unsuspended']]);
+            }
+
+            return Http::response(['users' => ['probashix' => ['user' => 'probashix', 'domain' => 'acme.com', 'status' => $suspended ? 'suspended' : 'active']]]);
+        });
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'unsuspend'])->assertOk();
+
+        $this->assertSame('active', $this->service->refresh()->status);
+        Http::assertNotSent(fn ($r) => isset($r['unsuspend']) && ($r['skip'] ?? null) == 1);
+    }
+
     public function test_unsuspend_can_be_resent_for_an_active_service(): void
     {
         Http::fake([

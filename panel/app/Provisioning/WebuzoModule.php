@@ -75,9 +75,26 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
         $this->call('users', ['suspend' => $service->remote_id, 'skip' => 1]);
     }
 
+    /**
+     * For unsuspend, Webuzo's skip=1 means "only the sub-users, the account itself stays suspended",
+     * so the server answered done and the site stayed on the suspended page. Send no skip (an ordinary
+     * account), and if the account still reads as suspended, skip=2 (the account only, never its
+     * sub-users), then skip=0 (the account and its sub-users).
+     */
     public function unsuspend(Service $service): void
     {
-        $this->call('users', ['unsuspend' => $service->remote_id, 'skip' => 1]);
+        foreach ([null, 2, 0] as $skip) {
+            $this->call('users', ['unsuspend' => $service->remote_id, ...($skip === null ? [] : ['skip' => $skip])]);
+
+            try {
+                if (! $this->accountInfo($service)['suspended']) {
+                    return;
+                }
+            } catch (\Throwable) {
+                // The account list could not be read: the job's own check decides.
+                return;
+            }
+        }
     }
 
     public function accountInfo(Service $service): array
