@@ -68,15 +68,16 @@ class ClientServiceToolsTest extends TestCase
 
         $this->getJson("/api/client/services/{$service->id}")->assertOk()
             ->assertJsonPath('has_tools', true)
-            ->assertJsonPath('panel_apps', [])
+            ->assertJsonPath('panel_apps', ['email', 'files', 'databases', 'domains', 'cron', 'backups'])
             ->assertJsonPath('server.hostname', 'earth.test')
             ->assertJsonPath('panel_url', 'https://earth.test:2003');
 
         // The list's Quick Action signs in the same way instead of opening the login page.
         $this->getJson('/api/client/services')->assertOk()->assertJsonPath('0.can_sso', true);
         $this->postJson("/api/client/services/{$service->id}/sso")->assertOk()->assertJsonPath('url', 'https://earth.test:2003/sess1/?as=token');
-        // Webuzo has no deep links, so asking for one is refused.
-        $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'email'])->assertJsonValidationErrors('app');
+        // A Webuzo shortcut points the login at that page.
+        $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'email'])->assertOk()->assertJsonPath('url', 'https://earth.test:2003/sess1/?as=token&act=email');
+        $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'phpmyadmin'])->assertJsonValidationErrors('app');
 
         $this->postJson("/api/client/services/{$service->id}/usage")->assertOk()
             ->assertJsonPath('usage.disk_used', 695)->assertJsonPath('usage.disk_limit', 5120)->assertJsonPath('usage.metrics.0.label', 'Disk Usage');
@@ -94,11 +95,20 @@ class ClientServiceToolsTest extends TestCase
 
     public function test_cpanel_logins_can_open_email_and_databases(): void
     {
-        Http::fake(['whm.test:2087/json-api/create_user_session*' => Http::response(['metadata' => ['result' => 1], 'data' => ['url' => 'https://whm.test:2083/cpsess1/login/?session=x']])]);
+        Http::fake([
+            'whm.test:2087/json-api/create_user_session*' => Http::response(['metadata' => ['result' => 1], 'data' => ['url' => 'https://whm.test:2083/cpsess1/login/?session=x']]),
+            // The user's own pages: no phpMyAdmin or forwarders here, and the newer cron key.
+            'whm.test:2087/json-api/get_users_links*' => Http::response(['metadata' => ['result' => 1], 'data' => [
+                'Email_Accounts' => 'x', 'FileManager_Home' => 'x', 'Database_MySQL' => 'x', 'SSL_TLS_Manager' => 'x', 'Cron_Home' => 'x', 'Backups_Home' => 'x', 'Stats_AWStats' => 'x',
+            ]]),
+        ]);
         $server = Server::create(['name' => 'WHM', 'module' => 'cpanel', 'hostname' => 'whm.test', 'username' => 'root', 'credentials' => 'TOKEN']);
         $service = $this->service($this->product('Standard', 'cpanel', 7000), $server);
 
-        $this->getJson("/api/client/services/{$service->id}")->assertJsonPath('panel_apps', ['email', 'databases', 'files', 'backups']);
+        $this->getJson("/api/client/services/{$service->id}")->assertJsonPath('panel_apps', ['email', 'files', 'databases', 'ssl', 'cron', 'backups']);
+        $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'phpmyadmin'])->assertJsonValidationErrors('app');
+        $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'cron'])->assertOk();
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'create_user_session') && str_contains($r->url(), 'app=Cron_Home'));
         $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'databases'])->assertOk()->assertJsonPath('url', 'https://whm.test:2083/cpsess1/login/?session=x');
         $this->postJson("/api/client/services/{$service->id}/sso", ['app' => 'shell'])->assertJsonValidationErrors('app');
 

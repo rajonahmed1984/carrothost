@@ -28,6 +28,11 @@ class ServiceUpgrade extends Model
         return $this->belongsTo(Invoice::class);
     }
 
+    public function oldProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'old_product_id');
+    }
+
     public function newProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'new_product_id');

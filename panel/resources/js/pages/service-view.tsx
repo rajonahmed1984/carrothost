@@ -10,6 +10,7 @@ import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tool
 import { alertDialog, ask } from '../dialog';
 import { VpsPanel } from './vps-panel';
 import { PanelLogo } from '../panel-logo';
+import { PanelShortcuts } from '../panel-shortcuts';
 import { LinkWebdockModal } from './webdock-link';
 
 type Option = { code: string; name: string };
@@ -26,7 +27,7 @@ export type ServiceFull = {
     cost_amount: string | null; cost_currency: string | null;
     server: { id: number; name: string; hostname: string } | null;
     order: { id: number; order_number: string | null } | null;
-    username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean; is_vps?: boolean;
+    username: string | null; has_password: boolean; panel_url: string | null; has_tools: boolean; panel_apps?: string[]; is_vps?: boolean;
     /** A VPS set up by hand (no module): hostname, IP, SSH port and root login are entered here. */
     manual_vps?: boolean; ssh_port?: number | null;
     usage_metrics: { key: string; label: string; used: string; limit: string | null; percent: number | null }[] | null;
@@ -341,11 +342,11 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
         mutationFn: async () => (await api.post<ServiceFull>(`/services/${s.id}/usage`)).data,
         onSuccess: fresh,
     });
-    const sso = useMutation({ mutationFn: async () => (await api.post<{ url: string }>(`/services/${s.id}/sso`)).data.url });
+    const sso = useMutation({ mutationFn: async (app?: string) => (await api.post<{ url: string }>(`/services/${s.id}/sso`, { app })).data.url });
     // Open the tab first, while the click still counts as the user's, then point it at the one-time link.
-    const loginToPanel = () => {
+    const loginToPanel = (app?: string) => {
         const tab = window.open('about:blank', '_blank');
-        sso.mutate(undefined, {
+        sso.mutate(app, {
             onSuccess: (url) => { if (tab) tab.location.href = url; else window.location.href = url; },
             onError: (e) => { tab?.close(); alertDialog(errorMessage(e)); },
         });
@@ -415,7 +416,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         {s.client_services.map((o) => <option key={o.id} value={o.id}>{o.name}{o.status !== 'active' ? ` (${label(o.status)})` : ''}</option>)}
                     </select>
                     {s.has_tools
-                        ? <button type="button" onClick={loginToPanel} disabled={sso.isPending} className="ui-btn ui-btn-primary h-9"><LogIn size={14} /> {sso.isPending ? 'Signing in...' : 'Login to Control Panel'}</button>
+                        ? <button type="button" onClick={() => loginToPanel()} disabled={sso.isPending} className="ui-btn ui-btn-primary h-9"><LogIn size={14} /> {sso.isPending ? 'Signing in...' : 'Login to Control Panel'}</button>
                         : s.panel_url && <a href={s.panel_url} target="_blank" rel="noreferrer" className="ui-btn ui-btn-primary h-9"><LogIn size={14} /> Control Panel</a>}
                     <Dropdown label="More actions" buttonClassName="ui-btn ui-btn-secondary h-9" button={<>More <ChevronDown size={14} /></>} menuClassName="w-60 py-1 text-sm">
                         <Link role="menuitem" to={`/admin/clients/${s.client.id}?tab=invoices`} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><FileText size={14} className="text-slate-400" /> View Invoices</Link>
@@ -644,10 +645,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                     icon={<MonitorSmartphone size={16} />}
                 >
                     {/* cPanel and Webuzo refuse to load inside another site's frame, so the login opens in its own tab. */}
-                    <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
-                        <p className="max-w-md text-sm text-slate-500">Open {s.remote_id}'s control panel in a new tab, already signed in. Every opening creates a new one-time login.</p>
-                        <ErrorNote error={sso.error} />
-                        <Button type="button" disabled={sso.isPending} onClick={loginToPanel}><ExternalLink size={14} /> {sso.isPending ? 'Signing in...' : 'Open Control Panel'}</Button>
+                    <div className="space-y-3 p-4">
+                        <PanelShortcuts module={s.product.module} apps={s.panel_apps ?? []} pending={sso.isPending} onOpen={loginToPanel} />
+                        <p className="text-center text-xs text-slate-500">Each tile opens {s.remote_id}'s control panel on that page in a new tab, already signed in.</p>
                     </div>
                 </Section>
             )}

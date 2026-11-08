@@ -332,9 +332,12 @@ class ServiceController extends Controller
         return $this->detail($service->refresh());
     }
 
-    public function sso(Service $service, ServiceTools $tools)
+    public function sso(Request $request, Service $service, ServiceTools $tools)
     {
-        return ['url' => $tools->loginUrl($service->load('product', 'server'))];
+        $service->load('product', 'server');
+        $data = $request->validate(['app' => ['nullable', Rule::in(ServiceTools::panelApps($service))]]);
+
+        return ['url' => $tools->loginUrl($service, $data['app'] ?? null)];
     }
 
     public function changePassword(Request $request, Service $service, ServiceTools $tools)
@@ -498,6 +501,7 @@ class ServiceController extends Controller
             'ssh_port' => isset($service->credentials['port']) ? (int) $service->credentials['port'] : null,
             'panel_url' => $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
             'has_tools' => ServiceTools::hasTools($service),
+            'panel_apps' => ServiceTools::panelApps($service),
             'is_vps' => VpsTools::supports($service),
             'pending_upgrade' => app(ServiceTools::class)->pendingUpgrade($service),
             'client_services' => $service->client->services()->with('product:id,name')->orderByDesc('id')->get(['id', 'product_id', 'domain', 'status'])

@@ -8,11 +8,13 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\Service;
+use App\Models\ServiceUpgrade;
 use App\Provisioning\AccountCredentials;
 use App\Services\AdminNotifier;
 use App\Services\BillingService;
 use App\Services\CustomerMailer;
 use App\Services\InvoiceActions;
+use App\Services\ServiceTools;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -59,6 +61,19 @@ class OrderController extends Controller
 
         return [
             ...$order->toArray(),
+            // A product or cycle change raised from a service has no services of its own.
+            'upgrades' => $this->upgradesOf($order)->map(fn (ServiceUpgrade $u) => [
+                'id' => $u->id,
+                'service_id' => $u->service_id,
+                'domain' => $u->service?->domain,
+                'old_product' => $u->oldProduct?->name,
+                'new_product' => $u->newProduct?->name,
+                'old_cycle' => $u->old_cycle,
+                'new_cycle' => $u->new_cycle,
+                'new_recurring_amount' => $u->new_recurring_amount,
+                'amount_due' => $u->amount_due,
+                'status' => $u->status,
+            ])->values(),
             // Orders placed before the amount was saved fall back to their invoices.
             'amount' => (float) $order->amount > 0 ? $order->amount : number_format((float) $order->invoices->sum('total'), 2, '.', ''),
             // A fresh, unique username and a strong password for each account not yet created.
@@ -136,6 +151,18 @@ class OrderController extends Controller
                 // A service may carry its planned username before the account exists.
                 ->orWhere(fn ($q) => $q->whereNull('remote_id')->whereIn('provision_status', ['none', 'manual_required', 'failed'])))
             ->get();
+
+        $upgrades = $this->upgradesOf($order)->where('status', 'pending');
+
+        if ($waiting->isEmpty() && $upgrades->isNotEmpty()) {
+            $order->update(['status' => 'active']);
+            foreach ($upgrades as $upgrade) {
+                app(ServiceTools::class)->applyAccepted($upgrade);
+            }
+            ActivityLog::record('order.accepted', $order);
+
+            return $this->show($order->refresh());
+        }
 
         if ($waiting->isEmpty()) {
             throw ValidationException::withMessages(['order' => 'Everything in this order is already set up or being set up.']);
@@ -219,6 +246,16 @@ class OrderController extends Controller
         app(AdminNotifier::class)->orderAccepted($order);
 
         return $this->show($order);
+    }
+
+    /** @return \Illuminate\Support\Collection<int, ServiceUpgrade> */
+    private function upgradesOf(Order $order)
+    {
+        $invoices = $order->invoices()->pluck('id');
+
+        return $invoices->isEmpty() ? collect() : ServiceUpgrade::with(['service:id,domain', 'oldProduct:id,name', 'newProduct:id,name'])
+            ->whereIn('invoice_id', $invoices)
+            ->get();
     }
 
     public function cancel(Order $order)

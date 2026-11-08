@@ -98,6 +98,19 @@ type OrderDetail = {
         total: string;
         due_date: string;
     }[];
+    /** Product or cycle changes this order bills for. */
+    upgrades?: {
+        id: number;
+        service_id: number;
+        domain: string | null;
+        old_product: string | null;
+        new_product: string | null;
+        old_cycle: string;
+        new_cycle: string;
+        new_recurring_amount: string;
+        amount_due: string;
+        status: string;
+    }[];
 };
 
 /** Same rules as the server's: upper, lower, digit and a URL-safe symbol, 14 characters. */
@@ -588,6 +601,32 @@ export function OrderDetailPage() {
                                             </tr>
                                         );
                                     })}
+
+                                    {/* Upgrades / downgrades */}
+                                    {(o.upgrades ?? []).map((u) => (
+                                        <tr key={`upgrade-${u.id}`} className="hover:bg-slate-50/70">
+                                            <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">Upgrade/Downgrade</td>
+                                            <td className="px-4 py-3">
+                                                <div className="font-semibold text-slate-900">
+                                                    {u.old_product ?? 'Unknown'} <span className="text-slate-400">&rarr;</span> {u.new_product ?? 'Unknown'}
+                                                </div>
+                                                <div className="mt-0.5 text-slate-600">
+                                                    <Link to={`/admin/products-services/${u.service_id}`} className="text-accent hover:underline">{u.domain || `Service #${u.service_id}`}</Link>
+                                                    {' '}&middot; New recurring {money(u.new_recurring_amount)}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-center whitespace-nowrap text-slate-600">
+                                                {u.old_cycle === u.new_cycle ? formatBillingCycle(u.new_cycle) : `${formatBillingCycle(u.old_cycle)} → ${formatBillingCycle(u.new_cycle)}`}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-medium text-slate-900 whitespace-nowrap">{money(u.amount_due)}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                <Status value={u.status === 'done' ? 'active' : u.status} />
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <Status value={isPaid ? 'paid' : 'unpaid'} />
+                                            </td>
+                                        </tr>
+                                    ))}
 
                                     {/* Domains */}
                                     {o.domains.map((d) => (

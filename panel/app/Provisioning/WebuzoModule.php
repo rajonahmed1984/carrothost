@@ -14,7 +14,23 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
 {
     use GeneratesUsername;
 
+    /** Shortcut key => the enduser panel page (act) the login link is pointed at. */
+    public const APPS = [
+        'email' => 'email',
+        'files' => 'filemanager',
+        'databases' => 'dbs',
+        'domains' => 'domainmanage',
+        'cron' => 'cronjob',
+        'backups' => 'backup',
+    ];
+
     public function __construct(private Server $server) {}
+
+    /** @return array<string, string> shortcut key => enduser panel page */
+    public function panelApps(Service $service): array
+    {
+        return self::APPS;
+    }
 
     public function testConnection(): void
     {
@@ -114,7 +130,10 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
             throw new RuntimeException('Webuzo did not return a login link.');
         }
 
-        return $this->onHostname($url);
+        $url = $this->onHostname($url);
+
+        // The login lands on the dashboard; a shortcut also names the page to open.
+        return $app && isset(self::APPS[$app]) ? $url.(str_contains($url, '?') ? '&' : '?').'act='.self::APPS[$app] : $url;
     }
 
     /**

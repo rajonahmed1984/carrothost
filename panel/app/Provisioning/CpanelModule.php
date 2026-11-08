@@ -6,6 +6,7 @@ use App\Models\Server;
 use App\Models\Service;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -131,18 +132,66 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
     }
 
     /** Pages a login can open straight into: our key => cPanel's app name for create_user_session. */
+    /**
+     * Shortcut key => the cPanel app keys that open it, in order of preference. Which ones a user
+     * has depends on the cPanel version, theme and feature list, so the server is asked (panelApps).
+     */
     public const APPS = [
-        'email' => 'Email_Accounts',
-        'databases' => 'Database_MySQL',
-        'files' => 'FileManager_Home',
-        'backups' => 'Backups_Home',
+        'email' => ['Email_Accounts'],
+        'forwarders' => ['Email_Forwarders'],
+        'files' => ['FileManager_Home'],
+        'databases' => ['Database_MySQL'],
+        'phpmyadmin' => ['Database_phpMyAdmin'],
+        'domains' => ['Domains_domains', 'Domains_SubDomains'],
+        'ssl' => ['SSL_TLS_Status', 'SSL_TLS_Manager'],
+        'cron' => ['Cron_Home', 'Cron_Cron'],
+        'backups' => ['Backups_Home'],
     ];
+
+    /** Used when the server cannot be asked: pages every cPanel account has. */
+    private const CORE_APPS = ['email', 'files', 'databases', 'backups'];
+
+    /**
+     * The shortcuts this account really has, as shortcut key => cPanel app key. Read from the
+     * server's own list of the user's pages and kept for a day.
+     *
+     * @return array<string, string>
+     */
+    public function panelApps(Service $service): array
+    {
+        $links = Cache::remember("cpanel-apps:{$this->server->id}:{$service->remote_id}", now()->addDay(), function () use ($service) {
+            try {
+                $data = $this->call('get_users_links', ['user' => $service->remote_id, 'service' => 'cpaneld'], 20)['data'] ?? null;
+
+                return is_array($data) ? array_keys($data) : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        });
+
+        // Not cached when the server could not answer, so the next page view asks again.
+        if ($links === null) {
+            Cache::forget("cpanel-apps:{$this->server->id}:{$service->remote_id}");
+        }
+
+        $apps = [];
+        foreach (self::APPS as $key => $candidates) {
+            $found = $links === null
+                ? (in_array($key, self::CORE_APPS, true) ? $candidates[0] : null)
+                : collect($candidates)->first(fn ($c) => in_array($c, $links, true));
+            if ($found) {
+                $apps[$key] = $found;
+            }
+        }
+
+        return $apps;
+    }
 
     public function loginUrl(Service $service, ?string $app = null): string
     {
         $params = ['user' => $service->remote_id, 'service' => 'cpaneld'];
-        if ($app && isset(self::APPS[$app])) {
-            $params['app'] = self::APPS[$app];
+        if ($app && ($appKey = $this->panelApps($service)[$app] ?? null)) {
+            $params['app'] = $appKey;
         }
         $url = data_get($this->call('create_user_session', $params), 'data.url');
 

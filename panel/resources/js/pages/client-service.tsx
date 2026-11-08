@@ -8,6 +8,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { alertDialog } from '../dialog';
 import { PanelLogo, panelName } from '../panel-logo';
+import { PanelShortcuts } from '../panel-shortcuts';
 import { Button, Dropdown, ErrorNote, Field, Modal, QueryState, Status, Table } from '../ui';
 import { UpgradeModal } from './service-tools';
 import { VpsPanel } from './vps-panel';
@@ -277,7 +278,6 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
     const days = s.next_due_date ? daysUntil(s.next_due_date) : null;
     const host = s.server?.hostname ?? null;
     const subjectFor = (what: string) => `/tickets/new?service=${s.id}&subject=${encodeURIComponent(`${what}: ${s.product.name}${s.domain ? ` - ${s.domain}` : ''}`)}`;
-    const app = (key: string) => s.panel_apps.includes(key) && tools;
     const diskPct = pct(s.usage.disk_used, s.usage.disk_limit);
     const bwPct = pct(s.usage.bw_used, s.usage.bw_limit);
     const extraMetrics = s.usage.metrics.filter((m) => !/disk|band/i.test(`${m.key} ${m.label}`));
@@ -459,6 +459,13 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                         )}
                     </div>
 
+                    {hosting && tools && active && (
+                        <SectionCard icon={<LayoutGrid size={18} />} title={`${panelLabel} Shortcuts`}>
+                            <PanelShortcuts module={s.product.module} apps={s.panel_apps} pending={panel.pending} onOpen={panel.open} />
+                            <p className="mt-3 text-center text-xs text-slate-500">Each one opens {panelLabel} on that page in a new tab, already signed in.</p>
+                        </SectionCard>
+                    )}
+
                     {hosting && (
                         <div className="grid items-start gap-5 xl:grid-cols-2">
                             <SectionCard
@@ -490,10 +497,6 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                                     {tools && active && <Tile icon={<PanelLogo module={s.product.module} />} tone="" name={`Login to ${panelLabel}`} disabled={panel.pending} onClick={() => panel.open()} />}
                                     {tools && <Tile icon={<KeyRound size={18} />} tone="bg-emerald-100 text-emerald-700" name="Change Password" onClick={() => setDialog('password')} />}
                                     {canManage && s.can_upgrade && <Tile icon={<ArrowUpDown size={18} />} tone="bg-sky-100 text-sky-700" name="Upgrade / Downgrade" onClick={() => setDialog('upgrade')} />}
-                                    {app('email') && active && <Tile icon={<Mail size={18} />} tone="bg-indigo-100 text-indigo-700" name="Email Accounts" disabled={panel.pending} onClick={() => panel.open('email')} />}
-                                    {app('databases') && active && <Tile icon={<Database size={18} />} tone="bg-amber-100 text-amber-700" name="Manage Databases" disabled={panel.pending} onClick={() => panel.open('databases')} />}
-                                    {app('files') && active && <Tile icon={<FolderOpen size={18} />} tone="bg-teal-100 text-teal-700" name="File Manager" disabled={panel.pending} onClick={() => panel.open('files')} />}
-                                    {app('backups') && active && <Tile icon={<History size={18} />} tone="bg-violet-100 text-violet-700" name="Backups" disabled={panel.pending} onClick={() => panel.open('backups')} />}
                                     {canManage && active && <Tile icon={<Globe size={18} />} tone="bg-purple-100 text-purple-700" name="Change Domain" to={subjectFor('Change primary domain')} />}
                                     <Tile icon={<Headset size={18} />} tone="bg-cyan-100 text-cyan-700" name="Open Support Ticket" to={`/tickets/new?service=${s.id}`} />
                                     {!['cancelled', 'terminated'].includes(s.status) && <Tile icon={<CircleX size={18} />} tone="bg-rose-100 text-rose-600" name="Request Cancellation" to={subjectFor('Cancellation request')} />}

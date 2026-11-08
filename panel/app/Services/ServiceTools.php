@@ -42,6 +42,19 @@ class ServiceTools
         return $class && is_subclass_of($class, ManagesAccounts::class) && $service->remote_id && $service->server_id;
     }
 
+    /** The control panel pages a one-time login can open straight on, by shortcut key. */
+    public static function panelApps(Service $service): array
+    {
+        if (! self::hasTools($service)) {
+            return [];
+        }
+        // Pages often load the server with a few columns only; the lookup needs its login.
+        $class = config("billing.provisioning_modules.{$service->product->module}.class");
+        $server = $service->server()->first();
+
+        return $server && method_exists($class, 'panelApps') ? array_keys((new $class($server))->panelApps($service)) : [];
+    }
+
     public function refreshUsage(Service $service): void
     {
         $usage = $this->run(fn () => $this->module($service)->usage($service));
@@ -193,6 +206,14 @@ class ServiceTools
         $upgrade = $service->upgrades()->where('invoice_id', $invoice->id)->where('status', 'pending')->first();
 
         if ($upgrade) {
+            $this->apply($upgrade);
+        }
+    }
+
+    /** An admin accepted the upgrade's order: the change happens now, paid or not. */
+    public function applyAccepted(ServiceUpgrade $upgrade): void
+    {
+        if ($upgrade->status === 'pending') {
             $this->apply($upgrade);
         }
     }

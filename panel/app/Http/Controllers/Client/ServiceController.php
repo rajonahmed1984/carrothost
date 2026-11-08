@@ -7,7 +7,6 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
-use App\Provisioning\CpanelModule;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
 use Illuminate\Http\Request;
@@ -21,8 +20,6 @@ class ServiceController extends Controller
     private const PANEL_PORTS = ['cpanel' => 2083, 'webuzo' => 2003];
 
     /** Pages inside the control panel a one-click login can open, by module. */
-    private const PANEL_APPS = ['cpanel' => CpanelModule::APPS];
-
     /** What the customer sees in a service's activity, and how it reads. */
     private const ACTIVITY = [
         'service.panel_login' => 'Signed in to the control panel',
@@ -69,7 +66,7 @@ class ServiceController extends Controller
             'vps_actions' => VpsTools::supports($service) ? VpsTools::clientActions($service) : null,
             // One-click login, password change and live usage go through the server module.
             'has_tools' => $hasTools,
-            'panel_apps' => $hasTools ? array_keys(self::PANEL_APPS[$service->product->module] ?? []) : [],
+            'panel_apps' => $hasTools ? ServiceTools::panelApps($service) : [],
             'can_upgrade' => $service->status === 'active' && ! $pending && $this->upgradeProducts($service)->count() > 1,
             'pending_upgrade' => $pending ? [
                 'invoice_id' => $pending->invoice_id,
@@ -113,7 +110,7 @@ class ServiceController extends Controller
     public function sso(Request $request, int $id, ServiceTools $tools)
     {
         $service = $this->hosting($request, $id, 'console');
-        $data = $request->validate(['app' => ['nullable', Rule::in(array_keys(self::PANEL_APPS[$service->product->module] ?? []))]]);
+        $data = $request->validate(['app' => ['nullable', Rule::in(ServiceTools::panelApps($service))]]);
 
         return ['url' => $tools->loginUrl($service, $data['app'] ?? null)];
     }

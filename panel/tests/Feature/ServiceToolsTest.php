@@ -69,6 +69,25 @@ class ServiceToolsTest extends TestCase
         $this->assertSame('active', $service->status);
     }
 
+    public function test_an_upgrade_order_lists_the_change_and_accepting_applies_it(): void
+    {
+        $service = $this->service();
+        $invoiceId = $this->postJson("/api/services/{$service->id}/upgrade", ['product_id' => $this->standard->id, 'cycle' => 'annually'])->assertOk()->json('invoice_id');
+        $orderId = \App\Models\Invoice::find($invoiceId)->order_id;
+
+        $this->getJson("/api/orders/{$orderId}")->assertOk()
+            ->assertJsonPath('upgrades.0.old_product', 'Starter')
+            ->assertJsonPath('upgrades.0.new_product', 'Standard')
+            ->assertJsonPath('upgrades.0.status', 'pending');
+
+        $this->postJson("/api/orders/{$orderId}/accept", [])->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('upgrades.0.status', 'done');
+        $this->assertSame($this->standard->id, $service->refresh()->product_id);
+
+        $this->postJson("/api/orders/{$orderId}/accept", [])->assertJsonValidationErrors('order');
+    }
+
     public function test_a_change_with_nothing_to_pay_applies_at_once_and_cancelled_invoices_free_the_service(): void
     {
         $service = $this->service(['next_due_date' => today()->subDay()]);
