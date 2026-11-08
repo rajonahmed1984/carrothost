@@ -6,9 +6,12 @@ use App\Models\ActivityLog;
 use App\Models\Server;
 use App\Models\Service;
 use App\Provisioning\ProvisioningModule;
+use App\Provisioning\ReportsAccountStatus;
 use App\Services\CustomerMailer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Sleep;
+use RuntimeException;
 use Throwable;
 
 class ProvisionService implements ShouldQueue
@@ -90,6 +93,7 @@ class ProvisionService implements ShouldQueue
     private function suspend(ProvisioningModule $module, Service $service): array
     {
         $module->suspend($service, $this->billing ? 'Overdue invoice' : 'Suspended by staff');
+        $this->confirmSuspended($module, $service, true);
 
         return ['status' => 'suspended', 'auto_suspended' => $this->billing];
     }
@@ -97,8 +101,40 @@ class ProvisionService implements ShouldQueue
     private function unsuspend(ProvisioningModule $module, Service $service): array
     {
         $module->unsuspend($service);
+        $this->confirmSuspended($module, $service, false);
 
         return ['status' => 'active', 'auto_suspended' => false];
+    }
+
+    /**
+     * Some servers report success while the account stays as it was (Webuzo has said "unsuspended"
+     * and left the site on the suspended page), so read the account back before calling it done.
+     * Retries a few times for servers that apply the change as a background task. An account that
+     * cannot be read is left alone: only a server that answers with the wrong state fails the job.
+     */
+    private function confirmSuspended(ProvisioningModule $module, Service $service, bool $suspended): void
+    {
+        if (! $module instanceof ReportsAccountStatus) {
+            return;
+        }
+
+        foreach ([0, 2, 4] as $wait) {
+            if ($wait) {
+                Sleep::for($wait)->seconds();
+            }
+            try {
+                if ($module->accountInfo($service)['suspended'] === $suspended) {
+                    return;
+                }
+            } catch (Throwable) {
+                return;
+            }
+        }
+
+        $done = $suspended ? 'suspended' : 'unsuspended';
+        $state = $suspended ? 'active' : 'suspended';
+
+        throw new RuntimeException("The server said {$service->remote_id} was {$done}, but it still shows the account as {$state}. Check the account in the server's control panel.");
     }
 
     private function terminate(ProvisioningModule $module, Service $service): array

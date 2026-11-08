@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowRightLeft, Check, KeyRound, RefreshCw, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, money } from '../api';
-import { Button, ErrorNote, Field, Modal, QueryState } from '../ui';
+import { Button, ErrorNote, Field, Modal, Progress, QueryState } from '../ui';
 import { ask } from '../dialog';
 
 /* Dialogs opened from a service's More menu and module commands. Each posts to the service and hands back the fresh record. */
@@ -179,6 +179,7 @@ export function ChangePasswordModal<T>({ serviceId, username, onClose, onDone }:
                         <Button type="button" variant="ghost" className="shrink-0" onClick={() => setPassword(generate())}><RefreshCw size={14} /> Generate</Button>
                     </div>
                 </Field>
+                {change.isPending && <Progress label="Changing the password on the server..." />}
                 <ErrorNote error={change.error} />
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

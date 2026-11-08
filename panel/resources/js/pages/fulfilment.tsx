@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, ErrorNote, Field, Input, Modal, PagedTable, Select, Status } from '../ui';
+import { Button, ErrorNote, Field, Input, Modal, PagedTable, Progress, Select, Status } from '../ui';
 import { alertDialog, ask } from '../dialog';
 
 /** The status tab, kept in the URL (?status=) so dashboard cards can link straight to a filtered list. */
@@ -48,7 +48,24 @@ export function ServiceActions({ service }: { service: Service }) {
         else act.mutate(action);
     };
 
-    const busy = act.isPending || ['queued', 'running'].includes(service.provision_status);
+    const working = ['queued', 'running'].includes(service.provision_status);
+    const busy = act.isPending || working;
+    // A background create or terminate: re-read the list until it finishes.
+    useEffect(() => {
+        if (!working) return;
+        const timer = setInterval(() => qc.invalidateQueries({ queryKey: ['/services'] }), 5000);
+
+        return () => clearInterval(timer);
+    }, [working, qc]);
+    const doing: Record<string, string> = { create: 'Creating...', suspend: 'Suspending...', unsuspend: 'Unsuspending...', terminate: 'Terminating...' };
+
+    if (busy) {
+        return (
+            <div className="flex justify-end">
+                <Progress compact label={act.isPending && act.variables ? doing[act.variables] ?? 'Working...' : service.provision_status === 'queued' ? 'Queued...' : 'Working...'} />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-wrap justify-end gap-3">

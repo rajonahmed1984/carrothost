@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRightLeft, ArrowUpCircle, Check, ChevronDown, CreditCar
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, Dropdown, ErrorNote, Modal, QueryState, Status } from '../ui';
+import { Button, Dropdown, ErrorNote, Modal, Progress, QueryState, Spinner, Status } from '../ui';
 import { Row, Section, Toggle } from './domain-view';
 import { SendMessage } from './sales';
 import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tools';
@@ -164,19 +164,20 @@ function LoginDetails({ id, onClose }: { id: number; onClose: () => void }) {
  * Reads the account from cPanel or Webuzo and lists where it differs from the panel. Domain and
  * IP can be copied from the server; status and package are the panel's, so the server is changed.
  */
-function ServerCheck({ s, onDone }: { s: ServiceFull; onDone: (data: ServiceFull, notices: string[]) => void }) {
+function ServerCheck({ s, onDone, onRead }: { s: ServiceFull; onDone: (data: ServiceFull, notices: string[]) => void; onRead: (suspended: boolean | null) => void }) {
     const [state, setState] = useState<ServerState | null>(null);
     const [use, setUse] = useState<string[]>([]);
     const read = useMutation({
         mutationFn: async () => (await api.get<ServerState>(`/services/${s.id}/server-state`)).data,
         onSuccess: (data) => {
             setState(data);
+            onRead(data.server.suspended);
             setUse((Object.keys(data.differences) as (keyof ServerState['differences'])[]).filter((k) => data.differences[k]));
         },
     });
     const apply = useMutation({
         mutationFn: async () => (await api.post<Saved>(`/services/${s.id}/server-state`, { use })).data,
-        onSuccess: ({ notices, ...data }) => { setState(null); onDone(data, notices ?? []); },
+        onSuccess: ({ notices, ...data }) => { setState(null); onRead(null); onDone(data, notices ?? []); },
     });
     const rows: { key: keyof ServerState['differences']; label: string; panel: string; server: string; fix: string }[] = state ? [
         { key: 'status', label: 'Status', panel: label(state.panel.status), server: state.server.suspended ? 'Suspended' : 'Active', fix: `${state.panel.status === 'suspended' ? 'Suspend' : 'Unsuspend'} on the server` },
@@ -185,6 +186,7 @@ function ServerCheck({ s, onDone }: { s: ServiceFull; onDone: (data: ServiceFull
         { key: 'dedicated_ip', label: 'Dedicated IP', panel: state.panel.ip ?? 'None (shared)', server: state.server.ip ?? '-', fix: 'Copy to the panel' },
     ] : [];
     const differs = rows.filter((r) => state?.differences[r.key]);
+    const fixing = use.includes('status') || use.includes('package') ? 'Applying the fixes on the server...' : 'Saving the fixes...';
 
     return (
         <div className="space-y-2 border-t border-slate-100 pt-3">
@@ -221,6 +223,7 @@ function ServerCheck({ s, onDone }: { s: ServiceFull; onDone: (data: ServiceFull
                     </table>
                 </div>
             )}
+            {apply.isPending && <Progress label={fixing} />}
             {differs.length > 0 && (
                 <Button type="button" disabled={!use.length || apply.isPending} onClick={() => apply.mutate()}>
                     {apply.isPending ? 'Applying...' : `Apply ${use.length} fix${use.length === 1 ? '' : 'es'}`}
@@ -235,7 +238,12 @@ function ServerCheck({ s, onDone }: { s: ServiceFull; onDone: (data: ServiceFull
  * Used on its own page and inside the client profile's Services tab.
  */
 export function ServiceView({ id, onSelect, onBack }: { id: number; onSelect: (id: number) => void; onBack?: () => void }) {
-    const query = useQuery({ queryKey: ['/services', String(id)], queryFn: async () => (await api.get<ServiceFull>(`/services/${id}`)).data });
+    const query = useQuery({
+        queryKey: ['/services', String(id)],
+        queryFn: async () => (await api.get<ServiceFull>(`/services/${id}`)).data,
+        // A create or terminate runs in the background: keep reading until it finishes.
+        refetchInterval: (q) => (q.state.data && ['queued', 'running'].includes(q.state.data.provision_status) ? 4000 : false),
+    });
 
     return (
         <QueryState query={query}>
@@ -251,6 +259,8 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const [linking, setLinking] = useState(false);
     const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
+    // What "Check with server" last read, so Suspend/Unsuspend can fix an account out of step with the panel.
+    const [serverSuspended, setServerSuspended] = useState<boolean | null>(null);
     const navigate = useNavigate();
     const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => linked(s, f, key, value));
     const dirty = JSON.stringify(form) !== JSON.stringify(toForm(s));
@@ -306,7 +316,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
 
     const act = useMutation({
         mutationFn: (action: string) => api.post(`/services/${s.id}/action`, { action }),
-        onSettled: refresh,
+        onSettled: () => { setServerSuspended(null); refresh(); },
         onError: (e) => alertDialog(errorMessage(e)),
     });
     const run = (action: string) => {
@@ -351,13 +361,27 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
         },
         onError: (e) => alertDialog(errorMessage(e)),
     });
-    const busy = act.isPending || ['queued', 'running'].includes(s.provision_status);
+    const busy = act.isPending || changePackage.isPending || ['queued', 'running'].includes(s.provision_status);
+    const account = s.remote_id ?? 'the account';
+    const doing: Record<string, string> = {
+        create: 'Creating the account on the server...',
+        suspend: `Suspending ${account} on the server...`,
+        unsuspend: `Unsuspending ${account} on the server...`,
+        terminate: `Terminating ${account} on the server...`,
+    };
+    const serverSave = save.isPending && ((!!statusAction && form.apply_to_server) || (productChanged && form.change_package));
+    const progress: { label: string; hint?: string } | null = act.isPending && act.variables ? { label: doing[act.variables] ?? 'Working on the server...', hint: act.variables === 'create' ? undefined : 'This usually takes a few seconds.' }
+        : changePackage.isPending ? { label: `Changing ${account} to the ${s.product.module_package ?? s.product.name} package...` }
+            : serverSave ? { label: 'Saving and updating the server...' }
+                : s.provision_status === 'queued' ? { label: 'Queued. Waiting for the background worker to start...', hint: 'This page updates by itself when it finishes.' }
+                    : s.provision_status === 'running' ? { label: 'Working on the server...', hint: 'Creating an account can take a minute or two. This page updates by itself.' }
+                        : null;
     const hasModule = !!s.product.module;
     const noModule = hasModule ? `The ${s.product.module} module cannot do this. Do it in the server's control panel.` : 'This product has no server module.';
     const commands: { key: string; label: string; enabled: boolean; why: string; danger?: boolean }[] = [
         { key: 'create', label: s.provision_status === 'failed' ? 'Retry Create' : 'Create', enabled: hasModule && s.status === 'active' && !s.remote_id, why: !hasModule ? noModule : s.remote_id ? 'The account already exists.' : 'Only an active (paid) service can be created.' },
-        { key: 'suspend', label: 'Suspend', enabled: !!s.remote_id && s.status === 'active', why: s.remote_id ? 'Only an active service can be suspended.' : 'No account on a server yet.' },
-        { key: 'unsuspend', label: 'Unsuspend', enabled: !!s.remote_id && s.status === 'suspended', why: s.remote_id ? 'The service is not suspended.' : 'No account on a server yet.' },
+        { key: 'suspend', label: 'Suspend', enabled: !!s.remote_id && (s.status === 'active' || (s.status === 'suspended' && serverSuspended === false)), why: s.remote_id ? 'Only an active service can be suspended.' : 'No account on a server yet.' },
+        { key: 'unsuspend', label: 'Unsuspend', enabled: !!s.remote_id && (s.status === 'suspended' || (s.status === 'active' && serverSuspended === true)), why: s.remote_id ? 'The service is not suspended. Check with server to see whether the server has it suspended.' : 'No account on a server yet.' },
         { key: 'terminate', label: 'Terminate', enabled: !!s.remote_id && s.status !== 'terminated', why: 'No account on a server to terminate.', danger: true },
         { key: 'package', label: 'Change Package', enabled: s.has_tools, why: s.remote_id ? noModule : 'No account on a server yet.' },
         { key: 'password', label: 'Change Password', enabled: s.has_tools, why: s.remote_id ? noModule : 'No account on a server yet.' },
@@ -572,6 +596,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                                     onClick={() => run(c.key)}
                                     className={`ui-btn h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${c.danger ? 'ui-btn-danger' : 'ui-btn-secondary'}`}
                                 >
+                                    {act.isPending && act.variables === c.key || (c.key === 'package' && changePackage.isPending) ? <Spinner className="h-3 w-3" /> : null}
                                     {c.label}
                                 </button>
                             ))}
@@ -581,9 +606,10 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                             {s.remote_id ? <span className="font-mono">{s.remote_id}</span> : <span>Not provisioned</span>}
                             <Status value={s.provision_status} />
                         </div>
-                        {s.provision_error && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{s.provision_error}</p>}
+                        {progress && <Progress label={progress.label} hint={progress.hint} />}
+                        {s.provision_error && !progress && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{s.provision_error}</p>}
                         {s.remote_id && (s.product.module === 'cpanel' || s.product.module === 'webuzo') && (
-                            <ServerCheck s={s} onDone={(data, notices) => { fresh(data); setForm(toForm(data)); if (notices.length) setNotice(notices.join(' ')); }} />
+                            <ServerCheck s={s} onRead={setServerSuspended} onDone={(data, notices) => { fresh(data); setForm(toForm(data)); if (notices.length) setNotice(notices.join(' ')); }} />
                         )}
                     </div>
                 </Section>

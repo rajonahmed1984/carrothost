@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, FileText, MinusCircle, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Status, Table } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, Spinner, Status, Table } from '../ui';
 import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
 import { alertDialog, ask } from '../dialog';
@@ -293,7 +293,7 @@ export function OrderDetailPage() {
                             </Button>
                             {o.status === 'pending' && (
                                 <Button variant="primary" disabled={accept.isPending} onClick={() => accept.mutate()}>
-                                    <Check size={14} className="mr-1" /> Accept order
+                                    {accept.isPending ? <Spinner className="mr-1 h-3.5 w-3.5 text-current" /> : <Check size={14} className="mr-1" />} {accept.isPending ? 'Accepting...' : 'Accept order'}
                                 </Button>
                             )}
                             {o.status !== 'cancelled' && (
@@ -668,7 +668,7 @@ export function OrderDetailPage() {
                             disabled={accept.isPending}
                             onClick={() => accept.mutate()}
                         >
-                            <Check size={14} className="mr-1" /> Accept Order
+                            {accept.isPending ? <Spinner className="mr-1 h-3.5 w-3.5 text-current" /> : <Check size={14} className="mr-1" />} {accept.isPending ? 'Accepting...' : 'Accept Order'}
                         </Button>
                         <Button
                             variant="ghost"

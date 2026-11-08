@@ -14,6 +14,7 @@ use App\Services\BillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 /** Admin edits to a service reach the server, and fields tied together stay in step. */
@@ -69,6 +70,38 @@ class ServiceSyncTest extends TestCase
         $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'unsuspend'])->assertStatus(422)
             ->assertJsonValidationErrors('action');
         $this->assertSame('suspended', $this->service->refresh()->status);
+    }
+
+    public function test_unsuspend_fails_when_the_server_says_done_but_keeps_the_account_suspended(): void
+    {
+        Sleep::fake();
+        $this->service->update(['status' => 'suspended']);
+        Http::fake([
+            '*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [['domain' => 'acme.com', 'suspended' => 1]]]]),
+            '*' => Http::response(['metadata' => ['result' => 1]]),
+        ]);
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'unsuspend'])->assertStatus(422)
+            ->assertJsonValidationErrors('action');
+
+        $this->service->refresh();
+        $this->assertSame('suspended', $this->service->status);
+        $this->assertSame('failed', $this->service->provision_status);
+        $this->assertStringContainsString('still shows the account as suspended', $this->service->provision_error);
+    }
+
+    public function test_unsuspend_can_be_resent_for_an_active_service(): void
+    {
+        Http::fake([
+            '*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [['domain' => 'acme.com', 'suspended' => 0]]]]),
+            '*' => Http::response(['metadata' => ['result' => 1]]),
+        ]);
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'unsuspend'])->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('provision_status', 'done');
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'unsuspendacct') && $r['user'] === 'acme');
     }
 
     public function test_status_can_be_saved_in_the_panel_only(): void
@@ -127,12 +160,19 @@ class ServiceSyncTest extends TestCase
 
     public function test_check_with_server_lists_differences_and_applies_the_picked_ones(): void
     {
-        Http::fake([
-            '*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [[
-                'user' => 'acme', 'domain' => 'acme.net', 'ip' => '203.0.113.5', 'plan' => 'starter', 'suspended' => 0,
-            ]]]]),
-            '*suspendacct*' => Http::response(['metadata' => ['result' => 1]]),
-        ]);
+        // The server reads as running until it is suspended.
+        $suspended = 0;
+        Http::fake(function ($request) use (&$suspended) {
+            if (str_contains($request->url(), 'suspendacct')) {
+                $suspended = 1;
+
+                return Http::response(['metadata' => ['result' => 1]]);
+            }
+
+            return Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [[
+                'user' => 'acme', 'domain' => 'acme.net', 'ip' => '203.0.113.5', 'plan' => 'starter', 'suspended' => $suspended,
+            ]]]]);
+        });
         $this->service->update(['status' => 'suspended', 'dedicated_ip' => '203.0.113.9']);
 
         $this->getJson("/api/services/{$this->service->id}/server-state")->assertOk()

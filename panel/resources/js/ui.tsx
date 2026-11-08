@@ -161,6 +161,29 @@ export function Status({ value }: { value: string }) {
     return <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap capitalize ${tones[value] ?? 'bg-slate-100 text-slate-600'}`}>{value.replace('_', ' ')}</span>;
 }
 
+/** Shows that a server action is under way: a spinner, what is happening, and a moving bar. */
+export function Progress({ label, hint, compact = false }: { label: string; hint?: string; compact?: boolean }) {
+    if (compact) {
+        return (
+            <span role="status" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)]">
+                <Spinner /> {label}
+            </span>
+        );
+    }
+
+    return (
+        <div role="status" aria-live="polite" className="space-y-2 rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[var(--accent-soft)] px-3 py-2.5">
+            <p className="flex items-center gap-2 text-xs font-semibold text-slate-800"><Spinner /> {label}</p>
+            <div className="progress-track h-1.5"><span /></div>
+            {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+        </div>
+    );
+}
+
+export function Spinner({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+    return <span aria-hidden className={`inline-block shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent text-[var(--accent)] ${className}`} />;
+}
+
 export type Column<T> = { header: string; cell: (row: T) => ReactNode; align?: 'right' };
 
 /** Ticked row ids. They are kept across pages, so a tick survives paging and searching. */
