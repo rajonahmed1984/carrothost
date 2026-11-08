@@ -227,14 +227,28 @@ class ServiceController extends Controller
         return $action;
     }
 
-    /** Queues a staff suspend or unsuspend (the client gets no overdue notice) and says so. */
+    /** Runs a staff suspend or unsuspend on the server now (the client gets no overdue notice) and says how it went. */
     private function sendStatus(Service $service, string $action): string
     {
-        $service->update(['provision_status' => 'queued']);
-        ProvisionService::dispatch($service->id, $action, true, false);
-        ActivityLog::record("service.{$action}.requested", $service);
+        $error = $this->runNow($service, $action);
 
-        return ucfirst($action)." of {$service->remote_id} sent to the server.";
+        return $error === null
+            ? ucfirst($action)."ed {$service->remote_id} on the server."
+            : "Saved, but the server did not {$action} {$service->remote_id}: {$error}";
+    }
+
+    /**
+     * Suspend and unsuspend are one quick API call, so staff see the result at once instead of
+     * waiting for the cron-driven queue. Returns the server's error, or null when it worked.
+     */
+    private function runNow(Service $service, string $action): ?string
+    {
+        $service->update(['provision_status' => 'running']);
+        ActivityLog::record("service.{$action}.requested", $service);
+        (new ProvisionService($service->id, $action, true, false))->handle();
+        $service->refresh();
+
+        return $service->provision_status === 'failed' ? ($service->provision_error ?: 'Unknown error.') : null;
     }
 
     /** The account as the server has it, beside what the panel holds, with every difference. */
@@ -518,8 +532,16 @@ class ServiceController extends Controller
             throw ValidationException::withMessages(['action' => 'Only an active (paid) service can be provisioned.']);
         }
 
-        $service->update(['provision_status' => 'queued']);
         // Suspended here by staff, not for an unpaid bill: the client gets no overdue notice.
+        if (in_array($action, ['suspend', 'unsuspend'], true)) {
+            if ($error = $this->runNow($service, $action)) {
+                throw ValidationException::withMessages(['action' => ucfirst($action)." failed on the server: {$error}"]);
+            }
+
+            return $service;
+        }
+
+        $service->update(['provision_status' => 'queued']);
         ProvisionService::dispatch($service->id, $action, true, false);
         ActivityLog::record("service.{$action}.requested", $service);
 

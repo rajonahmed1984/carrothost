@@ -44,14 +44,31 @@ class ServiceSyncTest extends TestCase
 
     public function test_suspending_in_the_form_suspends_on_the_server_without_an_overdue_notice(): void
     {
-        Queue::fake();
+        Http::fake(['*' => Http::response(['metadata' => ['result' => 1]])]);
 
         $this->putJson("/api/services/{$this->service->id}", ['status' => 'suspended'])->assertOk()
             ->assertJsonPath('status', 'suspended')
-            ->assertJsonPath('provision_status', 'queued')
-            ->assertJsonPath('notices.0', 'Suspend of acme sent to the server.');
+            ->assertJsonPath('provision_status', 'done')
+            ->assertJsonPath('auto_suspended', false)
+            ->assertJsonPath('notices.0', 'Suspended acme on the server.');
 
-        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->action === 'suspend' && $job->billing === false);
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'suspendacct') && $r['user'] === 'acme');
+    }
+
+    public function test_suspend_button_runs_at_once_and_reports_a_server_failure(): void
+    {
+        Http::fake([
+            '*unsuspendacct*' => Http::response(['metadata' => ['result' => 0, 'reason' => 'Account is locked.']]),
+            '*' => Http::response(['metadata' => ['result' => 1]]),
+        ]);
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'suspend'])->assertOk()
+            ->assertJsonPath('status', 'suspended')
+            ->assertJsonPath('provision_status', 'done');
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'unsuspend'])->assertStatus(422)
+            ->assertJsonValidationErrors('action');
+        $this->assertSame('suspended', $this->service->refresh()->status);
     }
 
     public function test_status_can_be_saved_in_the_panel_only(): void
@@ -67,12 +84,14 @@ class ServiceSyncTest extends TestCase
     public function test_reactivating_unsuspends_and_termination_is_never_automatic(): void
     {
         Queue::fake();
+        Http::fake(['*' => Http::response(['metadata' => ['result' => 1]])]);
         $this->service->update(['status' => 'suspended']);
 
-        $this->putJson("/api/services/{$this->service->id}", ['status' => 'active'])->assertOk();
-        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->action === 'unsuspend');
+        $this->putJson("/api/services/{$this->service->id}", ['status' => 'active'])->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('provision_status', 'done');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'unsuspendacct'));
 
-        $this->service->update(['provision_status' => 'done']);
         $this->putJson("/api/services/{$this->service->id}", ['status' => 'terminated'])->assertOk();
         Queue::assertNotPushed(ProvisionService::class, fn ($job) => $job->action === 'terminate');
     }
@@ -108,10 +127,12 @@ class ServiceSyncTest extends TestCase
 
     public function test_check_with_server_lists_differences_and_applies_the_picked_ones(): void
     {
-        Queue::fake();
-        Http::fake(['*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [[
-            'user' => 'acme', 'domain' => 'acme.net', 'ip' => '203.0.113.5', 'plan' => 'starter', 'suspended' => 0,
-        ]]]])]);
+        Http::fake([
+            '*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [[
+                'user' => 'acme', 'domain' => 'acme.net', 'ip' => '203.0.113.5', 'plan' => 'starter', 'suspended' => 0,
+            ]]]]),
+            '*suspendacct*' => Http::response(['metadata' => ['result' => 1]]),
+        ]);
         $this->service->update(['status' => 'suspended', 'dedicated_ip' => '203.0.113.9']);
 
         $this->getJson("/api/services/{$this->service->id}/server-state")->assertOk()
@@ -120,9 +141,10 @@ class ServiceSyncTest extends TestCase
         $this->postJson("/api/services/{$this->service->id}/server-state", ['use' => ['domain', 'dedicated_ip', 'status']])->assertOk()
             ->assertJsonPath('domain', 'acme.net')
             ->assertJsonPath('dedicated_ip', '203.0.113.5')
-            ->assertJsonPath('status', 'suspended');
+            ->assertJsonPath('status', 'suspended')
+            ->assertJsonPath('provision_status', 'done');
 
-        Queue::assertPushed(ProvisionService::class, fn ($job) => $job->action === 'suspend' && $job->billing === false);
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'suspendacct') && $r['user'] === 'acme');
     }
 
     public function test_payment_methods_list_only_gateways_that_are_on(): void
