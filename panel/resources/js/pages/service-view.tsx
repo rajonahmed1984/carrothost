@@ -316,7 +316,9 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
 
     const act = useMutation({
         mutationFn: (action: string) => api.post(`/services/${s.id}/action`, { action }),
-        onSettled: () => { setServerSuspended(null); refresh(); },
+        // A failed suspend/unsuspend leaves the server as it was, so the last check still holds and the button stays.
+        onSuccess: () => setServerSuspended(null),
+        onSettled: refresh,
         onError: (e) => alertDialog(errorMessage(e)),
     });
     const run = (action: string) => {
@@ -379,7 +381,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const hasModule = !!s.product.module;
     const noModule = hasModule ? `The ${s.product.module} module cannot do this. Do it in the server's control panel.` : 'This product has no server module.';
     const commands: { key: string; label: string; enabled: boolean; why: string; danger?: boolean }[] = [
-        { key: 'create', label: s.provision_status === 'failed' ? 'Retry Create' : 'Create', enabled: hasModule && s.status === 'active' && !s.remote_id, why: !hasModule ? noModule : s.remote_id ? 'The account already exists.' : 'Only an active (paid) service can be created.' },
+        { key: 'create', label: s.provision_status === 'failed' && !s.remote_id ? 'Retry Create' : 'Create', enabled: hasModule && s.status === 'active' && !s.remote_id, why: !hasModule ? noModule : s.remote_id ? 'The account already exists.' : 'Only an active (paid) service can be created.' },
         { key: 'suspend', label: 'Suspend', enabled: !!s.remote_id && (s.status === 'active' || (s.status === 'suspended' && serverSuspended === false)), why: s.remote_id ? 'Only an active service can be suspended.' : 'No account on a server yet.' },
         { key: 'unsuspend', label: 'Unsuspend', enabled: !!s.remote_id && (s.status === 'suspended' || (s.status === 'active' && serverSuspended === true)), why: s.remote_id ? 'The service is not suspended. Check with server to see whether the server has it suspended.' : 'No account on a server yet.' },
         { key: 'terminate', label: 'Terminate', enabled: !!s.remote_id && s.status !== 'terminated', why: 'No account on a server to terminate.', danger: true },
