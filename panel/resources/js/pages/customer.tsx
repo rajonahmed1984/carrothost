@@ -951,7 +951,7 @@ function Invoice() {
     );
 }
 
-type StoreProduct = { id: number; name: string; type: string; description: string | null; prices: { cycle: string; price: string; setup_fee: string }[]; os_choices?: { slug: string; name: string }[]; default_os?: string | null };
+type StoreProduct = { id: number; name: string; slug: string; type: string; description: string | null; prices: { cycle: string; price: string; setup_fee: string }[]; os_choices?: { slug: string; name: string }[]; default_os?: string | null };
 type StoreGroup = { id: number; name: string; slug: string; headline: string | null; products: StoreProduct[] };
 
 const useStore = (enabled = true) => useQuery({ queryKey: ['client-store'], queryFn: async () => (await api.get<StoreGroup[]>('/client/store')).data, enabled });
@@ -1059,15 +1059,24 @@ function ProductCard({ product }: { product: StoreProduct }) {
     );
 }
 
+/** /store/{group} lists the group; /store/{group}/{product} is a product's direct order link, from the website. */
 function Store() {
-    const { slug } = useParams();
+    const { slug, product: productSlug } = useParams();
     const query = useStore();
     const group = query.data?.find((g) => g.slug === slug);
+    const product = productSlug ? group?.products.find((p) => p.slug === productSlug) : undefined;
 
     return (
         <QueryState query={query}>
             {query.data && !group && <Navigate to="/" replace />}
-            {group && (
+            {group && productSlug && !product && <Navigate to={`/store/${group.slug}`} replace />}
+            {group && product && (
+                <div className="mx-auto max-w-md space-y-4">
+                    <ProductCard product={product} />
+                    {group.products.length > 1 && <p className="text-center text-xs"><Link className="table-action-link" to={`/store/${group.slug}`}>See all {group.name} plans</Link></p>}
+                </div>
+            )}
+            {group && !productSlug && (
                 <div className="space-y-4">
                     {group.headline && <p className="text-sm text-slate-600">{group.headline}</p>}
                     {group.products.length === 0 && <p className="card p-6 text-center text-sm text-slate-500">Nothing to order here yet.</p>}
@@ -1112,7 +1121,7 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
     // A detail page sits under its list: [list path, list title, page title].
     const parents: [string, string, string][] = [['/services/', 'My Services', 'Service Details'], ['/domains/', 'My Domains', 'Domain Details'], ['/invoices/', 'My Invoices', 'View Invoice'], ['/tickets/', 'My Tickets', 'Ticket Details'], ['/account/emails/', 'My Emails', 'View Email']];
     const parent = titles[pathname] ? undefined : parents.find(([prefix]) => pathname.startsWith(prefix));
-    const storeGroup = store.data?.find((g) => pathname === `/store/${g.slug}`);
+    const storeGroup = store.data?.find((g) => pathname === `/store/${g.slug}` || pathname.startsWith(`/store/${g.slug}/`));
     const title = titles[pathname] ?? parent?.[2] ?? storeGroup?.name ?? 'My Account';
     const crumbs: [string, string | null][] = [
         ...(pathname === '/tickets/new' ? [['My Tickets', '/tickets'] as [string, string]] : []),
@@ -1216,6 +1225,7 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                             {can('invoices') && <Route path="/add-funds" element={<AddFundsPage />} />}
                             {can('invoices') && <Route path="/credits" element={<CreditHistoryPage />} />}
                             {can('orders') && <Route path="/store/:slug" element={<Store />} />}
+                            {can('orders') && <Route path="/store/:slug/:product" element={<Store />} />}
                             {can('orders') && <Route path="/order-domain" element={<DomainOrderPage />} />}
                             {can('tickets') && <Route path="/tickets" element={<ClientTicketsPage />} />}
                             {can('tickets') && <Route path="/tickets/new" element={<ClientNewTicketPage />} />}

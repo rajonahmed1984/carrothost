@@ -157,7 +157,7 @@ function Login({ audience }: { audience: Audience }) {
             subtitle={google && !useEmail ? 'Choose a method to continue to the client portal' : 'Enter your credentials to continue'}
             footer={audience === 'admin'
                 ? <p>Client account? Use the <TextLink to="/login">client login</TextLink>.</p>
-                : <p>Need an account? <TextLink to="/register">Register</TextLink>.</p>}
+                : <p>Need an account? <TextLink to={`/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}>Register</TextLink>.</p>}
         >
             <div className="space-y-4">
                 {state?.status && <Notice>{state.status}</Notice>}
@@ -263,6 +263,7 @@ function LoginCode({ audience }: { audience: Audience }) {
 
 function RegisterCode() {
     const navigate = useNavigate();
+    const { search } = useLocation();
 
     return (
         <CodeScreen
@@ -270,15 +271,15 @@ function RegisterCode() {
             heading="Verify your email"
             submitLabel="Verify & complete registration"
             cancelLabel="Back to registration"
-            cancelTo="/register"
-            onCancel={() => { void api.post<{ form: object | null }>('/client/register/verify/cancel').then(({ data }) => navigate('/register', { state: { form: data.form } })); }}
+            cancelTo={`/register${search}`}
+            onCancel={() => { void api.post<{ form: object | null }>('/client/register/verify/cancel').then(({ data }) => navigate(`/register${search}`, { state: { form: data.form } })); }}
         />
     );
 }
 
 function Register() {
     const navigate = useNavigate();
-    const { state } = useLocation();
+    const { state, search } = useLocation();
     const recaptcha = useRecaptcha('REGISTER');
     const branding = useBranding();
     const currencies = branding.currencies ?? ['BDT', 'USD'];
@@ -286,13 +287,13 @@ function Register() {
     const set = (field: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value });
     const submit = useMutation({
         mutationFn: () => api.post('/client/register', { ...form, ...recaptcha.field }),
-        onSuccess: () => navigate('/register/verify'),
+        onSuccess: () => navigate(`/register/verify${search}`),
         onError: recaptcha.reset,
     });
     const mismatch = form.password_confirmation !== '' && form.password !== form.password_confirmation;
 
     return (
-        <AuthCard wide title="Create an account" subtitle={<>Already have an account? <TextLink to="/login">Sign in</TextLink>.</>}>
+        <AuthCard wide title="Create an account" subtitle={<>Already have an account? <TextLink to={`/login${search}`}>Sign in</TextLink>.</>}>
             <form onSubmit={(e: FormEvent) => { e.preventDefault(); submit.mutate(); }} className="grid gap-4 sm:grid-cols-2">
                 <Field label="Full name"><Input required autoComplete="name" maxLength={255} value={form.name} onChange={set('name')} /></Field>
                 <Field label="Company (optional)"><Input autoComplete="organization" maxLength={255} value={form.company ?? ''} onChange={set('company')} /></Field>

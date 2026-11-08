@@ -185,6 +185,7 @@ Route::prefix('api')->group(function () {
         Route::apiResource('product-groups', Admin\ProductGroupController::class)->except('show');
         Route::get('products/packages', [Admin\ProductController::class, 'packages']);
         Route::get('products/images', [Admin\ProductController::class, 'images']);
+        Route::post('products/reorder', [Admin\ProductController::class, 'reorder']);
         Route::apiResource('products', Admin\ProductController::class);
         Route::put('tlds', [Admin\TldController::class, 'bulkUpdate']);
         Route::get('tlds/lookup', [Admin\TldController::class, 'lookup']);

@@ -9,6 +9,7 @@ use App\Models\Server;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -22,7 +23,27 @@ class ProductController extends Controller
             'services as active_count' => fn ($q) => $q->where('status', 'active'),
             'services as suspended_count' => fn ($q) => $q->where('status', 'suspended'),
             'services as inactive_count' => fn ($q) => $q->whereIn('status', ['pending', 'cancelled', 'terminated', 'fraud']),
-        ])->orderBy('name')->get();
+        ])->orderBy('sort_order')->orderBy('name')->get();
+    }
+
+    /** The order of the products in one group, top first, as the admin arranged them. */
+    public function reorder(Request $request)
+    {
+        $data = $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|distinct']);
+        $products = Product::whereKey($data['ids'])->get(['id', 'product_group_id', 'sort_order']);
+
+        if ($products->count() !== count($data['ids']) || $products->pluck('product_group_id')->unique()->count() > 1) {
+            throw ValidationException::withMessages(['ids' => 'Reorder the products of one group at a time.']);
+        }
+
+        DB::transaction(function () use ($data) {
+            foreach ($data['ids'] as $i => $id) {
+                Product::whereKey($id)->update(['sort_order' => $i + 1]);
+            }
+        });
+        ActivityLog::record('product.reordered', context: ['group_id' => $products->first()->product_group_id]);
+
+        return response()->noContent();
     }
 
     public function show(Product $product)
@@ -98,8 +119,11 @@ class ProductController extends Controller
 
     private function save(Product $product, Request $request): Product
     {
+        // Blank = made from the name when saving (see Product::booted).
+        $request->merge(['slug' => Str::slug((string) $request->input('slug')) ?: null]);
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('products')->where('product_group_id', $request->input('product_group_id'))->ignore($product->id)],
             'product_group_id' => 'nullable|exists:product_groups,id',
             'type' => 'required|in:shared_hosting,vps,other',
             'description' => 'nullable|string',

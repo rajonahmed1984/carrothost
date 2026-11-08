@@ -376,6 +376,8 @@ function App() {
     // The customer's home is /, and a gateway returns them to their invoice with ?payment=.
     if (pathname === '/') return <Navigate to="/login" replace />;
     if (new URLSearchParams(search).has('payment')) return <Navigate to={`/login?redirect=${from}`} replace />;
+    // A product's direct order link on the website: the customer signs in (or registers) and lands on it.
+    if (pathname.startsWith('/store/')) return <Navigate to={`/login?redirect=${from}`} replace />;
 
     return <Navigate to={`/admin/login?redirect=${from}`} replace />;
 }

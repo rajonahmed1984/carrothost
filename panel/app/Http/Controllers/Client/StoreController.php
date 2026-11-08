@@ -25,7 +25,7 @@ class StoreController extends Controller
         $currency = $request->user('client')->currencyCode();
 
         return ProductGroup::where('is_visible', true)
-            ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('name')->with('prices')])
+            ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('name')->with('prices')])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'headline'])
@@ -33,7 +33,7 @@ class StoreController extends Controller
                 ...$group->only('id', 'name', 'slug', 'headline'),
                 'currency' => $currency,
                 'products' => $group->products->map(fn (Product $product) => [
-                    ...$product->only('id', 'name', 'type', 'description'),
+                    ...$product->only('id', 'name', 'slug', 'type', 'description'),
                     // The OS choices a VPS product offers; empty means its default is installed.
                     'os_choices' => $product->vpsConfig()['images'],
                     'default_os' => $product->vpsConfig()['default_image'],

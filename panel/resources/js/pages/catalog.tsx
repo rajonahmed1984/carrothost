@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, errorMessage, money } from '../api';
+import { api, basePath, errorMessage, money } from '../api';
 import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, SecretInput, Select, Status, Table, type Column } from '../ui';
 
 import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
@@ -54,7 +54,7 @@ function GroupForm({ group, onClose }: { group: Group | null; onClose: () => voi
 }
 
 type Product = {
-    id: number; product_group_id: number | null; name: string; type: string; description: string | null; module: string | null; module_package: string | null;
+    id: number; product_group_id: number | null; sort_order?: number; name: string; slug?: string | null; type: string; description: string | null; module: string | null; module_package: string | null;
     server_id: number | null; setup_mode: string; is_active: boolean; prices: { cycle: string; price: string; setup_fee: string; price_usd?: string | null; setup_fee_usd?: string | null }[];
     module_config?: Partial<VpsConfig> | null;
     cost_amount?: string | null; cost_currency?: string | null;
@@ -192,7 +192,38 @@ const productTabs = [
     { key: 'details', label: 'Details' },
     { key: 'pricing', label: 'Pricing' },
     { key: 'module', label: 'Module Settings' },
+    { key: 'links', label: 'Links' },
 ];
+
+/** The product's direct order link, for the Order button on the website's pricing table. */
+function ProductLinks({ product, group, slug, onSlug }: { product: Product | null; group: Group | undefined; slug: string; onSlug: (slug: string) => void }) {
+    const [copied, setCopied] = useState(false);
+    const saved = product?.slug ?? '';
+    const link = group && saved ? `${window.location.origin}${basePath}/store/${group.slug}/${saved}` : '';
+    const copy = () => {
+        void navigator.clipboard?.writeText(link).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); });
+    };
+    const problem = !product ? 'Save the product first to get its link.'
+        : !group ? 'Put the product in a product group (Details tab) to get its link.'
+            : !group.is_visible ? `The ${group.name} group is hidden, so this link will not open the order page until you show it.`
+                : !product.is_active ? 'The product is not available for new orders (Details tab), so this link will not work.'
+                    : slug !== saved ? 'Save changes to update the link.' : null;
+
+    return (
+        <div className="card space-y-4 p-5">
+            <Field label="Direct Shopping Cart Link" hint="Use it as the Order button link on your website. Signed-out visitors log in or register first, then land on this product's order form.">
+                <div className="flex gap-2">
+                    <Input readOnly value={link} placeholder="Not available yet" onFocus={(e) => e.target.select()} className="font-mono" />
+                    <Button type="button" variant="ghost" disabled={!link} onClick={copy}><Copy size={14} /> {copied ? 'Copied' : 'Copy'}</Button>
+                </div>
+            </Field>
+            {problem && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">{problem}</p>}
+            <Field label="URL slug" hint="The last part of the link. Left blank, it is made from the product name. Changing it breaks links already on your website.">
+                <Input placeholder="starter" value={slug} onChange={(e) => onSlug(e.target.value)} />
+            </Field>
+        </div>
+    );
+}
 
 const setupModes = [
     { value: 'order', label: 'Automatically set up the product as soon as an order is placed' },
@@ -243,7 +274,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
     const [form, setForm] = useState({
         name: product?.name ?? '', product_group_id: String((product ? product.product_group_id : groupId) ?? ''), type: product?.type ?? 'shared_hosting', module: product?.module ?? '',
         module_package: product?.module_package ?? '', server_id: String(product?.server_id ?? ''), setup_mode: product?.setup_mode ?? 'payment',
-        description: product?.description ?? '', is_active: product?.is_active ?? true,
+        description: product?.description ?? '', is_active: product?.is_active ?? true, slug: product?.slug ?? '',
     });
     const [vps, setVps] = useState<VpsConfig>(() => vpsDefaults(product?.module_config));
     const [cost, setCost] = useState({ amount: product?.cost_amount ?? '', currency: product?.cost_currency ?? 'BDT' });
@@ -254,7 +285,7 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
     const save = useMutation({
         mutationFn: async () => {
             const body = {
-                ...form, product_group_id: form.product_group_id ? Number(form.product_group_id) : null, description: form.description || null,
+                ...form, product_group_id: form.product_group_id ? Number(form.product_group_id) : null, description: form.description || null, slug: form.slug || null,
                 module: form.module || null, module_package: form.module ? form.module_package || null : null, server_id: form.module && form.server_id ? Number(form.server_id) : null, prices,
                 module_config: form.module === 'webdock' ? { ...vps, default_image: vps.default_image || null } : null,
                 cost_amount: form.type === 'vps' && cost.amount !== '' ? cost.amount : null,
@@ -267,6 +298,8 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
             qc.invalidateQueries({ queryKey: ['products'] });
             qc.invalidateQueries({ queryKey: ['product-groups'] });
             qc.setQueryData(['product', String(saved.id)], saved);
+            // A blank slug comes back made from the name.
+            setForm((f) => ({ ...f, slug: saved.slug ?? '' }));
             if (!product) navigate(`/admin/products-pricing/${saved.id}?tab=${tab.key}`, { replace: true });
         },
     });
@@ -383,6 +416,15 @@ function ProductEditor({ product, groupId }: { product: Product | null; groupId:
                 </div>
             </div>
 
+            {tab.key === 'links' && (
+                <ProductLinks
+                    product={product}
+                    group={groups.data?.find((g) => g.id === product?.product_group_id)}
+                    slug={form.slug}
+                    onSlug={(slug) => setForm({ ...form, slug })}
+                />
+            )}
+
             <ErrorNote error={save.error ?? remove.error} />
             <div className="flex items-center justify-end gap-3 pb-2">
                 {save.isSuccess && <span role="status" className="text-xs font-semibold text-emerald-700">Product saved.</span>}
@@ -403,7 +445,8 @@ export function ProductEditPage() {
     return <QueryState query={query}>{query.data && <ProductEditor key={query.data.id} product={query.data} groupId={null} />}</QueryState>;
 }
 
-const productColumns: Column<Product>[] = [
+/** The product table; with `move`, each row gets up/down arrows to arrange the group. */
+const productColumns = (rows: Product[], move?: (index: number, step: -1 | 1) => void, busy = false): Column<Product>[] => [
     { header: 'Name', cell: (p) => <Link className="table-action-link font-semibold" to={`/admin/products-pricing/${p.id}`}>{p.name}</Link> },
     { header: 'Type', cell: (p) => p.type.replace('_', ' ') },
     { header: 'Automation', cell: (p) => (p.module ? `${p.module}${p.module_package ? ` / ${p.module_package}` : ''}` : 'Manual') },
@@ -419,8 +462,55 @@ const productColumns: Column<Product>[] = [
     },
     { header: 'Pricing', cell: (p) => p.prices.map((x) => `${money(x.price)} / ${x.cycle}`).join(', ') },
     { header: 'Status', cell: (p) => <Status value={p.is_active ? 'active' : 'cancelled'} /> },
-    { header: '', cell: (p) => <Link className="table-action-link" to={`/admin/products-pricing/${p.id}`}>Edit</Link>, align: 'right' },
+    {
+        header: '',
+        align: 'right',
+        cell: (p) => {
+            const i = rows.indexOf(p);
+
+            return (
+                <span className="flex items-center justify-end gap-1">
+                    {move && rows.length > 1 && (
+                        <span className="mr-2 flex items-center gap-0.5 text-slate-400">
+                            <button type="button" aria-label={`Move ${p.name} up`} title="Move up" disabled={busy || i === 0} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:cursor-default disabled:opacity-30" onClick={() => move(i, -1)}><ArrowUp size={14} /></button>
+                            <button type="button" aria-label={`Move ${p.name} down`} title="Move down" disabled={busy || i === rows.length - 1} className="cursor-pointer rounded p-1 hover:text-slate-700 disabled:cursor-default disabled:opacity-30" onClick={() => move(i, 1)}><ArrowDown size={14} /></button>
+                        </span>
+                    )}
+                    <Link className="table-action-link" to={`/admin/products-pricing/${p.id}`}>Edit</Link>
+                </span>
+            );
+        },
+    },
 ];
+
+/** One group's products, top first: the order customers see them in on the order page. */
+function GroupProducts({ rows }: { rows: Product[] }) {
+    const qc = useQueryClient();
+    const reorder = useMutation({
+        mutationFn: (ids: number[]) => api.post('/products/reorder', { ids }),
+        onMutate: async (ids) => {
+            await qc.cancelQueries({ queryKey: ['products'] });
+            const before = qc.getQueryData<Product[]>(['products']);
+            const at = new Map(ids.map((id, i) => [id, i]));
+            // Shows the new order straight away; the other groups keep their places.
+            qc.setQueryData<Product[]>(['products'], (all) => all?.map((p) => (at.has(p.id) ? { ...p, sort_order: at.get(p.id)! + 1 } : p)).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)));
+
+            return { before };
+        },
+        onError: (error, _ids, context) => {
+            if (context?.before) qc.setQueryData(['products'], context.before);
+            alertDialog(errorMessage(error));
+        },
+        onSettled: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    });
+    const move = (index: number, step: -1 | 1) => {
+        const ids = rows.map((p) => p.id);
+        [ids[index], ids[index + step]] = [ids[index + step], ids[index]];
+        reorder.mutate(ids);
+    };
+
+    return <Table<Product> rows={rows} empty="No products in this group yet." columns={productColumns(rows, move, reorder.isPending)} />;
+}
 
 export function ProductsPage() {
     const query = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get<Product[]>('/products')).data });
@@ -452,13 +542,13 @@ export function ProductsPage() {
                                 }
                             >
                                 {g.headline && <p className="border-b border-slate-200 px-4 py-2 text-xs text-slate-500">{g.headline}</p>}
-                                <Table<Product> rows={query.data?.filter((p) => p.product_group_id === g.id) ?? []} empty="No products in this group yet." columns={productColumns} />
+                                <GroupProducts rows={query.data?.filter((p) => p.product_group_id === g.id) ?? []} />
                             </Card>
                         ))}
                         {ungrouped.length > 0 && (
                             <Card title="Not in a group">
                                 <p className="border-b border-slate-200 px-4 py-2 text-xs text-slate-500">Customers cannot order these until you put them in a group.</p>
-                                <Table<Product> rows={ungrouped} empty="" columns={productColumns} />
+                                <Table<Product> rows={ungrouped} empty="" columns={productColumns(ungrouped)} />
                             </Card>
                         )}
                     </div>
