@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Addons\AddonManager;
 use App\Mail\PasswordResetLink;
 use App\Models\Client;
 use App\Services\CustomerMailer;
@@ -33,8 +32,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Settings::apply();
-
-        $this->app->make(AddonManager::class)->bootEnabled();
 
         LoginService::registerRateLimiter();
 

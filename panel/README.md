@@ -1,6 +1,6 @@
 # CarrotHost Panel
 
-Admin panel for clients, orders, invoices, hosting, domains, gateways and addons.
+Admin panel for clients, orders, invoices, hosting, domains, and gateways.
 Laravel 13 API with a React admin UI. It is separate from the marketing site in the
 repository root and is deployed on its own.
 
@@ -87,12 +87,6 @@ customer without a password. Never deploy with those values.
 
 To connect a provisioning module, implement `App\Provisioning\ProvisioningModule` and set
 its class in `config/billing.php`.
-
-## Addons
-
-An addon is a folder in `addons/` holding `addon.json` and an `Addon.php` class that
-implements `App\Addons\PanelAddon`. See `addons/PaidLog`. Addons run with full panel
-access, so they are installed by deploying code. The admin UI only turns them on and off.
 
 ## Tests
 

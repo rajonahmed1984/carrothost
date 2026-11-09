@@ -313,8 +313,6 @@ Route::prefix('api')->group(function () {
         Route::post('chats/{client}', [Admin\ChatController::class, 'store']);
         Route::get('chats/{client}/messages/{message}/attachment', [Admin\ChatController::class, 'attachment']);
 
-        Route::get('addons', [Admin\AddonController::class, 'index']);
-        Route::put('addons/{code}', [Admin\AddonController::class, 'update']);
 
         Route::get('meta', [Admin\DashboardController::class, 'meta']);
     });

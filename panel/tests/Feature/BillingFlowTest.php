@@ -2,11 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Addons\AddonManager;
 use App\Jobs\ProvisionService;
 use App\Mail\CustomerNotice;
 use App\Models\ActivityLog;
-use App\Models\Addon;
 use App\Models\Client;
 use App\Models\Domain;
 use App\Models\Gateway;
@@ -366,17 +364,6 @@ class BillingFlowTest extends TestCase
 
         $this->actingAs($admin)->putJson('/api/gateways/sslcommerz', ['is_enabled' => true, 'config' => [...$config, 'store_password' => '']])->assertOk();
         $this->assertSame('top-secret', Gateway::first()->config['store_password']);
-    }
-
-    public function test_enabled_addon_receives_invoice_paid(): void
-    {
-        Queue::fake();
-        Addon::create(['code' => 'paid-log', 'is_enabled' => true]);
-        app(AddonManager::class)->bootEnabled();
-
-        app(BillingService::class)->recordPayment($this->orderInvoice(), 'manual', 'TX1', '4300.00');
-
-        $this->assertTrue(ActivityLog::where('action', 'addon.paid_log.invoice_paid')->exists());
     }
 
     public function test_customer_logs_in_and_sees_only_their_own_data(): void
