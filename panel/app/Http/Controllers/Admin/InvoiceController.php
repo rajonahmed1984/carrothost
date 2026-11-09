@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Gateway;
 use App\Models\Invoice;
 use App\Services\BillingService;
 use App\Models\PaymentAttempt;
@@ -20,7 +21,7 @@ class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        return Invoice::with('client:id,name')
+        $page = Invoice::with(['client:id,name', 'payments' => fn ($q) => $q->select('id', 'invoice_id', 'gateway', 'amount', 'created_at')->oldest('id')])
             ->when($request->query('q'), fn ($query, $q) => $query->where(fn ($w) => $w
                 ->where('number', 'like', "%{$q}%")
                 ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%"))))
@@ -32,6 +33,24 @@ class InvoiceController extends Controller
             })
             ->latest('id')
             ->paginate(25);
+
+        // How it was paid and refunded, named like the invoice page does ("bKash, Account Credit").
+        // Refunds are the negative payment rows; the latest one dates the refund.
+        $names = fn ($payments) => $payments->pluck('gateway')->unique()
+            ->map(fn ($code) => $code === 'credit' ? 'Account Credit' : config("billing.gateways.{$code}.name", $code))
+            ->implode(', ') ?: null;
+        $page->getCollection()->transform(function (Invoice $invoice) use ($names) {
+            $refunds = $invoice->payments->where('amount', '<', 0);
+
+            return [
+                ...collect($invoice->toArray())->except('payments')->all(),
+                'payment_method' => $names($invoice->payments->where('amount', '>', 0)),
+                'refund_method' => $names($refunds),
+                'refunded_at' => $refunds->last()?->created_at?->toIso8601String(),
+            ];
+        });
+
+        return $page;
     }
 
     public function show(Invoice $invoice, BillingService $billing)
@@ -52,7 +71,8 @@ class InvoiceController extends Controller
 
         $payment = $billing->recordPayment($invoice, $data['gateway'] ?? 'manual', $data['transaction_id'], number_format((float) $data['amount'], 2, '.', ''));
         $extra = array_filter([
-            'fee' => isset($data['fee']) ? number_format((float) $data['fee'], 2, '.', '') : null,
+            // A fee left blank is the gateway's own (Settings > Payment Gateways); type 0 for none.
+            'fee' => isset($data['fee']) ? number_format((float) $data['fee'], 2, '.', '') : ($payment->wasRecentlyCreated ? Gateway::feeFor($payment->gateway, (string) $payment->amount) : null),
             'created_at' => ! empty($data['date']) && $payment->wasRecentlyCreated ? Carbon::parse($data['date'])->setTimeFrom(now()) : null,
         ], fn ($v) => $v !== null);
         if ($extra) {

@@ -77,6 +77,10 @@ class ProvisionService implements ShouldQueue
             if ($this->action === 'suspend' && ($changes['auto_suspended'] ?? false)) {
                 app(CustomerMailer::class)->serviceSuspended($service->refresh());
             }
+            // A billing unsuspend (the overdue invoice was paid) tells the client it is back on.
+            if ($this->action === 'unsuspend' && $this->billing) {
+                app(CustomerMailer::class)->serviceUnsuspended($service->refresh());
+            }
         } catch (Throwable $e) {
             $service->update(['provision_status' => 'failed', 'provision_error' => $e->getMessage()]);
             ActivityLog::record("service.{$this->action}.failed", $service, ['error' => $e->getMessage()]);

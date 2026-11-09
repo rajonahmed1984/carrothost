@@ -5,7 +5,11 @@ import { api, money } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, PagedTable, QueryState, Status } from '../ui';
 import { ask } from '../dialog';
 
-type Invoice = { id: number; number: string; status: string; currency: string; total: string; due_date: string; client: { id: number; name: string; email?: string } };
+type Invoice = { id: number; number: string; status: string; currency: string; total: string; due_date: string; paid_at?: string | null; payment_method?: string | null; refunded_at?: string | null; refund_method?: string | null; client: { id: number; name: string; email?: string } };
+const dash = <span className="text-slate-400">-</span>;
+/** A timestamp as a date in the same YYYY-MM-DD form as the Due column. */
+const day = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('en-CA') : dash);
+
 type Detail = Invoice & {
     items: { id: number; description: string; amount: string }[];
     payments: { id: number; gateway: string; transaction_id: string; amount: string; created_at: string }[];
@@ -125,8 +129,17 @@ export function InvoicesPage({ mode = 'all' }: { mode?: 'all' | 'paid' | 'unpaid
                     { header: 'Number', cell: (i) => <Link className="table-action-link font-semibold" to={`${basePath}/${i.id}`}>{i.number}</Link> },
                     { header: 'Client', cell: (i) => <Link className="hover:text-accent" to={`/admin/clients/${i.client.id}`}>{i.client.name}</Link> },
                     { header: 'Due', cell: (i) => i.due_date },
+                    ...(mode === 'paid' ? [
+                        { header: 'Paid', cell: (i: Invoice) => day(i.paid_at) },
+                        { header: 'Gateway', cell: (i: Invoice) => i.payment_method ?? dash },
+                    ] : []),
+                    ...(mode === 'refunded' ? [
+                        { header: 'Refunded', cell: (i: Invoice) => day(i.refunded_at) },
+                        { header: 'Gateway', cell: (i: Invoice) => i.refund_method ?? dash },
+                    ] : []),
                     { header: 'Total', cell: (i) => money(i.total, i.currency), align: 'right' },
-                    { header: 'Status', cell: (i) => <Status value={i.status} /> },
+                    // Every row here is unpaid and past due, so say so in red rather than "Unpaid".
+                    { header: 'Status', cell: (i) => <Status value={mode === 'overdue' && i.status === 'unpaid' ? 'overdue' : i.status} /> },
                 ]}
             />
             {id && <InvoiceModal id={Number(id)} onClose={() => navigate(-1)} />}

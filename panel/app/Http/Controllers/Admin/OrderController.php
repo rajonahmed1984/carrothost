@@ -24,7 +24,8 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        return Order::with(['client:id,name,email', 'invoices:id,order_id,number,status,total'])
+        // services/domains: just the ids, so Manage can open the item on the client's page.
+        return Order::with(['client:id,name,email', 'invoices:id,order_id,number,status,total', 'services:id,order_id', 'domains:id,order_id'])
             ->withCount(['services', 'domains'])
             ->when($request->query('status'), function ($q, $status) {
                 if ($status === 'all_active') {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\Ticket;
 use App\Services\ChatService;
 use App\Support\Attachments;
@@ -58,6 +59,9 @@ class ChatController extends Controller
         return [
             'awaiting_tickets' => Ticket::whereIn('status', Ticket::AWAITING_REPLY)->count(),
             'unread_chat' => $chat->unreadForStaff(),
+            // Same filters as the Unpaid and Overdue Invoices lists.
+            'unpaid_invoices' => Invoice::where('status', 'unpaid')->count(),
+            'overdue_invoices' => Invoice::where('status', 'unpaid')->whereDate('due_date', '<', today())->count(),
         ];
     }
 }

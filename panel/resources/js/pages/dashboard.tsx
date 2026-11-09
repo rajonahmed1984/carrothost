@@ -21,7 +21,7 @@ export type Dashboard = {
     pending_module_actions_split?: { services: number; domains: number };
     billing: { today: string; month: string; year: string; all_time: string };
     charts: Record<Range, ChartRow[]>;
-    automation: { renewal_invoices: number; suspensions: number; provisioned: number; domains_expiring: number; last_run_human: string | null };
+    automation: { tasks: Record<string, { today: number; series: number[] }>; last_run_human: string | null; stale: boolean };
     health: { rating: string; passed: number; total: number; warnings: number; critical: number; checks: Check_[] };
     client_activity: { active: number; last_hour: number; recent: { id: number; name: string; ip: string | null; when: string }[] };
     activity: { id: number; who: string; action: string; when: string }[];
@@ -229,27 +229,59 @@ function Health({ data }: { data: Dashboard }) {
     );
 }
 
+const AUTOMATION_METRICS = [
+    { task: 'renewals', label: 'Invoices Created', color: '#14b8a6' },
+    { task: 'suspensions', label: 'Overdue Suspensions', color: '#f59e0b' },
+    { task: 'invoice_reminders', label: 'Overdue Reminders', color: '#64748b' },
+    { task: 'ticket_auto_close', label: 'Inactive Tickets Closed', color: '#ec4899' },
+    { task: 'domain_reminders', label: 'Domain Reminders', color: '#3b82f6' },
+    { task: 'terminations', label: 'Cancellations Processed', color: '#a855f7' },
+];
+
+const DAY = 86400000;
+
+/** Last 7 days of one task, oldest first, as a small filled line under its label. */
+function Sparkline({ series, color }: { series: number[]; color: string }) {
+    const rows = series.map((value, i) => ({ value, day: new Date(Date.now() - (series.length - 1 - i) * DAY).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) }));
+
+    return (
+        <div className="mx-auto h-9 w-full max-w-[9rem]">
+            <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={rows} margin={{ top: 3, right: 0, bottom: 1, left: 0 }}>
+                    <YAxis hide domain={[0, (max: number) => Math.max(max, 1)]} />
+                    <XAxis hide dataKey="day" />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 11, padding: '2px 8px' }} labelStyle={{ fontSize: 11 }} formatter={(v) => [v, 'Count']} />
+                    <Area type="linear" dataKey="value" stroke={color} strokeWidth={1.5} fill={color} fillOpacity={0.2} isAnimationActive={false} dot={false} />
+                </ComposedChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
 function Automation({ data }: { data: Dashboard }) {
     const a = data.automation;
-    const metrics: [string, number][] = [
-        ['Renewal Invoices Created', a.renewal_invoices],
-        ['Overdue Suspensions', a.suspensions],
-        ['Accounts Provisioned', a.provisioned],
-        ['Domains Expiring in 30 Days', a.domains_expiring],
-    ];
 
     return (
         <div className="p-4">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-5 text-center">
-                {metrics.map(([label, value]) => (
-                    <div key={label} className="border-t-2 border-slate-200 pt-2">
-                        <div className="text-xs text-slate-500">{label}</div>
-                        <div className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">{value}</div>
-                    </div>
-                ))}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-center">
+                {AUTOMATION_METRICS.map((m) => {
+                    const t = a.tasks?.[m.task] ?? { today: 0, series: [] };
+
+                    return (
+                        <div key={m.task}>
+                            {t.series.length > 0 ? <Sparkline series={t.series} color={m.color} /> : <div className="mx-auto h-9 max-w-[9rem] border-b-2" style={{ borderColor: m.color }} />}
+                            <div className="mt-1 text-xs text-slate-500">{m.label}</div>
+                            <div className="text-2xl font-semibold tabular-nums" style={{ color: m.color }}>{t.today}</div>
+                        </div>
+                    );
+                })}
             </div>
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
-                {a.last_run_human ? <><Check size={14} className="text-brand-green" /> Today&apos;s counts. Last run: {a.last_run_human}</> : <><AlertTriangle size={14} className="text-amber-700" /> Automation has not run yet</>}
+            <p className="mt-4 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                {a.last_run_human ? (
+                    a.stale
+                        ? <><AlertTriangle size={14} className="text-rose-600" /> Last automation run: {a.last_run_human} <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">Needs attention</span></>
+                        : <><Check size={14} className="text-brand-green" /> Today&apos;s counts, last 7 days graphed. Last run: {a.last_run_human}</>
+                ) : <><AlertTriangle size={14} className="text-amber-700" /> Automation has not run yet <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">Needs attention</span></>}
             </p>
         </div>
     );

@@ -254,6 +254,21 @@ type Order = {
     domains_count: number;
     client: { id: number; name: string };
     invoices: { id: number; number: string; status: string; total: string }[];
+    services?: { id: number }[];
+    domains?: { id: number }[];
+};
+
+/**
+ * Where Manage goes. An active or cancelled order is settled, so open what it bought on the
+ * client's page (its service, else its domain); an order with nothing linked (older imports)
+ * opens the client's services. A pending order still opens the order to accept or cancel it.
+ */
+const manageUrl = (o: Order, mode: string) => {
+    if (mode === 'pending') return `/admin/orders/${o.id}`;
+    const base = `/admin/clients/${o.client.id}`;
+    if (o.services?.length) return `${base}?tab=services&view=${o.services[0].id}`;
+    if (o.domains?.length) return `${base}?tab=domains&view=${o.domains[0].id}`;
+    return `${base}?tab=services`;
 };
 
 /** The order's saved total, or its invoices' when it was never saved (older panel orders). */
@@ -449,7 +464,7 @@ export function OrdersPage({ mode = 'active' }: { mode?: 'active' | 'cancelled' 
                     {
                         header: 'Action',
                         cell: (o) => (
-                            <Link to={`/admin/orders/${o.id}`}>
+                            <Link to={manageUrl(o, mode)}>
                                 <Button variant="link">Manage</Button>
                             </Link>
                         ),

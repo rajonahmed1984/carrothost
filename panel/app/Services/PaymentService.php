@@ -104,7 +104,11 @@ class PaymentService
                     return;
                 }
 
-                $this->billing->recordPayment($locked->invoice, $locked->gateway, $transactionId, (string) $locked->amount, ['reference' => $locked->reference]);
+                $payment = $this->billing->recordPayment($locked->invoice, $locked->gateway, $transactionId, (string) $locked->amount, ['reference' => $locked->reference]);
+                // The gateway's cut (Settings > Payment Gateways), so Transactions show what really came in.
+                if ($payment->wasRecentlyCreated && $payment->fee === null && ($fee = Gateway::feeFor($locked->gateway, (string) $payment->amount)) !== null) {
+                    $payment->update(['fee' => $fee]);
+                }
                 $locked->update(['status' => 'paid', 'failure_reason' => null]);
             });
 

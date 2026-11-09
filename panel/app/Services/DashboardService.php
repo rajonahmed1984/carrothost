@@ -67,20 +67,40 @@ class DashboardService
         return array_values(array_filter($rows, fn ($row) => isset($row['label'])));
     }
 
+    /** Daily cron tasks shown on the Automation Overview, in display order. */
+    public const AUTOMATION_TASKS = ['renewals', 'suspensions', 'invoice_reminders', 'ticket_auto_close', 'domain_reminders', 'terminations'];
+
+    /**
+     * What each daily cron task did today, and per day over the last 7 days (oldest first) for the
+     * sparklines. Read from the automation.run log every task writes with its count.
+     */
     public function automation(): array
     {
-        $today = today();
-        $lastRun = ActivityLog::where('action', 'automation.run')->latest('id')->first();
+        $days = 7;
+        $start = today()->subDays($days - 1);
+        $index = [];
+        for ($i = 0; $i < $days; $i++) {
+            $index[$start->copy()->addDays($i)->format('Y-m-d')] = $i;
+        }
+
+        $series = array_fill_keys(self::AUTOMATION_TASKS, array_fill(0, $days, 0));
+        $logs = ActivityLog::where('action', 'automation.run')->where('created_at', '>=', $start)->get(['context', 'created_at']);
+        foreach ($logs as $log) {
+            $task = $log->context['task'] ?? null;
+            $day = $index[$log->created_at->format('Y-m-d')] ?? null;
+            if (isset($series[$task]) && $day !== null) {
+                $series[$task][$day] += (int) ($log->context['count'] ?? 0);
+            }
+        }
+
+        $lastRun = ActivityLog::where('action', 'automation.run')->latest('id')->value('created_at');
 
         return [
-            'renewal_invoices' => InvoiceItem::where('kind', 'renewal')
-                ->whereHas('invoice', fn ($q) => $q->where('created_at', '>=', $today))
-                ->count(),
-            'suspensions' => ActivityLog::where('action', 'service.suspend')->where('created_at', '>=', $today)->count(),
-            'provisioned' => ActivityLog::where('action', 'service.create')->where('created_at', '>=', $today)->count(),
-            'domains_expiring' => Domain::where('status', 'active')->whereDate('expires_at', '<=', $today->copy()->addDays(30))->count(),
-            'last_run' => $lastRun?->created_at?->toIso8601String(),
-            'last_run_human' => $lastRun?->created_at?->diffForHumans(),
+            'tasks' => collect($series)->map(fn ($counts) => ['today' => end($counts), 'series' => $counts])->all(),
+            'last_run' => $lastRun?->toIso8601String(),
+            'last_run_human' => $lastRun?->diffForHumans(),
+            // Same window as the Automation (cron) health check.
+            'stale' => ! $lastRun || now()->diffInHours($lastRun, true) > 26,
         ];
     }
 

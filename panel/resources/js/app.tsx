@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api, background, basePath, setDefaultCurrency } from './api';
-import { ActivityPage, AddonsPage } from './pages/system';
+import { ActivityPage } from './pages/system';
 import { GatewaysPage } from './pages/gateways';
 import { ClientsPage, OrdersPage } from './pages/sales';
 import { DashboardPage } from './pages/dashboard';
@@ -23,7 +23,7 @@ import { AdminAccountPage, type ClientProfile } from './pages/security';
 import { ChatsPage, TicketDetailPage, TicketsPage } from './pages/support';
 import { Dropdown, LogoIcon, useAppConfig, useBranding } from './ui';
 
-type Badges = { awaiting_tickets: number; unread_chat: number };
+type Badges = { awaiting_tickets: number; unread_chat: number; unpaid_invoices: number; overdue_invoices: number };
 type NavItem = { to: string; label: string; badge?: keyof Badges; end?: boolean };
 
 const navSections: { title: string; items: NavItem[] }[] = [
@@ -42,8 +42,8 @@ const navSections: { title: string; items: NavItem[] }[] = [
         title: 'Billing',
         items: [
             { to: '/admin/paid-invoices', label: 'Paid Invoices' },
-            { to: '/admin/unpaid-invoices', label: 'Unpaid Invoices' },
-            { to: '/admin/overdue-invoices', label: 'Overdue Invoices' },
+            { to: '/admin/unpaid-invoices', label: 'Unpaid Invoices', badge: 'unpaid_invoices' },
+            { to: '/admin/overdue-invoices', label: 'Overdue Invoices', badge: 'overdue_invoices' },
             { to: '/admin/cancelled-invoices', label: 'Cancelled Invoices' },
             { to: '/admin/refunded-invoices', label: 'Refunded Invoices' },
             { to: '/admin/transactions', label: 'Transactions' },
@@ -61,14 +61,14 @@ const navSections: { title: string; items: NavItem[] }[] = [
         items: [
             { to: '/admin/products-pricing', label: 'Products' },
             { to: '/admin/domain-pricing', label: 'Domain Pricing' },
-            { to: '/admin/vps-profit', label: 'VPS Profit' },
         ],
     },
     {
         title: 'System',
         items: [
-            { to: '/admin/activity', label: 'Activity Log' },
             { to: '/admin/settings', label: 'Settings', end: true },
+            { to: '/admin/vps-profit', label: 'VPS Profit' },
+            { to: '/admin/activity', label: 'Activity Log' },
             ...settings,
         ],
     },
@@ -142,7 +142,9 @@ function Shell({ name }: { name: string }) {
     const badge = (item: NavItem) => {
         const count = item.badge ? badges.data?.[item.badge] ?? 0 : 0;
 
-        return count > 0 ? <span className="ml-auto rounded-full bg-accent px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">{count}</span> : null;
+        const color = item.badge === 'overdue_invoices' ? 'bg-rose-600' : item.badge === 'unpaid_invoices' ? 'bg-amber-500' : 'bg-accent';
+
+        return count > 0 ? <span className={`ml-auto rounded-full ${color} px-1.5 py-0.5 text-[10px] leading-none font-bold text-white tabular-nums`}>{count > 999 ? '999+' : count}</span> : null;
     };
     const section = pathname.startsWith('/admin')
         ? (pathname.split('/')[2] ? `/admin/${pathname.split('/')[2]}` : '/admin/dashboard')
@@ -257,8 +259,7 @@ function Shell({ name }: { name: string }) {
                         <Route path="/admin/settings/servers-config" element={<ServersPage />} />
                         <Route path="/admin/settings/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />
                         <Route path="/admin/settings/registrars" element={<RegistrarsPage />} />
-                        <Route path="/admin/settings/addons" element={<AddonsPage />} />
-                        {['gateways', 'registrars', 'addons'].map((page) => (
+                        {['gateways', 'registrars'].map((page) => (
                             <Route key={page} path={`/admin/${page}`} element={<Navigate to={`/admin/settings/${page}`} replace />} />
                         ))}
                         <Route path="/admin/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />

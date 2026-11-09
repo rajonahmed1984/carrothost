@@ -7,10 +7,9 @@ import { EmailTemplatesSection } from './email-templates';
 
 /** Integration pages listed under System in the sidebar. */
 export const settings = [
-    { to: '/admin/settings/gateways', label: 'Payment Gateways' },
     { to: '/admin/settings/servers-config', label: 'Servers Config' },
     { to: '/admin/settings/registrars', label: 'Domain Registrars' },
-    { to: '/admin/settings/addons', label: 'Addons' },
+    { to: '/admin/settings/gateways', label: 'Payment Gateways' },
 ];
 
 const tabs = [
@@ -185,6 +184,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
     const qc = useQueryClient();
     const [params, setParams] = useSearchParams();
     const tab = tabs.find((t) => t.key === params.get('tab')) ?? tabs[0];
+    const smsLogs = tab.key === 'sms' && params.get('view') === 'logs';
     const [values, setValues] = useState<Values>(data.settings);
     const [secrets, setSecrets] = useState(emptySecrets);
     const [files, setFiles] = useState<{ logo: File | null; favicon: File | null }>({ logo: null, favicon: null });
@@ -246,6 +246,25 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                 </div>
                 <p className="mt-3 text-xs text-slate-500">{tab.hint}</p>
             </div>
+
+            {tab.key === 'sms' && (
+                <div className="flex gap-1 border-b border-slate-200">
+                    {[{ key: 'settings', label: 'Settings' }, { key: 'logs', label: 'Recent SMS' }].map((v) => {
+                        const active = (v.key === 'logs') === smsLogs;
+
+                        return (
+                            <button
+                                key={v.key}
+                                type="button"
+                                onClick={() => setParams(v.key === 'logs' ? { tab: 'sms', view: 'logs' } : { tab: 'sms' }, { replace: true })}
+                                className={`-mb-px cursor-pointer border-b-2 px-4 py-2 text-sm font-semibold transition ${active ? 'border-[var(--accent)] text-accent' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                            >
+                                {v.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
                 <div className={tab.key === 'general' ? 'space-y-4' : 'hidden'}>
@@ -456,7 +475,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                     </div>
                 </div>
 
-                <div className={tab.key === 'sms' ? 'space-y-4' : 'hidden'}>
+                <div className={tab.key === 'sms' && !smsLogs ? 'space-y-4' : 'hidden'}>
                     <div className="grid gap-4 lg:grid-cols-2">
                         <Section title="SMS Gateway">
                             <Check checked={values.sms_enabled} onChange={set('sms_enabled')} label="Enable SMS notifications" />
@@ -486,11 +505,10 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                         </div>
                         <p className="text-xs text-slate-500">Clear a message to go back to the default. Reminders follow the days set under Automation &gt; Billing Reminders. Clients without a Bangladeshi mobile number are skipped.</p>
                     </Section>
-                    <SmsLogs />
                 </div>
 
                 <ErrorNote error={save.error} />
-                <div className="flex items-center justify-end gap-3 pb-2">
+                <div className={smsLogs ? 'hidden' : 'flex items-center justify-end gap-3 pb-2'}>
                     {save.isSuccess && <span role="status" className="text-xs font-semibold text-emerald-700">Settings saved.</span>}
                     <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save settings'}</Button>
                 </div>
@@ -498,6 +516,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
 
             {/* Outside the settings form: templates save on their own. */}
             {tab.key === 'email' && <EmailTemplatesSection />}
+            {smsLogs && <SmsLogs />}
         </div>
     );
 }

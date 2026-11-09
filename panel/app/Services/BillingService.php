@@ -347,6 +347,11 @@ class BillingService
         }
 
         $service->update($changes);
+
+        // Nothing on a server to unsuspend: it is back on now, so tell the client.
+        if (($changes['status'] ?? null) === 'active') {
+            DB::afterCommit(fn () => $this->mailer->serviceUnsuspended($service));
+        }
     }
 
     private function activateDomain(Domain $domain): void

@@ -97,6 +97,13 @@ class CustomerMailer
         ], $invoice ? url("invoices/{$invoice->id}") : url('invoices'), $invoice ? 'Pay invoice' : 'View invoices');
     }
 
+    public function serviceUnsuspended(Service $service): void
+    {
+        $service->loadMissing('client', 'product');
+
+        $this->send('service_unsuspended', $service->client, MailFrom::BILLING, $this->serviceValues($service), url("services/{$service->id}"), 'Open your service');
+    }
+
     /** $daysLeft is negative once the domain has expired. */
     public function domainExpiry(Domain $domain, int $daysLeft): void
     {

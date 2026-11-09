@@ -94,6 +94,12 @@ class EmailTemplates
                 'body' => $hello.'<p>Your <strong>{$service_product_name}</strong> service for <strong>{$service_domain}</strong> has been suspended because a payment is overdue.</p><p>Pay invoice <strong>#{$invoice_number}</strong> and the service is turned back on automatically.</p>'.$sign,
                 'fields' => ['service_product_name', 'service_domain', 'invoice_number', 'invoice_link'],
             ],
+            'service_unsuspended' => [
+                'group' => 'product', 'name' => 'Service Unsuspension Notification', 'description' => 'Sent when a service suspended for an overdue payment is turned back on after the invoice is paid.',
+                'subject' => 'Service reactivated: {$service_product_name}',
+                'body' => $hello.'<p>Thank you for your payment. Your <strong>{$service_product_name}</strong> service for <strong>{$service_domain}</strong> has been unsuspended and is active again.</p><p>If anything is still not working, reply to this email or open a support ticket.</p>'.$sign,
+                'fields' => ['service_product_name', 'service_domain', 'service_link'],
+            ],
 
             /* ---------- Domain ---------- */
             'domain_renewal_reminder' => [

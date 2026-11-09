@@ -26,6 +26,8 @@ class GatewayController extends Controller
                 'callback_url' => isset($definition['callback']) ? url($definition['callback']) : null,
                 'is_enabled' => (bool) $gateway?->is_enabled,
                 'test_mode' => (bool) ($gateway?->test_mode ?? true),
+                'fee_percent' => (string) ($gateway?->fee_percent ?? '0'),
+                'fee_fixed' => (string) ($gateway?->fee_fixed ?? '0'),
                 // Secrets only ever report whether they are set.
                 'fields' => array_map(fn ($field) => [
                     ...$field,
@@ -64,7 +66,7 @@ class GatewayController extends Controller
         abort_unless($definition, 404);
 
         $fields = $definition['fields'] ?? [];
-        $rules = ['is_enabled' => 'required|boolean', 'test_mode' => 'boolean', 'config' => 'array'];
+        $rules = ['is_enabled' => 'required|boolean', 'test_mode' => 'boolean', 'config' => 'array', 'fee_percent' => 'nullable|numeric|min:0|max:100', 'fee_fixed' => 'nullable|numeric|min:0|max:100000'];
 
         foreach ($fields as $field) {
             $rules["config.{$field['key']}"] = match ($field['type'] ?? 'text') {
@@ -114,8 +116,15 @@ class GatewayController extends Controller
         $gateway->config = $config;
         $gateway->is_enabled = $data['is_enabled'];
         $gateway->test_mode = $data['test_mode'] ?? $gateway->test_mode ?? true;
+        // Left out of the request: keep what is saved.
+        if ($request->has('fee_percent')) {
+            $gateway->fee_percent = $data['fee_percent'] ?? 0;
+        }
+        if ($request->has('fee_fixed')) {
+            $gateway->fee_fixed = $data['fee_fixed'] ?? 0;
+        }
         $gateway->save();
-        ActivityLog::record('gateway.updated', $gateway, ['enabled' => $gateway->is_enabled, 'test_mode' => $gateway->test_mode]);
+        ActivityLog::record('gateway.updated', $gateway, ['enabled' => $gateway->is_enabled, 'test_mode' => $gateway->test_mode, 'fee_percent' => $gateway->fee_percent, 'fee_fixed' => $gateway->fee_fixed]);
 
         return ['ok' => true];
     }
