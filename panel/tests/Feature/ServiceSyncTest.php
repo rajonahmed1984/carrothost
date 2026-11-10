@@ -72,6 +72,43 @@ class ServiceSyncTest extends TestCase
         $this->assertSame('suspended', $this->service->refresh()->status);
     }
 
+    public function test_actions_on_an_account_without_a_server_never_go_to_another_server(): void
+    {
+        Http::fake(['*' => Http::response(['metadata' => ['result' => 1]])]);
+        $this->service->update(['server_id' => null, 'status' => 'suspended']);
+
+        (new ProvisionService($this->service->id, 'terminate', true, false))->handle();
+
+        Http::assertNothingSent();
+        $this->assertSame('failed', $this->service->refresh()->provision_status);
+        $this->assertSame('suspended', $this->service->status);
+    }
+
+    public function test_terminate_marks_the_date_and_counts_an_account_already_gone_as_done(): void
+    {
+        Http::fake([
+            '*removeacct*' => Http::response(['metadata' => ['result' => 0, 'reason' => 'User does not exist.']]),
+            '*accountsummary*' => Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => []]]),
+        ]);
+
+        (new ProvisionService($this->service->id, 'terminate', true, false))->handle();
+
+        $this->service->refresh();
+        $this->assertSame('terminated', $this->service->status);
+        $this->assertSame('done', $this->service->provision_status);
+        $this->assertSame(today()->toDateString(), $this->service->termination_date->toDateString());
+    }
+
+    public function test_terminate_still_fails_when_the_server_cannot_be_reached(): void
+    {
+        Http::fake(['*' => Http::response('down', 500)]);
+
+        (new ProvisionService($this->service->id, 'terminate', true, false))->handle();
+
+        $this->assertSame('failed', $this->service->refresh()->provision_status);
+        $this->assertSame('active', $this->service->status);
+    }
+
     public function test_unsuspend_fails_when_the_server_says_done_but_keeps_the_account_suspended(): void
     {
         Sleep::fake();

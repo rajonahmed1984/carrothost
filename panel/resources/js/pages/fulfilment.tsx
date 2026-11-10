@@ -72,7 +72,7 @@ export function ServiceActions({ service }: { service: Service }) {
             {service.status === 'active' && !service.remote_id && service.product.module && <Button variant="link" disabled={busy} onClick={() => run('create')}>{service.provision_status === 'failed' ? 'Retry' : 'Provision'}</Button>}
             {service.status === 'active' && service.remote_id && <Button variant="link" disabled={busy} onClick={() => run('suspend')}>Suspend</Button>}
             {service.status === 'suspended' && service.remote_id && <Button variant="link" disabled={busy} onClick={() => run('unsuspend')}>Unsuspend</Button>}
-            {service.remote_id && <Button variant="link" disabled={reveal.isPending} onClick={() => reveal.mutate()}>Login</Button>}
+            {service.remote_id && service.status !== 'terminated' && <Button variant="link" disabled={reveal.isPending} onClick={() => reveal.mutate()}>Login</Button>}
             {service.remote_id && service.status !== 'terminated' && <Button variant="link-danger" disabled={busy} onClick={() => run('terminate')}>Terminate</Button>}
             {credentials && (
                 <Modal title="Account login" onClose={() => setCredentials(null)}>

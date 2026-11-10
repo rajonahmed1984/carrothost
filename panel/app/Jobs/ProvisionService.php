@@ -47,7 +47,18 @@ class ProvisionService implements ShouldQueue
             return;
         }
 
-        $server = $service->server ?? $this->pinnedServer($service) ?? $this->pickServer($moduleCode);
+        // Only a new account may go to any server. An existing account lives on its own server:
+        // sending suspend or terminate elsewhere could hit another customer with the same username.
+        $server = $this->action === 'create'
+            ? $service->server ?? $this->pinnedServer($service) ?? $this->pickServer($moduleCode)
+            : $service->server;
+
+        if (! $server && $this->action !== 'create') {
+            $service->update(['provision_status' => 'failed', 'provision_error' => "This service is not linked to a server, so {$service->remote_id} was not {$this->action}ed. Set its server first."]);
+            ActivityLog::record("service.{$this->action}.failed", $service, ['error' => 'No server linked.']);
+
+            return;
+        }
 
         if (! $server) {
             $service->update(['provision_status' => 'failed', 'provision_error' => "No active {$moduleCode} server has capacity."]);
@@ -143,9 +154,32 @@ class ProvisionService implements ShouldQueue
 
     private function terminate(ProvisioningModule $module, Service $service): array
     {
-        $module->terminate($service);
+        try {
+            $module->terminate($service);
+        } catch (Throwable $e) {
+            // Already removed on the server (by hand, say): nothing is left to delete.
+            if (! $this->accountGone($module, $service)) {
+                throw $e;
+            }
+        }
 
-        return ['status' => 'terminated'];
+        return ['status' => 'terminated', 'termination_date' => $service->termination_date ?? today()];
+    }
+
+    /** True only when the server answers and says it has no such account; any other error is not proof. */
+    private function accountGone(ProvisioningModule $module, Service $service): bool
+    {
+        if (! $module instanceof ReportsAccountStatus) {
+            return false;
+        }
+
+        try {
+            $module->accountInfo($service);
+
+            return false;
+        } catch (Throwable $e) {
+            return str_contains($e->getMessage(), "has no account named {$service->remote_id}");
+        }
     }
 
     /** The server the product is tied to, while it is active and still runs that module. */
