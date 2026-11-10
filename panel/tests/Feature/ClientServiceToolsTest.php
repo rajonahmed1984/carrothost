@@ -28,7 +28,7 @@ class ClientServiceToolsTest extends TestCase
         Mail::fake();
         $this->group = ProductGroup::create(['name' => 'Shared Hosting', 'slug' => 'shared-hosting']);
         $this->client = Client::create(['name' => 'Acme', 'email' => 'acme@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'acme@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('acme@example.com', 'correct-horse');
     }
 
     private function product(string $name, string $module, int $price, array $extra = []): Product

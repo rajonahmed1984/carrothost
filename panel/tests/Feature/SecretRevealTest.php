@@ -54,7 +54,7 @@ class SecretRevealTest extends TestCase
         $this->postJson('/api/secrets/setting', ['key' => 'sms_api_key'])->assertUnauthorized();
 
         Client::create(['name' => 'Rahim', 'email' => 'rahim@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'rahim@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('rahim@example.com', 'correct-horse');
         $this->postJson('/api/secrets/setting', ['key' => 'sms_api_key'])->assertUnauthorized();
     }
 }

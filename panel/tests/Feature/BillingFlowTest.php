@@ -376,7 +376,7 @@ class BillingFlowTest extends TestCase
 
         $this->getJson('/api/client/me')->assertUnauthorized();
         $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'wrong-password'])->assertUnprocessable();
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk()->assertJsonMissingPath('password');
+        $this->loginClientWithCode('mine@example.com', 'correct-horse')->assertJsonMissingPath('password');
 
         $this->getJson('/api/client/overview')->assertOk()->assertSee($myInvoice->number)->assertDontSee($theirInvoice->number);
         $this->getJson('/api/client/invoices')->assertOk()->assertJsonCount(1)->assertJsonPath('0.number', $myInvoice->number)->assertJsonStructure([['created_at', 'paid_at']]);
@@ -402,7 +402,7 @@ class BillingFlowTest extends TestCase
         Domain::create([...$base, 'name' => 'later.com', 'expires_at' => now()->addDays(200)]);
         Domain::create([...$base, 'name' => 'lapsing.com', 'expires_at' => now()->addDays(3), 'auto_renew' => false]);
         $client->tickets()->create(['number' => '100001', 'department' => 'support', 'subject' => 'Help', 'status' => 'answered', 'last_reply_at' => now()]);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->getJson('/api/client/overview')
             ->assertOk()
@@ -418,7 +418,7 @@ class BillingFlowTest extends TestCase
     {
         Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
 
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->getJson('/api/clients')->assertUnauthorized();
         $this->getJson('/api/dashboard')->assertUnauthorized();
@@ -475,7 +475,7 @@ class BillingFlowTest extends TestCase
     {
         Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
 
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->assertNotNull(Client::first()->last_login_at);
     }

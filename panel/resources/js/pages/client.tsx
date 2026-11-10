@@ -342,7 +342,6 @@ function ManageUserModal({
     const [lastName, setLastName] = useState(user.last_name ?? '');
     const [email, setEmail] = useState(user.email ?? '');
     const [language, setLanguage] = useState(user.language ?? 'English');
-    const [twoFactor, setTwoFactor] = useState(user.two_factor ?? false);
     const [makeOwner, setMakeOwner] = useState(user.is_owner);
     const [status, setStatus] = useState(user.status ?? 'active');
 
@@ -379,7 +378,6 @@ function ManageUserModal({
                 last_name: lastName,
                 email,
                 language,
-                two_factor: twoFactor,
                 is_owner: makeOwner,
                 status,
                 permissions: Array.from(permissions),
@@ -471,15 +469,8 @@ function ManageUserModal({
 
                         <div className="grid grid-cols-1 md:grid-cols-3 md:items-center gap-2">
                             <label className="md:text-right font-medium text-slate-700">Two-Factor Authentication</label>
-                            <div className="md:col-span-2 flex items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setTwoFactor(!twoFactor)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${twoFactor ? 'bg-sky-600' : 'bg-slate-300'}`}
-                                >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${twoFactor ? 'translate-x-6' : 'translate-x-1'}`} />
-                                </button>
-                                <span className="text-xs font-semibold uppercase text-slate-600">{twoFactor ? 'ON' : 'OFF'}</span>
+                            <div className="md:col-span-2 text-xs text-slate-600">
+                                <span className="font-semibold text-emerald-700 uppercase">Always on</span> · every sign-in needs a code emailed to this user.
                             </div>
                         </div>
 

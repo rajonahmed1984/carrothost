@@ -23,6 +23,6 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return $request->user()->only('id', 'name', 'email');
+        return $request->user()->only('id', 'name', 'email', 'role');
     }
 }

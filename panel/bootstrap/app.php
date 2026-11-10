@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureActiveClient;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureClientPermission;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\StaffAccess;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['admin' => EnsureAdmin::class, 'client.active' => EnsureActiveClient::class, 'client.can' => EnsureClientPermission::class, 'admin.idle' => AdminIdleTimeout::class]);
+        $middleware->alias(['admin' => EnsureAdmin::class, 'client.active' => EnsureActiveClient::class, 'client.can' => EnsureClientPermission::class, 'admin.idle' => AdminIdleTimeout::class, 'staff' => StaffAccess::class]);
         $middleware->append(SecurityHeaders::class);
         $middleware->redirectGuestsTo('/login');
         // Gateways post here from their own servers and carry no CSRF token.

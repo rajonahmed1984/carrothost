@@ -99,7 +99,7 @@ class TicketService
 
     private function notifyStaff(Ticket $ticket, string $subject, string $heading, string $message): void
     {
-        foreach (User::where('is_admin', true)->pluck('email') as $email) {
+        foreach (User::where('is_admin', true)->where('is_active', true)->pluck('email') as $email) {
             $this->send($email, new TicketNotification($subject, $heading, $message, url("tickets/{$ticket->id}")));
         }
     }

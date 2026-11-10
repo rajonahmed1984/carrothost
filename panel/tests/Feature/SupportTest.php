@@ -35,7 +35,7 @@ class SupportTest extends TestCase
     private function signIn(string $email = 'mine@example.com'): Client
     {
         $client = Client::create(['name' => 'Mine', 'email' => $email, 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => $email, 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode($email, 'correct-horse');
 
         return $client;
     }
@@ -79,7 +79,7 @@ class SupportTest extends TestCase
         Mail::assertSent(\App\Mail\CustomerNotice::class, fn ($mail) => $mail->hasTo('mine@example.com') && str_starts_with($mail->subjectLine, '[Ticket #') && str_contains($mail->richBody, 'Refunded.'));
 
         $this->signOut();
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
         $this->getJson("/api/client/tickets/{$id}")->assertJsonPath('replies.1.author', 'Rafi')->assertJsonPath('replies.1.staff', true)->assertDontSee('staff@example.com');
         $this->postJson("/api/client/tickets/{$id}/close")->assertJsonPath('status', 'closed');
         $this->postJson("/api/client/tickets/{$id}/replies", ['message' => 'Still charged.'])->assertJsonPath('status', 'customer_reply');
@@ -139,7 +139,7 @@ class SupportTest extends TestCase
         $this->postJson("/api/chats/{$client->id}", ['message' => 'Hi, how can we help?'])->assertCreated()->assertJsonPath('author', 'Rafi');
         $this->signOut();
 
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
         $this->getJson('/api/client/badges')->assertJsonPath('unread_chat', 1);
         $this->getJson("/api/client/chat?after_id={$first}")->assertJsonCount(1, 'items')->assertJsonPath('items.0.staff', true)->assertJsonPath('seen_up_to', $first + 1);
         $this->getJson('/api/client/badges')->assertJsonPath('unread_chat', 0);

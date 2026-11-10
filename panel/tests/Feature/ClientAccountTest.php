@@ -19,7 +19,7 @@ class ClientAccountTest extends TestCase
     private function signIn(string $email = 'mine@example.com'): Client
     {
         $client = Client::firstOrCreate(['email' => $email], ['name' => 'Mine', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => $email, 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode($email, 'correct-horse');
 
         return $client;
     }

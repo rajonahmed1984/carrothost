@@ -39,7 +39,7 @@ class ClientServicesTest extends TestCase
         $theirs = $this->service($other, ['domain' => 'theirs.net']);
         $this->service($mine, ['domain' => 'old.net', 'status' => 'terminated']);
         $invoice = app(BillingService::class)->createInvoice($mine, [['description' => 'Renewal', 'amount' => '6999.18', 'kind' => 'renewal', 'service_id' => $service->id]], now());
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $list = $this->getJson('/api/client/services')->assertOk()->assertJsonCount(2)->assertDontSee('theirs.net')->assertDontSee('S3cret-pass')->json();
         $live = collect($list)->firstWhere('domain', 'erestu.net');

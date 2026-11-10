@@ -10,7 +10,8 @@ class EnsureAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->is_admin, 403);
+        // A user disabled while signed in loses access on their next request.
+        abort_unless($request->user()?->is_admin && $request->user()->is_active !== false, 403);
 
         return $next($request);
     }

@@ -20,6 +20,7 @@ import { DomainDetailPage, OrderDetailPage, ServiceDetailPage } from './pages/re
 import { ClientDetailPage } from './pages/client';
 import { GuestPages, isGuestPath, safeRedirect } from './pages/auth';
 import { AdminAccountPage, type ClientProfile } from './pages/security';
+import { roleLabels, UsersPage, type StaffRole } from './pages/users';
 import { ChatsPage, TicketDetailPage, TicketsPage } from './pages/support';
 import { Dropdown, LogoIcon, useAppConfig, useBranding } from './ui';
 
@@ -69,6 +70,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
             { to: '/admin/settings', label: 'Settings', end: true },
             { to: '/admin/vps-profit', label: 'VPS Profit' },
             { to: '/admin/activity', label: 'Activity Log' },
+            { to: '/admin/users', label: 'Users' },
             ...settings,
         ],
     },
@@ -85,6 +87,18 @@ const pageTitles: Record<string, string> = {
     ...Object.fromEntries(navSections.flatMap((s) => s.items).map((i) => [i.to, i.label])),
 };
 
+type Me = { id: number; name: string; email: string; role: StaffRole };
+
+/** Support staff see only these pages (the server enforces the same limits); admins see everything. */
+const supportPages = [
+    '/admin/clients', '/admin/active-orders', '/admin/pending-orders', '/admin/cancelled-orders', '/admin/orders',
+    '/admin/products-services', '/admin/services', '/admin/domain-registrations', '/admin/domains',
+    '/admin/invoices', '/admin/paid-invoices', '/admin/unpaid-invoices', '/admin/overdue-invoices', '/admin/cancelled-invoices', '/admin/refunded-invoices',
+    '/admin/tickets', '/admin/chats', '/admin/account',
+];
+const supportHome = '/admin/tickets';
+const canOpen = (role: StaffRole, path: string) => role !== 'support' || supportPages.some((p) => path === p || path.startsWith(`${p}/`));
+
 const bottomNav: [string, string, LucideIcon][] = [
     ['/admin/dashboard', 'Dashboard', LayoutDashboard],
     ['/admin/clients', 'Clients', Users],
@@ -92,7 +106,7 @@ const bottomNav: [string, string, LucideIcon][] = [
     ['/admin/products-services', 'Services', Boxes],
 ];
 
-function UserMenu({ name }: { name: string }) {
+function UserMenu({ name, role }: { name: string; role: StaffRole }) {
     const client = useQueryClient();
     const logout = useMutation({
         mutationFn: () => api.post('/logout'),
@@ -110,7 +124,7 @@ function UserMenu({ name }: { name: string }) {
                     <span className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-bold text-white">{name.charAt(0).toUpperCase()}</span>
                     <span className="hidden text-left sm:block">
                         <span className="block max-w-36 truncate text-xs font-semibold text-slate-900">{name}</span>
-                        <span className="block text-[10px] text-slate-500">Master Administrator</span>
+                        <span className="block text-[10px] text-slate-500">{roleLabels[role] ?? 'Administrator'}</span>
                     </span>
                     <ChevronDown size={14} className="hidden text-slate-500 sm:block" />
                 </>
@@ -126,7 +140,8 @@ function UserMenu({ name }: { name: string }) {
     );
 }
 
-function Shell({ name }: { name: string }) {
+function Shell({ me }: { me: Me }) {
+    const { name, role } = me;
     const { pathname } = useLocation();
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
@@ -167,6 +182,12 @@ function Shell({ name }: { name: string }) {
     };
 
     const navClass = ({ isActive }: { isActive: boolean }) => `nav-link ${isActive ? 'nav-link-active' : ''}`;
+    const sections = navSections
+        .map((s) => ({ ...s, items: s.items.filter((i) => canOpen(role, i.to)) }))
+        .filter((s) => s.items.length > 0);
+    const quickNav = bottomNav.filter(([to]) => canOpen(role, to));
+
+    if (pathname.startsWith('/admin') && !canOpen(role, pathname)) return <Navigate to={supportHome} replace />;
 
     return (
         <div className={`bg-dashboard flex min-h-screen flex-col md:flex-row ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -183,8 +204,8 @@ function Shell({ name }: { name: string }) {
                 <button type="button" aria-label="Close menu" onClick={() => setDrawerOpen(false)} className="absolute top-4 right-4 cursor-pointer rounded-full border border-white/10 bg-white/10 p-2 text-slate-200 md:hidden"><X size={16} /></button>
 
                 <nav className="mt-8 flex-1 space-y-4 text-sm">
-                    <NavLink to="/admin/dashboard" end className={navClass}><span className="h-2 w-2 shrink-0 rounded-full bg-current" /> Dashboard</NavLink>
-                    {navSections.map((section) => (
+                    {canOpen(role, '/admin/dashboard') && <NavLink to="/admin/dashboard" end className={navClass}><span className="h-2 w-2 shrink-0 rounded-full bg-current" /> Dashboard</NavLink>}
+                    {sections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <div className="nav-section">{section.title}</div>
                             {section.items.map((item) => (
@@ -199,7 +220,7 @@ function Shell({ name }: { name: string }) {
                 <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur md:hidden">
                     <button type="button" aria-label="Open menu" className="icon-btn" onClick={() => setDrawerOpen(true)}><Menu size={20} /></button>
                     <h1 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h1>
-                    <UserMenu name={name} />
+                    <UserMenu name={name} role={role} />
                 </header>
 
                 <header className="sticky top-0 z-20 hidden items-center justify-between gap-6 border-b border-slate-300/70 bg-white/80 px-6 py-3 backdrop-blur md:flex">
@@ -207,7 +228,7 @@ function Shell({ name }: { name: string }) {
                         <button type="button" aria-label="Toggle sidebar" aria-expanded={!collapsed} className="icon-btn" onClick={toggleSidebar}><PanelLeft size={18} /></button>
                         <h1 className="truncate text-lg font-semibold text-slate-900">{title}</h1>
                     </div>
-                    <UserMenu name={name} />
+                    <UserMenu name={name} role={role} />
                 </header>
 
                 <main key={section} className="fade-in pb-safe-nav w-full px-3 py-4 sm:px-4 md:px-6 md:py-6">
@@ -254,6 +275,7 @@ function Shell({ name }: { name: string }) {
                         <Route path="/admin/chats" element={<ChatsPage />} />
                         <Route path="/admin/chats/:clientId" element={<ChatsPage />} />
                         <Route path="/admin/activity" element={<ActivityPage />} />
+                        <Route path="/admin/users" element={<UsersPage meId={me.id} />} />
                         <Route path="/admin/settings" element={<SettingsPage />} />
                         <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
                         <Route path="/admin/settings/servers-config" element={<ServersPage />} />
@@ -297,8 +319,8 @@ function Shell({ name }: { name: string }) {
                 </main>
             </div>
 
-            <nav aria-label="Main" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-                {bottomNav.map(([to, label, Icon]) => (
+            <nav aria-label="Main" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid border-t border-slate-200 bg-white/95 backdrop-blur md:hidden" style={{ gridTemplateColumns: `repeat(${quickNav.length + 1}, minmax(0, 1fr))` }}>
+                {quickNav.map(([to, label, Icon]) => (
                     <NavLink key={to} to={to} end={to === '/admin/dashboard'} className={({ isActive }) => `flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold ${isActive ? 'text-accent' : 'text-slate-500'}`}>
                         <Icon size={20} /> {label}
                     </NavLink>
@@ -316,7 +338,7 @@ function Shell({ name }: { name: string }) {
                             <button type="button" aria-label="Close" onClick={() => setMoreOpen(false)} className="cursor-pointer rounded-lg p-1 text-slate-500"><X size={18} /></button>
                         </div>
                         <div className="space-y-5 py-2">
-                            {navSections.map((section) => (
+                            {sections.map((section) => (
                                 <div key={section.title} className="space-y-2">
                                     <div className="border-b border-slate-100 pb-1 text-[11px] font-bold tracking-[0.2em] text-accent uppercase">{section.title}</div>
                                     <div className="grid grid-cols-2 gap-2 pt-1">
@@ -339,7 +361,7 @@ function Shell({ name }: { name: string }) {
 function App() {
     const me = useQuery({
         queryKey: ['me'],
-        queryFn: async () => (await api.get<{ name: string }>('/me')).data,
+        queryFn: async () => (await api.get<Me>('/me')).data,
         retry: false,
     });
 
@@ -359,8 +381,8 @@ function App() {
 
     if (me.data) {
         if (guestPage) return <Navigate to={home} replace />;
-        if (pathname === '/' || pathname === '/admin') return <Navigate to="/admin/dashboard" replace />;
-        return <Shell name={me.data.name} />;
+        if (pathname === '/' || pathname === '/admin') return <Navigate to={canOpen(me.data.role, '/admin/dashboard') ? '/admin/dashboard' : supportHome} replace />;
+        return <Shell me={me.data} />;
     }
 
     // An admin can still sign in from a browser that holds a customer session.

@@ -203,20 +203,21 @@ class AuthTest extends TestCase
         $this->getJson('/api/login/otp')->assertNotFound();
     }
 
-    public function test_customer_without_otp_signs_in_directly(): void
+    public function test_every_customer_needs_the_code_even_with_the_old_setting_off(): void
     {
-        $client = $this->client();
+        $client = $this->client(['otp_enabled' => false]);
 
         $this->postJson('/api/client/login', ['email' => $client->email, 'password' => self::PASSWORD])
-            ->assertOk()->assertJson(['requires_otp' => false]);
+            ->assertOk()->assertJson(['requires_otp' => true]);
 
-        $this->assertAuthenticatedAs($client, 'client');
-        Mail::assertNothingSent();
+        $this->assertGuest('client');
+        Mail::assertSent(VerificationCode::class);
+        $this->putJson('/api/client/security', ['otp_enabled' => false])->assertNotFound();
     }
 
-    public function test_customer_with_otp_needs_the_code_and_records_the_login_only_then(): void
+    public function test_customer_needs_the_code_and_records_the_login_only_then(): void
     {
-        $client = $this->client(['otp_enabled' => true]);
+        $client = $this->client();
 
         $this->postJson('/api/client/login', ['email' => $client->email, 'password' => self::PASSWORD])
             ->assertOk()->assertJson(['requires_otp' => true]);
@@ -232,7 +233,7 @@ class AuthTest extends TestCase
 
     public function test_cancelling_drops_the_pending_sign_in(): void
     {
-        $client = $this->client(['otp_enabled' => true]);
+        $client = $this->client();
         $this->postJson('/api/client/login', ['email' => $client->email, 'password' => self::PASSWORD]);
 
         $this->postJson('/api/login/otp/cancel')->assertNoContent();
@@ -261,7 +262,8 @@ class AuthTest extends TestCase
         foreach (range(1, 4) as $ignored) {
             $this->postJson('/api/client/login', ['email' => $client->email, 'password' => 'wrong-password']);
         }
-        $this->postJson('/api/client/login', ['email' => $client->email, 'password' => self::PASSWORD])->assertOk();
+        // The count resets once the sign-in is complete, which is after the emailed code.
+        $this->loginClientWithCode($client->email, self::PASSWORD);
 
         foreach (range(1, 4) as $ignored) {
             $this->postJson('/api/client/login', ['email' => $client->email, 'password' => 'wrong-password'])->assertUnprocessable();
@@ -280,7 +282,7 @@ class AuthTest extends TestCase
         $this->postJson('/api/client/login', [...$credentials, 'g-recaptcha-response' => 'bad'])->assertUnprocessable();
         $this->assertGuest('client');
 
-        $this->postJson('/api/client/login', [...$credentials, 'g-recaptcha-response' => 'good'])->assertOk();
+        $this->loginClientWithCode($client->email, self::PASSWORD, ['g-recaptcha-response' => 'good']);
         $this->assertAuthenticatedAs($client, 'client');
     }
 
@@ -447,13 +449,11 @@ class AuthTest extends TestCase
         $this->assertTrue(Hash::check('a-brand-new-pass', $client->refresh()->password));
     }
 
-    public function test_customer_toggles_otp(): void
+    public function test_profile_reports_the_code_as_always_on(): void
     {
-        $client = $this->client();
+        $client = $this->client(['otp_enabled' => false]);
 
-        $this->actingAs($client, 'client')->putJson('/api/client/security', ['otp_enabled' => true])->assertOk()->assertJson(['otp_enabled' => true]);
-
-        $this->assertTrue($client->refresh()->requiresLoginOtp());
+        $this->actingAs($client, 'client')->getJson('/api/client/me')->assertOk()->assertJson(['otp_enabled' => true]);
     }
 
     public function test_verification_secrets_never_reach_the_api(): void
@@ -657,11 +657,9 @@ class AuthTest extends TestCase
         $this->actingAs($this->admin());
         $this->postJson("/api/clients/{$client->id}/impersonate")->assertOk();
 
-        $this->putJson('/api/client/security', ['otp_enabled' => true])->assertForbidden();
         $this->postJson('/api/client/password', ['current_password' => self::PASSWORD, 'password' => 'a-brand-new-pass', 'password_confirmation' => 'a-brand-new-pass'])->assertForbidden();
 
-        $this->assertFalse($client->refresh()->otp_enabled);
-        $this->assertTrue(Hash::check(self::PASSWORD, $client->password));
+        $this->assertTrue(Hash::check(self::PASSWORD, $client->refresh()->password));
     }
 
     public function test_impersonation_is_for_admins_and_active_clients(): void
@@ -694,7 +692,7 @@ class AuthTest extends TestCase
     {
         $client = $this->client();
 
-        $this->withSession(['impersonator_id' => 1])->postJson('/api/client/login', ['email' => $client->email, 'password' => self::PASSWORD])->assertOk();
+        $this->withSession(['impersonator_id' => 1])->loginClientWithCode($client->email, self::PASSWORD);
 
         $this->getJson('/api/client/me')->assertJson(['impersonating' => false]);
     }

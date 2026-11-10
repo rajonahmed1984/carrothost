@@ -19,7 +19,7 @@ class ClientDomainsTest extends TestCase
         $base = ['action' => 'register', 'recurring_amount' => '1600.00', 'status' => 'active', 'expires_at' => now()->addDays(10)];
         $domain = Domain::create([...$base, 'client_id' => $mine->id, 'name' => 'mine.com', 'nameservers' => ['ns1.carrothost.com', 'ns2.carrothost.com']]);
         $theirs = Domain::create([...$base, 'client_id' => $other->id, 'name' => 'theirs.com']);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->getJson('/api/client/domains')->assertOk()->assertJsonCount(1)->assertJsonPath('0.name', 'mine.com')->assertDontSee('theirs.com');
         $this->getJson("/api/client/domains/{$domain->id}")->assertOk()->assertJsonPath('nameservers.1', 'ns2.carrothost.com')->assertJsonPath('expires_at', now()->addDays(10)->toDateString())->assertJsonMissingPath('epp_code');

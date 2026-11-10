@@ -26,7 +26,7 @@ class Portal
             'label' => 'CarrotHost Admin',
             'recaptcha_action' => 'ADMIN_LOGIN',
             'min_password' => 12,
-            'scope' => ['is_admin' => true],
+            'scope' => ['is_admin' => true, 'is_active' => true],
         ],
     ];
 

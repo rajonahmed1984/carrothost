@@ -43,7 +43,7 @@ class DomainLookupTest extends TestCase
     private function signIn(): Client
     {
         $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         return $client;
     }

@@ -28,11 +28,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_active' => 'boolean',
             'login_otp_expires_at' => 'datetime',
         ];
     }
 
-    /** Every account here is an admin, and an admin sign-in always needs the emailed code. */
+    public const ROLES = ['admin', 'support'];
+
+    /** Admins run the whole panel; support staff only reach customers, tickets and chat. */
+    public function isFullAdmin(): bool
+    {
+        return $this->role !== 'support';
+    }
+
+    /** Every account here is staff, and a staff sign-in always needs the emailed code. */
     public function requiresLoginOtp(): bool
     {
         return true;

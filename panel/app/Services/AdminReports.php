@@ -49,7 +49,7 @@ class AdminReports
     {
         $saved = self::parseRecipients(config('billing.reports.recipients'));
 
-        return $saved ?: User::where('is_admin', true)->pluck('email')->filter()->unique()->values()->all();
+        return $saved ?: User::where('is_admin', true)->where('is_active', true)->where('role', 'admin')->pluck('email')->filter()->unique()->values()->all();
     }
 
     /** What the daily jobs did in the given day (default: yesterday). False when it could not be sent. */

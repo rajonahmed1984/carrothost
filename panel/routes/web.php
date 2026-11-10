@@ -87,7 +87,6 @@ Route::prefix('api')->group(function () {
                         Route::delete('sessions', 'destroyOtherSessions');
                     });
                 });
-                Route::put('security', [AccountController::class, 'security'])->middleware('client.can:owner');
 
                 Route::middleware('client.can:products')->group(function () {
                     Route::get('services', [ClientServiceController::class, 'index']);
@@ -156,7 +155,7 @@ Route::prefix('api')->group(function () {
         });
     });
 
-    Route::middleware(['auth:web', 'admin', 'admin.idle'])->group(function () {
+    Route::middleware(['auth:web', 'admin', 'admin.idle', 'staff'])->group(function () {
         Route::post('logout', [Admin\AuthController::class, 'logout']);
         Route::get('me', [Admin\AuthController::class, 'me']);
         Route::post('password', [Auth\PasswordController::class, 'change'])->defaults('portal', Portal::ADMIN)->middleware('throttle:5,1');
@@ -313,6 +312,8 @@ Route::prefix('api')->group(function () {
         Route::post('chats/{client}', [Admin\ChatController::class, 'store']);
         Route::get('chats/{client}/messages/{message}/attachment', [Admin\ChatController::class, 'attachment']);
 
+        // Staff accounts (admins and support); the staff middleware keeps this to admins.
+        Route::apiResource('users', Admin\UserController::class)->except('show');
 
         Route::get('meta', [Admin\DashboardController::class, 'meta']);
     });

@@ -64,7 +64,7 @@ class ProductLinkTest extends TestCase
         $group = ProductGroup::create(['name' => 'Webuzo Hosting', 'slug' => 'webuzo-hosting']);
         $group->products()->create(['name' => 'Starter', 'type' => 'shared_hosting'])->prices()->create(['cycle' => 'annually', 'price' => '1200']);
         Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->getJson('/api/client/store')->assertOk()->assertJsonPath('0.slug', 'webuzo-hosting')->assertJsonPath('0.products.0.slug', 'starter');
     }

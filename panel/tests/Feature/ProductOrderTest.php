@@ -61,7 +61,7 @@ class ProductOrderTest extends TestCase
         $this->postJson('/api/products/reorder', ['ids' => [$starter->id, $other->id]])->assertJsonValidationErrors('ids');
 
         Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
         $this->getJson('/api/client/store')->assertOk()
             ->assertJsonPath('0.products.0.name', 'Advanced')
             ->assertJsonPath('0.products.1.name', 'Starter')

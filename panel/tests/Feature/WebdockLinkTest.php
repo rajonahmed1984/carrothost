@@ -81,7 +81,7 @@ class WebdockLinkTest extends TestCase
     {
         $this->putJson("/api/services/{$this->service->id}", ['remote_id' => 'acnabin1', 'dedicated_ip' => '92.113.149.230', 'username' => 'fida02'])->assertOk();
         auth('web')->logout();
-        $this->postJson('/api/client/login', ['email' => 'reajul@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('reajul@example.com', 'correct-horse');
 
         $this->getJson("/api/client/services/{$this->service->id}")->assertOk()
             ->assertJsonPath('is_vps', true)

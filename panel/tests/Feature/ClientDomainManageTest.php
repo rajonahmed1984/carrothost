@@ -32,7 +32,7 @@ class ClientDomainManageTest extends TestCase
             'client_id' => $this->client->id, 'name' => 'rahim.com', 'action' => 'register', 'registrar' => 'resellcube', 'registrar_order_id' => '555',
             'recurring_amount' => '1638.00', 'years' => 1, 'status' => 'active', 'expires_at' => today()->addDays(190), 'nameservers' => ['ns1.old.com', 'ns2.old.com'],
         ]);
-        $this->postJson('/api/client/login', ['email' => 'rahim@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('rahim@example.com', 'correct-horse');
     }
 
     private function fakeRegistrar(array $extra = []): void

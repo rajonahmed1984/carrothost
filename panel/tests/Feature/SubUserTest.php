@@ -32,9 +32,19 @@ class SubUserTest extends TestCase
         $this->user->forceFill(['password' => self::PASSWORD])->save();
     }
 
+    /** Password, then the code emailed to the user: every sign-in needs both. */
     private function signIn(): void
     {
-        $this->postJson('/api/client/login', ['email' => 'maidul@example.com', 'password' => self::PASSWORD])->assertOk()->assertJsonPath('requires_otp', false);
+        Mail::fake();
+        $this->postJson('/api/client/login', ['email' => 'maidul@example.com', 'password' => self::PASSWORD])->assertOk()->assertJsonPath('requires_otp', true);
+
+        $code = null;
+        Mail::assertSent(VerificationCode::class, function (VerificationCode $mail) use (&$code) {
+            $code = $mail->code;
+
+            return true;
+        });
+        $this->postJson('/api/login/otp', ['otp' => $code])->assertOk();
     }
 
     public function test_a_user_signs_in_to_the_account_and_only_sees_what_they_may(): void
@@ -55,7 +65,6 @@ class SubUserTest extends TestCase
         $this->getJson('/api/client/account/contacts')->assertOk();
         $this->putJson("/api/client/account/contacts/{$this->user->id}", ['permissions' => ['profile', 'orders']])->assertForbidden();
         $this->getJson('/api/client/account/sessions')->assertForbidden();
-        $this->putJson('/api/client/security', ['otp_enabled' => true])->assertForbidden();
         $this->getJson('/api/client/overview')->assertOk()->assertJsonPath('services', [])->assertJsonCount(1, 'invoices');
         $this->assertNotNull($this->user->refresh()->last_login_at);
     }
@@ -85,7 +94,7 @@ class SubUserTest extends TestCase
     public function test_the_login_code_goes_to_the_users_own_address(): void
     {
         Mail::fake();
-        $this->user->update(['two_factor' => true]);
+        $this->user->update(['two_factor' => false]); // the old per-user switch no longer matters
 
         $this->postJson('/api/client/login', ['email' => 'maidul@example.com', 'password' => self::PASSWORD])->assertJsonPath('requires_otp', true);
 

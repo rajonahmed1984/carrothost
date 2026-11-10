@@ -63,7 +63,7 @@ class TldManagementTest extends TestCase
         $this->tld('.com');
         $this->tld('.bd', ['epp_required' => false]);
         $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
-        $this->postJson('/api/client/login', ['email' => 'mine@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         $this->getJson('/api/client/store/domains')->assertJsonPath('tlds.0.tld', '.bd')->assertJsonPath('tlds.0.epp_required', false)->assertJsonPath('tlds.1.epp_required', true);
 

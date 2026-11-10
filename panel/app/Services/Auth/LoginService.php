@@ -80,15 +80,7 @@ class LoginService
             throw ValidationException::withMessages(['email' => 'The provided credentials are incorrect.']);
         }
 
-        // A user gets a code when they turned it on for themselves or the account owner requires it.
-        $needsCode = $user ? ($user->two_factor || $account->requiresLoginOtp()) : $account->requiresLoginOtp();
-
-        if (! $needsCode) {
-            $this->complete($request, $portal, $account, $remember, $user);
-
-            return ['requires_otp' => false];
-        }
-
+        // Every password sign-in needs the emailed code: staff, customers and their users alike.
         // The code goes to whoever is signing in: the owner, or the user at their own address.
         if (! $this->otp->generateAndSend($user ?? $account, $portal) && ! LoginOtpService::isLocalDev()) {
             throw ValidationException::withMessages(['email' => 'We could not send your verification code. Please try again shortly.']);

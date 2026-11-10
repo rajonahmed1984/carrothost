@@ -59,7 +59,7 @@ class VpsProductOptionsTest extends TestCase
 
     private function login(): void
     {
-        $this->postJson('/api/client/login', ['email' => 'rahim@example.com', 'password' => 'correct-horse'])->assertOk();
+        $this->loginClientWithCode('rahim@example.com', 'correct-horse');
     }
 
     public function test_admin_saves_os_and_permission_settings_on_the_product(): void

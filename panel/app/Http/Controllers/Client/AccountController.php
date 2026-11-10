@@ -32,18 +32,6 @@ class AccountController extends Controller
         return $this->profile($request);
     }
 
-    /** The emailed code at sign-in is the customer's own choice, so an admin logged in as them cannot change it. */
-    public function security(Request $request)
-    {
-        abort_if($request->session()->has(LoginService::IMPERSONATOR), 403, 'Security settings cannot be changed while logged in as a client.');
-
-        $data = $request->validate(['otp_enabled' => 'required|boolean']);
-        $request->user('client')->update($data);
-        ActivityLog::record($data['otp_enabled'] ? 'client.otp_enabled' : 'client.otp_disabled', $request->user('client'));
-
-        return $this->profile($request);
-    }
-
     /** The dashboard. A user of the account only gets the parts their permissions cover. */
     public function overview(Request $request, SubUsers $subUsers)
     {
@@ -160,7 +148,8 @@ class AccountController extends Controller
         $user = app(SubUsers::class)->current($request);
 
         return [
-            ...$client->only('id', 'name', 'email', 'otp_enabled'),
+            ...$client->only('id', 'name', 'email'),
+            'otp_enabled' => $client->requiresLoginOtp(), // always on: every sign-in needs the emailed code
             // Everything in the client area is shown in this.
             'currency' => $client->currencyCode(),
             'has_password' => $user ? true : $client->password !== null, // a user always signed in with their own

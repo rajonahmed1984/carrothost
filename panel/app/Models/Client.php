@@ -53,9 +53,10 @@ class Client extends Authenticatable
         return $this->hasMany(ClientCredit::class);
     }
 
+    /** Customers always sign in with an emailed code, like staff. */
     public function requiresLoginOtp(): bool
     {
-        return $this->otp_enabled;
+        return true;
     }
 
     public function services(): HasMany
