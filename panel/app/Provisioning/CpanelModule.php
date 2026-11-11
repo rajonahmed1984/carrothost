@@ -73,12 +73,34 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
 
     public function suspend(Service $service, string $reason): void
     {
-        $this->call('suspendacct', ['user' => $service->remote_id, 'reason' => $reason]);
+        try {
+            $this->call('suspendacct', ['user' => $service->remote_id, 'reason' => $reason]);
+        } catch (RuntimeException $e) {
+            // WHM can error if the account is already suspended on the server; confirm via accountsummary.
+            if (! $this->isInSuspendState($service, true)) {
+                throw $e;
+            }
+        }
     }
 
     public function unsuspend(Service $service): void
     {
-        $this->call('unsuspendacct', ['user' => $service->remote_id]);
+        try {
+            $this->call('unsuspendacct', ['user' => $service->remote_id]);
+        } catch (RuntimeException $e) {
+            if (! $this->isInSuspendState($service, false)) {
+                throw $e;
+            }
+        }
+    }
+
+    private function isInSuspendState(Service $service, bool $expected): bool
+    {
+        try {
+            return $this->accountInfo($service)['suspended'] === $expected;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function accountInfo(Service $service): array
@@ -93,7 +115,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
             'domain' => filled($acct['domain'] ?? null) ? strtolower((string) $acct['domain']) : null,
             'ip' => filled($acct['ip'] ?? null) ? (string) $acct['ip'] : null,
             'package' => filled($acct['plan'] ?? null) ? (string) $acct['plan'] : null,
-            'suspended' => (bool) ($acct['suspended'] ?? false),
+            'suspended' => filter_var($acct['suspended'] ?? false, FILTER_VALIDATE_BOOLEAN),
         ];
     }
 

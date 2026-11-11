@@ -154,6 +154,68 @@ class ServiceSyncTest extends TestCase
         Http::assertNotSent(fn ($r) => isset($r['unsuspend']) && ($r['skip'] ?? null) == 1);
     }
 
+    public function test_webuzo_suspend_never_sends_the_sub_users_only_skip(): void
+    {
+        Sleep::fake();
+        $server = Server::create(['name' => 'W1', 'module' => 'webuzo', 'hostname' => 'earth.test', 'username' => 'root', 'credentials' => 'key']);
+        $product = Product::create(['name' => 'Web', 'type' => 'shared_hosting', 'module' => 'webuzo', 'module_package' => 'starter']);
+        $this->service->update(['status' => 'active', 'server_id' => $server->id, 'product_id' => $product->id, 'remote_id' => 'probashix']);
+
+        // Like the real server: skip=1 answers done but leaves the account active.
+        $suspended = false;
+        Http::fake(function ($request) use (&$suspended) {
+            if (isset($request['suspend'])) {
+                if (($request['skip'] ?? null) != 1) {
+                    $suspended = true;
+                }
+
+                return Http::response(['done' => ['msg' => 'The user has been suspended']]);
+            }
+
+            return Http::response(['users' => ['probashix' => ['user' => 'probashix', 'domain' => 'acme.com', 'status' => $suspended ? 'suspended' : 'active']]]);
+        });
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'suspend'])->assertOk();
+
+        $this->service->refresh();
+        $this->assertSame('suspended', $this->service->status);
+        $this->assertSame('done', $this->service->provision_status);
+        Http::assertNotSent(fn ($r) => isset($r['suspend']) && ($r['skip'] ?? null) == 1);
+    }
+
+    public function test_cpanel_suspend_accepts_already_suspended_account_and_override_unsuspends_it(): void
+    {
+        Sleep::fake();
+        $suspended = 1;
+        Http::fake(function ($request) use (&$suspended) {
+            if (str_contains($request->url(), 'suspendacct') && ! str_contains($request->url(), 'unsuspendacct')) {
+                return Http::response(['metadata' => ['result' => 0, 'reason' => 'The user acme is already suspended.']]);
+            }
+            if (str_contains($request->url(), 'unsuspendacct')) {
+                $suspended = 0;
+
+                return Http::response(['metadata' => ['result' => 1]]);
+            }
+
+            return Http::response(['metadata' => ['result' => 1], 'data' => ['acct' => [['domain' => 'acme.com', 'suspended' => $suspended]]]]);
+        });
+
+        $this->postJson("/api/services/{$this->service->id}/action", ['action' => 'suspend'])->assertOk()
+            ->assertJsonPath('status', 'suspended')
+            ->assertJsonPath('provision_status', 'done');
+
+        // Auto-suspended cPanel service is unsuspended when Override Auto-Suspend is saved with a future date.
+        $this->service->update(['auto_suspended' => true]);
+
+        $this->putJson("/api/services/{$this->service->id}", ['override_suspend_until' => today()->addDays(2)->toDateString()])
+            ->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('auto_suspended', false)
+            ->assertJsonPath('provision_status', 'done');
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'unsuspendacct') && $r['user'] === 'acme');
+    }
+
     public function test_unsuspend_can_be_resent_for_an_active_service(): void
     {
         Http::fake([

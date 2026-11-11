@@ -55,6 +55,11 @@ class Service extends Model
         return $this->hasMany(ServiceUpgrade::class);
     }
 
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

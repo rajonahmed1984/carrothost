@@ -17,8 +17,9 @@ use App\Services\DashboardService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
 use App\Support\PaymentMethods;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -117,9 +118,18 @@ class ServiceController extends Controller
         }
         $oldProduct = $service->product_id;
         $oldRemote = $service->remote_id;
+
+        $overrideActive = ! empty($data['override_suspend_until']) && Carbon::parse($data['override_suspend_until'])->gte(today());
+        if ($service->status === 'suspended' && $service->auto_suspended && $overrideActive && ($data['status'] ?? $service->status) === 'suspended') {
+            $data['status'] = 'active';
+        }
+
         $serverAction = $this->statusAction($service, $data['status'] ?? $service->status, $data['apply_to_server'] ?? true);
 
         $changes = collect($data)->except(['username', 'password', 'ssh_port', 'recalculate', 'apply_to_server', 'change_package'])->all();
+        if (($changes['status'] ?? null) === 'active' && $service->auto_suspended) {
+            $changes['auto_suspended'] = false;
+        }
 
         if (isset($changes['domain'])) {
             $changes['domain'] = strtolower($changes['domain']);

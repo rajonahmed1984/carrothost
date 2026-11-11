@@ -270,6 +270,8 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
         qc.invalidateQueries({ queryKey: ['/services'] });
         qc.invalidateQueries({ queryKey: ['/clients', String(s.client_id)] });
     };
+    const today = new Date().toLocaleDateString('en-CA');
+    const overrideReactivating = s.status === 'suspended' && s.auto_suspended && form.status === 'suspended' && form.override && Boolean(form.override_suspend_until) && form.override_suspend_until >= today;
     const statusAction = form.status === s.status || !s.remote_id || !s.product.module ? null
         : form.status === 'suspended' && s.status === 'active' ? 'suspend'
             : form.status === 'active' && s.status === 'suspended' ? 'unsuspend' : null;
@@ -299,7 +301,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                 cost_currency: rest.cost_amount === '' ? null : rest.cost_currency,
                 // Blank follows the product's price.
                 recurring_amount: rest.recurring_amount === '' ? null : rest.recurring_amount,
-                apply_to_server: statusAction ? apply_to_server : false,
+                apply_to_server: statusAction || overrideReactivating ? apply_to_server : false,
                 change_package: productChanged ? change_package : false,
             };
             if (password) body.password = password;
@@ -619,12 +621,15 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
 
                 <Section title="Suspension & Termination" icon={<PauseCircle size={16} />}>
                     <div className="space-y-3 p-4">
-                        <Toggle checked={form.override} onChange={(v) => set('override', v)} hint="Skips overdue auto-suspension until the date">Override Auto-Suspend</Toggle>
+                        <Toggle checked={form.override} onChange={(v) => set('override', v)} hint="Skips overdue auto-suspension until the date, and keeps an auto-suspended service active until then">Override Auto-Suspend</Toggle>
                         {form.override && (
-                            <label className="block pl-1">
-                                <span className="mb-1 block text-xs font-semibold text-slate-600">Do not suspend until</span>
-                                <input type="date" required className="ui-input max-w-52" value={form.override_suspend_until} onChange={(e) => set('override_suspend_until', e.target.value)} />
-                            </label>
+                            <div className="space-y-1 pl-1">
+                                <label className="block">
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Do not suspend until</span>
+                                    <input type="date" required className="ui-input max-w-52" value={form.override_suspend_until} onChange={(e) => set('override_suspend_until', e.target.value)} />
+                                </label>
+                                {overrideReactivating && <p className="text-[11px] text-emerald-700">Saving will unsuspend this service until that date.</p>}
+                            </div>
                         )}
                         <Toggle checked={form.terminate_end_of_cycle} onChange={(v) => set('terminate_end_of_cycle', v)} hint="Marks it for termination at the next due date. Terminate it with the module command then.">Auto-Terminate End of Cycle</Toggle>
                         {form.terminate_end_of_cycle && (

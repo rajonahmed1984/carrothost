@@ -68,11 +68,23 @@ class RenewalService
             return 0;
         }
 
-        $cutoff = now()->subDays(config('billing.suspend_after_days'))->toDateString();
+        $this->unsuspendOverridden();
+
+        $days = max((int) config('billing.suspend_after_days'), 0);
+        $cutoff = today()->subDays($days)->toDateString();
+        $op = $days === 0 ? '<' : '<=';
 
         $services = Service::where('status', 'active')
-            ->whereDate('next_due_date', '<', $cutoff)
+            ->where(function ($q) use ($op, $cutoff) {
+                $q->whereDate('next_due_date', $op, $cutoff)
+                    ->orWhere(function ($w) use ($op, $cutoff) {
+                        $w->whereNull('next_due_date')
+                            ->whereHas('invoiceItems.invoice', fn ($inv) => $inv->where('status', 'unpaid')->whereDate('due_date', $op, $cutoff));
+                    });
+            })
             ->whereNotIn('provision_status', ['queued', 'running'])
+            // Avoid hammering an unreachable server every minute; retry failed attempts after 15 minutes.
+            ->where(fn ($q) => $q->where('provision_status', '!=', 'failed')->orWhere('updated_at', '<=', now()->subMinutes(15)))
             // An admin can hold off suspension until a date ("do not suspend until").
             ->where(fn ($q) => $q->whereNull('override_suspend_until')->orWhereDate('override_suspend_until', '<', today()))
             ->get();
@@ -89,5 +101,31 @@ class RenewalService
         }
 
         return $services->count();
+    }
+
+    /** Keeps any auto-suspended service active until its "do not suspend until" override date passes. */
+    private function unsuspendOverridden(): void
+    {
+        $services = Service::with('product')
+            ->where('status', 'suspended')
+            ->where('auto_suspended', true)
+            ->whereNotNull('override_suspend_until')
+            ->whereDate('override_suspend_until', '>=', today())
+            ->whereNotIn('provision_status', ['queued', 'running'])
+            ->where(fn ($q) => $q->where('provision_status', '!=', 'failed')->orWhere('updated_at', '<=', now()->subMinutes(15)))
+            ->get();
+
+        foreach ($services as $service) {
+            if ($service->remote_id) {
+                $service->update(['provision_status' => 'queued']);
+                ProvisionService::dispatch($service->id, 'unsuspend', true, false);
+            } else {
+                $service->update([
+                    'status' => 'active',
+                    'auto_suspended' => false,
+                    'provision_status' => $service->product?->module ? 'manual_required' : 'none',
+                ]);
+            }
+        }
     }
 }

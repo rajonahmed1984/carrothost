@@ -27,7 +27,14 @@ Artisan::command('billing:suspend-overdue', function (RenewalService $renewals) 
 
         throw $e;
     }
-    ActivityLog::record('automation.run', context: ['task' => 'suspensions', 'count' => $count]);
+    // Runs every cron: record whenever services are suspended, plus once a day when 0 are due so reports show it ran without flooding the audit log.
+    $loggedToday = ActivityLog::where('action', 'automation.run')
+        ->whereDate('created_at', today())
+        ->get(['context'])
+        ->contains(fn (ActivityLog $log) => ($log->context['task'] ?? null) === 'suspensions');
+    if ($count > 0 || ! $loggedToday) {
+        ActivityLog::record('automation.run', context: ['task' => 'suspensions', 'count' => $count]);
+    }
     $this->info($count.' service(s) sent for suspension.');
 })->purpose('Suspend services whose invoices are past the grace period');
 
@@ -218,7 +225,7 @@ Schedule::command('billing:domain-reminders')->dailyAt('09:15');
 Schedule::command('billing:update-usage')->dailyAt('05:00')->withoutOverlapping();
 Schedule::command('registrars:sync-tlds')->dailyAt('03:45');
 Schedule::command('registrars:sync')->dailyAt('04:00');
-Schedule::command('billing:suspend-overdue')->dailyAt('02:00');
+Schedule::command('billing:suspend-overdue')->everyMinute()->withoutOverlapping();
 Schedule::command('billing:enforce-suspensions')->dailyAt('02:15')->withoutOverlapping();
 Schedule::command('tickets:auto-close')->dailyAt('03:00');
 // Shared hosting has no long-running worker, so cron drains the queue each minute.

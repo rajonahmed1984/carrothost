@@ -72,22 +72,26 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
 
     public function suspend(Service $service, string $reason): void
     {
-        $this->call('users', ['suspend' => $service->remote_id, 'skip' => 1]);
+        $this->toggleSuspend($service, 'suspend', true);
+    }
+
+    public function unsuspend(Service $service): void
+    {
+        $this->toggleSuspend($service, 'unsuspend', false);
     }
 
     /**
-     * For unsuspend, Webuzo's skip=1 means "only the sub-users, the account itself stays suspended",
-     * so the server answered done and the site stayed on the suspended page. Send no skip (an ordinary
-     * account), and if the account still reads as suspended, skip=2 (the account only, never its
-     * sub-users), then skip=0 (the account and its sub-users).
+     * Webuzo's skip=1 means "only the sub-users, leave the account itself unchanged", so the server
+     * answered done while the account stayed active on suspend or suspended on unsuspend. Send no
+     * skip first (an ordinary account), then skip=2 (the account only), then skip=0 (account + sub-users).
      */
-    public function unsuspend(Service $service): void
+    private function toggleSuspend(Service $service, string $param, bool $targetSuspended): void
     {
         foreach ([null, 2, 0] as $skip) {
-            $this->call('users', ['unsuspend' => $service->remote_id, ...($skip === null ? [] : ['skip' => $skip])]);
+            $this->call('users', [$param => $service->remote_id, ...($skip === null ? [] : ['skip' => $skip])]);
 
             try {
-                if (! $this->accountInfo($service)['suspended']) {
+                if ($this->accountInfo($service)['suspended'] === $targetSuspended) {
                     return;
                 }
             } catch (\Throwable) {
