@@ -83,7 +83,7 @@ export function RecordsTable<T extends { id: number }>({ rows, columns, empty, n
                 <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600">
                     <span className="font-semibold">With {ticks.length} selected:</span>
                     {bulk}
-                    <Button variant="link" onClick={() => onSelect([])}>Clear</Button>
+                    <Button type="button" variant="link" onClick={() => onSelect([])}>Clear</Button>
                 </div>
             )}
 
@@ -168,11 +168,15 @@ export function StatCards({ items }: { items: { label: string; value: ReactNode;
     );
 }
 
-export function Notice({ text, onClose }: { text: ReactNode; onClose: () => void }) {
+export function Notice({ text, onClose, tone = 'success' }: { text: ReactNode; onClose: () => void; tone?: 'success' | 'warning' }) {
+    const style = tone === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-900';
+
     return (
-        <p role="status" className="flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-900">
+        <p role="status" className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm ${style}`}>
             <span>{text}</span>
-            <button type="button" aria-label="Dismiss" className="cursor-pointer text-emerald-700" onClick={onClose}>×</button>
+            <button type="button" aria-label="Dismiss" className={`cursor-pointer ${tone === 'warning' ? 'text-amber-700' : 'text-emerald-700'}`} onClick={onClose}>×</button>
         </p>
     );
 }
@@ -189,6 +193,7 @@ function useRefresh(clientId: number) {
         qc.invalidateQueries({ queryKey: ['/clients', String(clientId)] });
         qc.invalidateQueries({ queryKey: ['/invoices'] });
         qc.invalidateQueries({ queryKey: ['/transactions'] });
+        qc.invalidateQueries({ queryKey: ['badges'] });
     };
 }
 
@@ -334,38 +339,43 @@ export function InvoicesTab({ client, onCreate, open, onOpen, edit = false, onGo
 function InvoiceList({ client, onCreate, onOpen }: { client: Detail; onCreate: () => void; onOpen: Viewer['onOpen'] }) {
     const refresh = useRefresh(client.id);
     const [selected, setSelected] = useState<number[]>([]);
-    const [notice, setNotice] = useState<ReactNode>(null);
+    const [notice, setNotice] = useState<{ text: ReactNode; tone?: 'success' | 'warning' } | null>(null);
     const bulk = useMutation({
-        mutationFn: async (action: string) => (await api.post<{ message: string; invoice_id?: number }>('/invoices/bulk', { invoice_ids: selected, action })).data,
+        mutationFn: async (action: string) => (await api.post<{ message: string; count?: number; invoice_id?: number }>('/invoices/bulk', { invoice_ids: selected, action })).data,
+        onMutate: () => setNotice(null),
         onSuccess: (data) => {
             setSelected([]);
-            setNotice(<>{data.message} {data.invoice_id && <Link className="font-semibold underline" to={`/admin/paid-invoices/${data.invoice_id}`}>Open it</Link>}</>);
+            setNotice({
+                text: <>{data.message} {data.invoice_id && <OpenLink className="font-semibold underline" onClick={() => onOpen(data.invoice_id!)}>Open it</OpenLink>}</>,
+                tone: data.count === 0 ? 'warning' : 'success',
+            });
             refresh();
         },
     });
     const remove = useMutation({
         mutationFn: (id: number) => api.delete(`/invoices/${id}`),
-        onSuccess: () => { setNotice('Invoice deleted.'); refresh(); },
+        onSuccess: () => { setNotice({ text: 'Invoice deleted.' }); refresh(); },
         onError: (e) => alertDialog(errorMessage(e)),
     });
     const overdue = (i: InvoiceRow) => i.status === 'unpaid' && new Date(`${i.due_date.slice(0, 10)}T23:59:59`) < new Date();
 
     return (
         <div className="space-y-3">
-            {notice && <Notice text={notice} onClose={() => setNotice(null)} />}
+            {notice && <Notice text={notice.text} tone={notice.tone} onClose={() => setNotice(null)} />}
             <ErrorNote error={bulk.error} />
             <RecordsTable
                 rows={client.invoices}
                 noun="invoices"
                 empty="No invoices."
                 selected={selected}
-                onSelect={setSelected}
+                onSelect={(ids) => { setSelected(ids); if (ids.length === 0) bulk.reset(); }}
                 search={{ placeholder: 'Invoice #, amount, status or method', text: (i) => `${i.number} ${i.total} ${i.status} ${i.payment_method ?? ''}` }}
                 initialSort={{ index: 2, desc: true }}
-                action={<Button onClick={onCreate}><Plus size={14} /> Create Invoice</Button>}
+                action={<Button type="button" onClick={onCreate}><Plus size={14} /> Create Invoice</Button>}
                 bulk={bulkActions.map((a) => (
                     <Button
                         key={a.key}
+                        type="button"
                         variant={a.variant ?? 'ghost'}
                         className="h-8 px-3"
                         disabled={bulk.isPending}

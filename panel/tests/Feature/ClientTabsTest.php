@@ -6,6 +6,7 @@ use App\Mail\CustomerNotice;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\PaymentAttempt;
 use App\Models\User;
 use App\Services\BillingService;
 use App\Services\CreditService;
@@ -47,11 +48,15 @@ class ClientTabsTest extends TestCase
         $this->assertSame('paid', $a->refresh()->status);
         $this->assertSame('100.00', $a->payments()->sole()->amount);
 
-        $this->bulk('mark_unpaid', [$a, $b])->assertJsonPath('message', '1 invoice(s) marked unpaid. 1 skipped (not paid).');
+        $this->bulk('mark_unpaid', [$a, $b])->assertJsonPath('message', '1 invoice(s) marked unpaid. 1 skipped (already unpaid).');
         $this->assertSame('unpaid', $a->refresh()->status);
+        $this->assertNull($a->paid_at);
 
         $this->bulk('mark_cancelled', [$b])->assertOk();
         $this->assertSame('cancelled', $b->refresh()->status);
+
+        $this->bulk('mark_unpaid', [$b])->assertOk()->assertJsonPath('message', '1 invoice(s) marked unpaid.');
+        $this->assertSame('unpaid', $b->refresh()->status);
     }
 
     public function test_cancelling_gives_back_the_credit_it_used(): void
@@ -77,8 +82,14 @@ class ClientTabsTest extends TestCase
         $this->assertSame(now()->addDay()->toDateString(), $merged->due_date->toDateString());
         $this->assertSame(['cancelled', 'cancelled'], [$a->refresh()->status, $b->refresh()->status]);
 
-        $this->bulk('duplicate', [$merged])->assertOk();
-        $this->assertSame(['150.00', 'unpaid'], [Invoice::latest('id')->first()->total, Invoice::latest('id')->first()->status]);
+        $dupId = $this->bulk('duplicate', [$merged])->assertOk()->json('invoice_id');
+        $dup = Invoice::findOrFail($dupId);
+        $this->assertSame(['150.00', 'unpaid'], [$dup->total, $dup->status]);
+
+        // An imported invoice without item rows falls back to its total rather than creating 0.00.
+        $noItems = Invoice::create(['client_id' => $this->client->id, 'number' => '3887', 'status' => 'cancelled', 'currency' => 'BDT', 'total' => '4200.00', 'due_date' => today()]);
+        $copyId = $this->bulk('duplicate', [$noItems])->assertOk()->json('invoice_id');
+        $this->assertSame('4200.00', Invoice::findOrFail($copyId)->total);
     }
 
     public function test_paying_a_mass_pay_invoice_pays_each_bundled_invoice(): void
@@ -99,6 +110,15 @@ class ClientTabsTest extends TestCase
     {
         Mail::fake();
         $unpaid = $this->invoice('100.00', '-2 days');
+        PaymentAttempt::create([
+            'invoice_id' => $unpaid->id,
+            'gateway' => 'bkash',
+            'reference' => 'ATT-1',
+            'amount' => '100.00',
+            'charge_amount' => '100.00',
+            'charge_currency' => 'BDT',
+            'status' => 'failed',
+        ]);
         $paid = $this->invoice('20.00');
         app(BillingService::class)->recordPayment($paid, 'manual', 'T1', '20.00');
 

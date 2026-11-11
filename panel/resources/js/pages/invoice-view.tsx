@@ -100,6 +100,7 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
         qc.invalidateQueries({ queryKey: ['/invoices'] });
         qc.invalidateQueries({ queryKey: ['/clients', String(clientId)] });
         qc.invalidateQueries({ queryKey: ['/transactions'] });
+        qc.invalidateQueries({ queryKey: ['badges'] });
     };
     const saved = (data: InvoiceFull, message: string) => {
         qc.setQueryData(['/invoices', inv.id], data);
@@ -108,6 +109,7 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
         setTab('summary');
     };
     const email = useMutation({ mutationFn: async () => (await api.post<{ message: string }>(`/invoices/${inv.id}/email`, { template })).data, onSuccess: (d) => setNotice(d.message) });
+    const markUnpaid = useMutation({ mutationFn: () => api.post('/invoices/bulk', { invoice_ids: [inv.id], action: 'mark_unpaid' }), onSuccess: () => { refreshAll(); setNotice('Invoice marked unpaid.'); }, onError: (e) => alertDialog(errorMessage(e)) });
     const cancel = useMutation({ mutationFn: () => api.post(`/invoices/${inv.id}/cancel`), onSuccess: () => { refreshAll(); setNotice('Invoice cancelled.'); }, onError: (e) => alertDialog(errorMessage(e)) });
     const remove = useMutation({ mutationFn: () => api.delete(`/invoices/${inv.id}`), onSuccess: () => { refreshAll(); onOpen(null); }, onError: (e) => alertDialog(errorMessage(e)) });
     const viewAsClient = useMutation({
@@ -139,10 +141,11 @@ function InvoiceScreen({ inv, clientId, edit, onOpen, onGo }: { inv: InvoiceFull
                 </Button>
                 <Button variant="ghost" className="h-9" onClick={() => printInvoice(inv, brand, false)}><Printer size={14} /> Print</Button>
                 <Button variant="ghost" className="h-9" onClick={() => printInvoice(inv, brand, true)}><Download size={14} /> Download</Button>
-                {(editable || inv.payments.length === 0) && (
+                {(editable || inv.payments.length === 0 || inv.status !== 'unpaid') && (
                     <Dropdown label="More invoice actions" buttonClassName="ui-btn ui-btn-secondary h-9" button={<>More <ChevronDown size={14} /></>} menuClassName="w-48 py-1 text-sm">
+                        {inv.status !== 'unpaid' && <button type="button" role="menuitem" disabled={markUnpaid.isPending} onClick={() => markUnpaid.mutate()} className={menuItem}><RotateCcw size={14} className="text-slate-400" /> Mark Unpaid</button>}
                         {editable && <button type="button" role="menuitem" disabled={cancel.isPending} onClick={() => ask(`Cancel invoice #${inv.number}?`, () => cancel.mutate())} className={menuItem}><Ban size={14} className="text-slate-400" /> Cancel Invoice</button>}
-                        <button type="button" role="menuitem" disabled={remove.isPending} onClick={() => ask(`Delete invoice #${inv.number}?`, () => remove.mutate())} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</button>
+                        {inv.payments.length === 0 && <button type="button" role="menuitem" disabled={remove.isPending} onClick={() => ask(`Delete invoice #${inv.number}?`, () => remove.mutate())} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</button>}
                     </Dropdown>
                 )}
             </ViewHeader>

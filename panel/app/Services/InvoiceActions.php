@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\PaymentAttempt;
 use App\Support\Currency;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,16 +24,19 @@ class InvoiceActions
 
     /**
      * @param  Collection<int, Invoice>  $invoices
-     * @return array{message: string, invoice_id?: int}
+     * @return array{message: string, count: int, invoice_id?: int}
      */
     public function run(string $action, Collection $invoices): array
     {
         return match ($action) {
             'mark_paid' => $this->count($invoices, 'unpaid', fn (Invoice $i) => $this->markPaid($i), 'marked paid'),
-            'mark_unpaid' => $this->count($invoices, 'paid', fn (Invoice $i) => $this->markUnpaid($i), 'marked unpaid'),
+            'mark_unpaid' => $this->count($invoices, fn (Invoice $i) => $i->status !== 'unpaid', fn (Invoice $i) => $this->markUnpaid($i), 'marked unpaid', 'already unpaid'),
             'mark_cancelled' => $this->count($invoices, 'unpaid', fn (Invoice $i) => $this->cancel($i), 'cancelled'),
             'duplicate' => $this->count($invoices, null, fn (Invoice $i) => $this->duplicate($i), 'duplicated'),
-            'reminder' => $this->count($invoices, 'unpaid', fn (Invoice $i) => $this->mailer->invoiceReminder($i, $this->billing->balanceDue($i)), 'reminded'),
+            'reminder' => $this->count($invoices, 'unpaid', function (Invoice $i) {
+                $this->mailer->invoiceReminder($i, $this->billing->balanceDue($i));
+                ActivityLog::record('invoice.email.reminder', $i);
+            }, 'reminded'),
             'merge' => $this->merge($invoices),
             'mass_pay' => $this->massPay($invoices),
             'delete' => $this->deleteAll($invoices),
@@ -55,7 +60,7 @@ class InvoiceActions
         }
     }
 
-    /** Only the status: services already set up stay as they are. */
+    /** Reopens a paid, cancelled or refunded invoice; services already set up stay as they are. */
     public function markUnpaid(Invoice $invoice): void
     {
         $invoice->update(['status' => 'unpaid', 'paid_at' => null]);
@@ -64,6 +69,10 @@ class InvoiceActions
 
     public function cancel(Invoice $invoice): void
     {
+        if ($invoice->payments()->exists()) {
+            throw ValidationException::withMessages(['invoice_ids' => "Invoice #{$invoice->number} has payments. Delete its transactions first."]);
+        }
+
         DB::transaction(function () use ($invoice) {
             $this->credits->returnFromInvoice($invoice);
             $invoice->update(['status' => 'cancelled']);
@@ -80,6 +89,8 @@ class InvoiceActions
 
         DB::transaction(function () use ($invoice) {
             $this->credits->returnFromInvoice($invoice);
+            // Unpaid checkouts leave PaymentAttempt rows whose FK restricts delete; payments were ruled out above.
+            PaymentAttempt::where('invoice_id', $invoice->id)->delete();
             ActivityLog::record('invoice.deleted', $invoice->client, ['number' => $invoice->number, 'total' => (string) $invoice->total]);
             $invoice->delete();
         });
@@ -88,10 +99,21 @@ class InvoiceActions
     /** A fresh unpaid copy, due today. Lines are copied as plain charges, so paying it sets nothing up twice. */
     public function duplicate(Invoice $invoice): Invoice
     {
-        $items = $invoice->items()->whereNotIn('kind', BillingService::PREPAYMENT_KINDS)
+        if (BillingService::isPrepayment($invoice)) {
+            throw ValidationException::withMessages(['invoice_ids' => 'Add Funds and Mass Pay invoices cannot be duplicated.']);
+        }
+
+        $currency = $invoice->currency ?: Currency::BASE;
+        $target = $invoice->client->currencyCode();
+        $items = $invoice->items()
+            ->where(fn ($q) => $q->whereNull('kind')->orWhereNotIn('kind', BillingService::PREPAYMENT_KINDS))
             ->where(fn ($q) => $q->where('description', '!=', 'Credit applied')->orWhere('amount', '>=', 0))
             // The copy is raised in the client's currency; an older invoice in another one is converted.
-            ->get()->map(fn ($item) => ['description' => $item->description, 'amount' => Currency::convert((string) $item->amount, $invoice->currency ?: 'BDT', $invoice->client->currencyCode()), 'kind' => 'other'])->all();
+            ->get()->map(fn ($item) => ['description' => $item->description, 'amount' => Currency::convert((string) $item->amount, $currency, $target), 'kind' => 'other'])->all();
+
+        if ($items === [] && bccomp((string) $invoice->total, '0', 2) > 0) {
+            $items = [['description' => "Invoice #{$invoice->number}", 'amount' => Currency::convert((string) $invoice->total, $currency, $target), 'kind' => 'other']];
+        }
 
         $copy = $this->billing->createInvoice($invoice->client, $items, today());
         ActivityLog::record('invoice.duplicated', $copy, ['from' => $invoice->number]);
@@ -108,15 +130,21 @@ class InvoiceActions
         }
 
         $merged = DB::transaction(function () use ($invoices) {
-            $items = $invoices->flatMap(fn (Invoice $i) => $i->items->map(fn ($item) => $item->only('description', 'amount', 'kind', 'service_id', 'domain_id', 'target_invoice_id')))->all();
-            $merged = $this->billing->createInvoice($invoices->first()->client, $items, $invoices->min('due_date'));
+            $items = $invoices->flatMap(function (Invoice $i) {
+                if ($i->items->isEmpty() && bccomp((string) $i->total, '0', 2) > 0) {
+                    return [['description' => "Invoice #{$i->number}", 'amount' => (string) $i->total, 'kind' => 'other']];
+                }
+
+                return $i->items->map(fn ($item) => $item->only('description', 'amount', 'kind', 'service_id', 'domain_id', 'target_invoice_id'));
+            })->all();
+            $merged = $this->billing->createInvoice($invoices->first()->client, $items, Carbon::parse($invoices->min('due_date')));
             Invoice::whereKey($invoices->modelKeys())->update(['status' => 'cancelled']);
             ActivityLog::record('invoice.merged', $merged, ['from' => $invoices->pluck('number')->implode(', ')]);
 
             return $merged;
         });
 
-        return ['message' => "Merged into invoice #{$merged->number}.", 'invoice_id' => $merged->id];
+        return ['message' => "Merged into invoice #{$merged->number}.", 'count' => 1, 'invoice_id' => $merged->id];
     }
 
     /** One invoice that, once paid, pays each selected invoice. */
@@ -135,10 +163,14 @@ class InvoiceActions
             'target_invoice_id' => $i->id,
         ])->filter(fn ($item) => bccomp($item['amount'], '0', 2) > 0)->values()->all();
 
+        if ($items === []) {
+            throw ValidationException::withMessages(['invoice_ids' => 'The selected invoices have no balance due.']);
+        }
+
         $bundle = $this->billing->createInvoice($invoices->first()->client, $items, today());
         ActivityLog::record('invoice.mass_pay', $bundle, ['for' => $invoices->pluck('number')->implode(', ')]);
 
-        return ['message' => "Mass Pay invoice #{$bundle->number} created.", 'invoice_id' => $bundle->id];
+        return ['message' => "Mass Pay invoice #{$bundle->number} created.", 'count' => 1, 'invoice_id' => $bundle->id];
     }
 
     private function deleteAll(Collection $invoices): array
@@ -148,7 +180,10 @@ class InvoiceActions
 
         $deleted = $invoices->count() - $kept->count();
 
-        return ['message' => "{$deleted} invoice(s) deleted.".($kept->isEmpty() ? '' : " {$kept->count()} with payments kept: delete their transactions first.")];
+        return [
+            'message' => "{$deleted} invoice(s) deleted.".($kept->isEmpty() ? '' : " {$kept->count()} with payments kept: delete their transactions first."),
+            'count' => $deleted,
+        ];
     }
 
     private function sameClientUnpaid(Collection $invoices, int $min, string $label): Collection
@@ -159,20 +194,39 @@ class InvoiceActions
 
         // The new invoice is in the client's currency, so every one bundled must be too.
         $currency = $invoices->first()->client->currencyCode();
-        if ($invoices->contains(fn (Invoice $i) => strtoupper((string) $i->currency) !== $currency)) {
+        if ($invoices->contains(fn (Invoice $i) => strtoupper((string) ($i->currency ?: Currency::BASE)) !== $currency)) {
             throw ValidationException::withMessages(['invoice_ids' => "{$label} needs invoices in the client's currency ({$currency})."]);
         }
 
         return $invoices->sortBy([['due_date', 'asc'], ['id', 'asc']])->values();
     }
 
-    /** Runs an action on the invoices in the right status and says how many it changed. */
-    private function count(Collection $invoices, ?string $status, callable $action, string $done): array
+    /**
+     * Runs an action on the eligible invoices and reports how many changed or were skipped.
+     *
+     * @param  string|(callable(Invoice): bool)|null  $filter
+     * @return array{message: string, count: int, invoice_id?: int}
+     */
+    private function count(Collection $invoices, string|callable|null $filter, callable $action, string $done, ?string $skipReason = null): array
     {
-        $eligible = $status ? $invoices->where('status', $status) : $invoices;
-        $eligible->each(fn (Invoice $i) => $action($i));
+        $eligible = match (true) {
+            is_string($filter) => $invoices->where('status', $filter),
+            is_callable($filter) => $invoices->filter($filter),
+            default => $invoices,
+        };
+        $results = $eligible->map(fn (Invoice $i) => $action($i));
         $skipped = $invoices->count() - $eligible->count();
+        $reason = $skipReason ?? (is_string($filter) ? "not {$filter}" : 'not eligible');
 
-        return ['message' => "{$eligible->count()} invoice(s) {$done}.".($skipped ? " {$skipped} skipped (not {$status})." : '')];
+        $result = [
+            'message' => "{$eligible->count()} invoice(s) {$done}.".($skipped ? " {$skipped} skipped ({$reason})." : ''),
+            'count' => $eligible->count(),
+        ];
+
+        if ($eligible->count() === 1 && ($first = $results->first()) instanceof Invoice) {
+            $result['invoice_id'] = $first->id;
+        }
+
+        return $result;
     }
 }
