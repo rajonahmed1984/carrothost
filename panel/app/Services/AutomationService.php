@@ -163,7 +163,8 @@ class AutomationService
             $count++;
         }
 
-        return $count;
+        // Accepted "end of billing period" cancellations whose due date has come.
+        return $count + app(CancellationService::class)->processDue();
     }
 
     /**

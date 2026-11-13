@@ -53,7 +53,7 @@ class AdminReportsTest extends TestCase
             $html = $mail->render();
 
             return $mail->hasTo('boss@example.com')
-                && $mail->subjectLine === config('app.name').' Cron Job Activity'
+                && $mail->subjectLine === 'Cron Job Activity & Domain Sync Report'
                 && str_contains($html, 'Renewal invoices created')
                 && collect($mail->sections[0]['rows'])->contains(fn ($row) => $row[0] === 'Renewal invoices created' && $row[1] === '4')
                 && str_contains($html, 'WHM timed out')
@@ -69,12 +69,12 @@ class AdminReportsTest extends TestCase
         Mail::assertSent(AdminReport::class, fn (AdminReport $mail) => $mail->hasTo('a@example.com') && $mail->hasTo('b@example.com') && ! $mail->hasTo('boss@example.com'));
 
         Mail::fake();
-        config(['billing.reports.cron_activity' => false]);
+        config(['billing.reports.cron_activity' => false, 'billing.reports.domain_sync' => false]);
         $this->artisan('reports:cron-activity')->assertSuccessful();
         Mail::assertNothingSent();
     }
 
-    public function test_domain_sync_report_lists_updates_errors_and_missing_domains(): void
+    public function test_the_midnight_sync_goes_into_the_daily_report_as_one_email(): void
     {
         Registrar::create(['code' => 'stargate', 'currency' => 'USD', 'reseller_id' => '123', 'api_key' => 'key']);
         $client = Client::create(['name' => 'Acme', 'email' => 'acme@example.com']);
@@ -95,16 +95,23 @@ class AdminReportsTest extends TestCase
             return [];
         });
 
+        config(['billing.domain_sync_enabled' => true]);
         $this->artisan('domains:sync')->assertSuccessful();
+        // The sync itself sends nothing; the report right after it carries the results.
+        Mail::assertNothingSent();
 
+        $this->artisan('reports:cron-activity')->assertSuccessful();
+
+        Mail::assertSent(AdminReport::class, 1);
         Mail::assertSent(AdminReport::class, function (AdminReport $mail) {
             $rows = collect($mail->sections)->keyBy('title')->map(fn ($s) => $s['rows']);
 
-            return $mail->subjectLine === config('app.name').' Domain Synchronisation Cron Report'
-                && $rows['Updated'] === [['renewed.com', 'stargate', 'Expiry date 2027-01-10 → 2028-01-10']]
-                && $rows['Errors'] === [['broken.com', 'stargate', 'Registrar API down']]
-                && $rows['Not Found at the Registrar'] === [['gone.com', 'stargate']]
-                && $rows['Already in Sync'] === [['same.com', 'stargate']]
+            return $mail->subjectLine === 'Cron Job Activity & Domain Sync Report'
+                && $rows->has('Daily Tasks')
+                && $rows['Domains Updated'] === [['renewed.com', 'stargate', 'Expiry date 2027-01-10 → 2028-01-10']]
+                && $rows['Domain Sync Errors'] === [['broken.com', 'stargate', 'Registrar API down']]
+                && $rows['Domains Not Found at the Registrar'] === [['gone.com', 'stargate']]
+                && $rows['Domains Already in Sync'] === [['same.com', 'stargate']]
                 && str_contains($mail->render(), '1 domain(s) still need a sync');
         });
         $this->assertDatabaseHas('activity_logs', ['action' => 'automation.run']);
@@ -117,5 +124,11 @@ class AdminReportsTest extends TestCase
 
         $this->assertSame('0 0 * * *', $at('reports:cron-activity'));
         $this->assertSame('0 0 * * *', $at('domains:sync'));
+        // The scheduler runs same-minute events in order: the sync must come before the report.
+        $order = $events->map(fn ($e) => (string) $e->command)->values();
+        $this->assertLessThan(
+            $order->search(fn ($c) => str_ends_with($c, 'reports:cron-activity')),
+            $order->search(fn ($c) => str_ends_with($c, 'domains:sync')),
+        );
     }
 }

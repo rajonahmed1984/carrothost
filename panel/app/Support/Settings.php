@@ -52,6 +52,9 @@ class Settings
         'notify_invoice_created' => 'billing.admin_notifications.invoice_created',
         'notify_invoice_paid' => 'billing.admin_notifications.invoice_paid',
         'notify_order_status' => 'billing.admin_notifications.order_status',
+        'notify_cancellation_request' => 'billing.admin_notifications.cancellation_request',
+        'notify_ticket' => 'billing.admin_notifications.ticket',
+        'notify_chat' => 'billing.admin_notifications.chat',
         'domain_allow_register' => 'billing.domains.allow_register',
         'domain_allow_transfer' => 'billing.domains.allow_transfer',
         'domain_allow_own' => 'billing.domains.allow_own',
@@ -96,6 +99,7 @@ class Settings
     public const BOOLEANS = [
         'suspension_enabled', 'unsuspension_enabled', 'recaptcha_enabled', 'termination_enabled', 'usage_update_enabled', 'domain_sync_enabled',
         'cron_report_enabled', 'domain_sync_report_enabled',
+        'notify_new_order', 'notify_invoice_created', 'notify_invoice_paid', 'notify_order_status', 'notify_cancellation_request', 'notify_ticket', 'notify_chat',
         'domain_allow_register', 'domain_allow_transfer', 'domain_allow_own', 'domain_auto_renew', 'domain_premium_enabled',
         'sms_enabled', 'sms_invoice_created_enabled', 'sms_invoice_paid_enabled', 'sms_invoice_reminder_enabled',
     ];

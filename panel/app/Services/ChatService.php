@@ -28,7 +28,11 @@ class ChatService
 
     public function send(Client $client, ?User $staff, ?string $message, array $attachment = []): array
     {
+        $staffReadId = (int) $client->chat_staff_read_id;
         $chat = $client->chatMessages()->create(['user_id' => $staff?->id, 'message' => $message, ...$attachment]);
+        if (! $staff) {
+            app(AdminNotifier::class)->chat($chat->setRelation('client', $client), $staffReadId);
+        }
 
         // Sending means the sender has seen everything before it.
         $client->forceFill($staff ? ['chat_staff_read_id' => $chat->id] : ['chat_read_id' => $chat->id])->save();

@@ -99,6 +99,7 @@ Route::prefix('api')->group(function () {
                     Route::post('services/{id}/change-password', [ClientServiceController::class, 'changePassword'])->whereNumber('id')->middleware('throttle:5,1,client-service-password');
                     Route::get('services/{id}/upgrade', [ClientServiceController::class, 'upgradeOptions'])->whereNumber('id');
                     Route::post('services/{id}/upgrade', [ClientServiceController::class, 'upgrade'])->whereNumber('id')->middleware('throttle:10,1,client-upgrade');
+                    Route::post('services/{id}/cancel', [ClientServiceController::class, 'requestCancellation'])->whereNumber('id')->middleware('throttle:5,1,client-cancel');
                     Route::get('services/{id}/vps',[ClientServiceController::class, 'vps'])->whereNumber('id')->middleware('throttle:30,1');
                     Route::get('services/{id}/vps/images', [ClientServiceController::class, 'vpsImages'])->whereNumber('id');
                     Route::post('services/{id}/vps/{action}', [ClientServiceController::class, 'vpsAction'])->whereNumber('id')
@@ -263,6 +264,7 @@ Route::prefix('api')->group(function () {
         Route::post('services/{service}/transfer', [Admin\ServiceController::class, 'transfer']);
         Route::post('services/{service}/welcome', [Admin\ServiceController::class, 'welcome'])->middleware('throttle:10,1');
         Route::post('services/{service}/action', [Admin\ServiceController::class, 'action']);
+        Route::post('services/{service}/cancellation', [Admin\ServiceController::class, 'cancellation']);
         Route::post('services/{service}/credentials', [Admin\ServiceController::class, 'credentials']);
         Route::get('services/{service}/vps', [Admin\ServiceController::class, 'vps']);
         Route::get('services/{service}/vps/images', [Admin\ServiceController::class, 'vpsImages']);

@@ -76,6 +76,7 @@ class ProvisionService implements ShouldQueue
                 'suspend' => $this->suspend($module, $service),
                 'unsuspend' => $this->unsuspend($module, $service),
                 'terminate' => $this->terminate($module, $service),
+                'cancel' => $this->cancel($module, $service),
             };
 
             $service->update([...$changes, 'provision_status' => 'done']);
@@ -111,6 +112,15 @@ class ProvisionService implements ShouldQueue
         $this->confirmSuspended($module, $service, true);
 
         return ['status' => 'suspended', 'auto_suspended' => $this->billing];
+    }
+
+    /** An accepted cancellation: the panel already shows it cancelled; the account is suspended, not removed. */
+    private function cancel(ProvisioningModule $module, Service $service): array
+    {
+        $module->suspend($service, 'Cancelled at client request');
+        $this->confirmSuspended($module, $service, true);
+
+        return ['auto_suspended' => false];
     }
 
     private function unsuspend(ProvisioningModule $module, Service $service): array

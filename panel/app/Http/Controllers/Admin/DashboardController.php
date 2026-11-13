@@ -20,7 +20,7 @@ class DashboardController extends Controller
             'overdue_invoices' => Invoice::where('status', 'unpaid')->whereDate('due_date', '<', today())->count(),
             'pending_orders' => Order::where('status', 'pending')->count(),
             'suspended_services' => Service::where('status', 'suspended')->count(),
-            'pending_cancellations' => Service::where('terminate_end_of_cycle', true)->whereIn('status', ['active', 'suspended', 'pending'])->count(),
+            'pending_cancellations' => \App\Services\CancellationService::pending(Service::query())->count(),
             'pending_module_actions' => $dashboard->pendingModuleActions(),
             // Where the tile goes: services first, the domain list when only domains wait.
             'pending_module_actions_split' => $dashboard->pendingModuleActionsSplit(),

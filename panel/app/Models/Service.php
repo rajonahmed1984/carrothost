@@ -37,6 +37,8 @@ class Service extends Model
             'module_options' => 'array',
             'cost_amount' => 'decimal:2',
             'renewal_invoiced_for' => 'date:Y-m-d',
+            'cancellation_requested_at' => 'datetime',
+            'cancellation_accepted_at' => 'datetime',
         ];
     }
 

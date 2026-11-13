@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Mail\TicketNotification;
+use App\Mail\AdminNotice;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\User;
@@ -60,7 +60,8 @@ class SupportTest extends TestCase
             ->assertJsonPath('status', 'open')
             ->assertJsonPath('department_name', 'Billing')
             ->assertJsonPath('replies.0.message', 'Invoice 1001 was paid twice.');
-        Mail::assertSent(TicketNotification::class, fn ($mail) => $mail->hasTo('staff@example.com') && $mail->hasFrom('support@carrothost.com', 'CarrotHost Support'));
+        Mail::assertQueued(AdminNotice::class, fn ($mail) => $mail->hasTo('staff@example.com') && $mail->hasFrom('support@carrothost.com', 'CarrotHost Support')
+            && str_starts_with($mail->subjectLine, 'New ticket #') && str_contains($mail->render(), 'Invoice 1001 was paid twice.') && str_contains($mail->url, '/admin/tickets/'));
         $this->getJson('/api/client/tickets')->assertJsonPath('tickets.0.subject', 'Charged twice')->assertJsonStructure(['tickets' => [['created_at', 'priority', 'department']]]);
     }
 
@@ -121,6 +122,27 @@ class SupportTest extends TestCase
         $this->signOut();
         $this->signIn('other@example.com');
         $this->get("/api/client/tickets/{$id}/replies/{$reply->id}/attachment")->assertNotFound();
+    }
+
+    public function test_a_chat_emails_staff_once_until_they_read_it(): void
+    {
+        Mail::fake();
+        $admin = $this->admin();
+        $client = $this->signIn();
+
+        $this->postJson('/api/client/chat', ['message' => 'Hello?'])->assertCreated();
+        $this->postJson('/api/client/chat', ['message' => 'Anyone there?'])->assertCreated();
+        Mail::assertQueued(AdminNotice::class, 1);
+        Mail::assertQueued(AdminNotice::class, fn ($mail) => $mail->hasTo('staff@example.com') && $mail->subjectLine === 'New chat message - Mine'
+            && str_contains($mail->render(), 'Hello?') && str_ends_with($mail->url, "/admin/chats/{$client->id}"));
+
+        // Once staff have read it, the next message is new again.
+        $this->signOut();
+        $this->actingAs($admin, 'web')->getJson("/api/chats/{$client->id}")->assertOk();
+        auth('web')->logout();
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
+        $this->postJson('/api/client/chat', ['message' => 'One more thing'])->assertCreated();
+        Mail::assertQueued(AdminNotice::class, 2);
     }
 
     public function test_chat_round_trip_with_unread_counts_and_polling(): void

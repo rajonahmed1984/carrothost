@@ -80,6 +80,9 @@ return [
         'invoice_created' => true,
         'invoice_paid' => true,
         'order_status' => true,
+        'cancellation_request' => true,
+        'ticket' => true,
+        'chat' => true,
     ],
 
     // Add Funds limits, in the billing currency. Admin > Settings overrides these.

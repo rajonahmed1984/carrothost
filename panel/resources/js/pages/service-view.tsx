@@ -19,7 +19,7 @@ export type ServiceFull = {
     id: number; client_id: number; order_id: number | null; product_id: number; server_id: number | null; domain: string | null;
     cycle: string; quantity: number; recurring_amount: string; first_payment_amount: string; payment_method: string | null; subscription_id: string | null;
     status: string; provision_status: string; provision_error: string | null; remote_id: string | null; dedicated_ip: string | null;
-    auto_suspended: boolean; override_suspend_until: string | null; terminate_end_of_cycle: boolean; terminate_reason: string | null;
+    auto_suspended: boolean; override_suspend_until: string | null; terminate_end_of_cycle: boolean; terminate_reason: string | null; cancellation_type: string | null; cancellation_reason: string | null; cancellation_requested_at: string | null; cancellation_accepted_at: string | null;
     next_due_date: string | null; registered_at: string | null; termination_date: string | null; admin_notes: string | null;
     disk_usage: number | null; disk_limit: number | null; bw_usage: number | null; bw_limit: number | null; usage_updated_at: string | null;
     client: { id: number; name: string; email: string };
@@ -335,6 +335,11 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
         qc.invalidateQueries({ queryKey: ['/services'] });
         qc.invalidateQueries({ queryKey: ['/clients'] });
     };
+    const decide = useMutation({
+        mutationFn: async (decision: 'accept' | 'reject') => (await api.post<ServiceFull>(`/services/${s.id}/cancellation`, { decision })).data,
+        onSuccess: (data, decision) => { fresh(data); setNotice(decision === 'accept' ? (data.status === 'cancelled' ? 'Cancellation accepted. The service is cancelled and its account is being suspended on the server.' : `Cancellation accepted. The service is cancelled on ${data.next_due_date ?? 'its due date'}.`) : 'Cancellation request rejected.'); },
+        onError: (e) => alertDialog(errorMessage(e)),
+    });
     const changePackage = useMutation({
         mutationFn: async () => (await api.post<ServiceFull>(`/services/${s.id}/package`)).data,
         onSuccess: (data) => { fresh(data); setNotice('Package changed on the server.'); },
@@ -407,6 +412,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         <Status value={s.status} />
                         {s.provision_status !== 'done' && s.provision_status !== 'none' && <Status value={s.provision_status} />}
                         {s.terminate_end_of_cycle && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">Terminates end of cycle</span>}
+                        {s.cancellation_requested_at && ['active', 'suspended', 'pending'].includes(s.status) && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">{s.cancellation_accepted_at ? 'Cancellation accepted' : 'Cancellation requested'}</span>}
                     </div>
                     <div className="text-xs text-slate-500">
                         {s.domain ? <a className="table-action-link" href={`https://${s.domain}`} target="_blank" rel="noreferrer">{s.domain}</a> : 'No domain'} · <Link className="table-action-link" to={`/admin/clients/${s.client.id}`}>{s.client.name}</Link> · {money(s.recurring_amount)} / {s.cycle}
@@ -451,6 +457,25 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                     <span className="flex items-center gap-2"><Check size={15} /> {notice}</span>
                     <button type="button" aria-label="Dismiss" className="cursor-pointer text-emerald-700" onClick={() => setNotice(null)}><X size={14} /></button>
                 </p>
+            )}
+            {s.cancellation_requested_at && ['active', 'suspended', 'pending'].includes(s.status) && (
+                <div className="flex flex-wrap items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                    <div className="min-w-0 flex-1">
+                        <strong>{s.cancellation_accepted_at ? 'Cancellation accepted' : 'Cancellation requested'}</strong> by the client on {new Date(s.cancellation_requested_at).toLocaleString()} · {s.cancellation_type === 'immediate' ? 'Immediate' : 'End of Billing Period'}
+                        {s.cancellation_reason && <p className="mt-1 whitespace-pre-line text-rose-800">{s.cancellation_reason}</p>}
+                        <p className="mt-1 text-xs text-rose-700">
+                            {s.cancellation_accepted_at
+                                ? `The service is cancelled and its account suspended on the server on ${s.next_due_date ?? 'its due date'}.`
+                                : 'Nothing changes until you accept. Accepting cancels its unpaid renewal invoices, then cancels the service in the portal and suspends the account on the server' + (s.cancellation_type === 'immediate' ? ' right away.' : ` on ${s.next_due_date ?? 'its due date'}.`)}
+                        </p>
+                    </div>
+                    {!s.cancellation_accepted_at && (
+                        <div className="flex gap-2">
+                            <button type="button" disabled={decide.isPending} onClick={() => ask('Accept this cancellation request?', () => decide.mutate('accept'))} className="ui-btn ui-btn-danger h-9">Accept</button>
+                            <button type="button" disabled={decide.isPending} onClick={() => ask('Reject this cancellation request? The service carries on as it is.', () => decide.mutate('reject'))} className="ui-btn ui-btn-secondary h-9">Reject</button>
+                        </div>
+                    )}
+                </div>
             )}
             {s.pending_upgrade && (
                 <p className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">

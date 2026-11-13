@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * The admin emails the panel sends from its cron: the daily Cron Job Activity report
- * and the Domain Synchronisation Cron Report.
+ * The daily admin email the panel sends from its cron at midnight: what the daily jobs did
+ * yesterday, plus what the midnight domain sync changed.
  */
 class AdminReports
 {
@@ -52,17 +52,31 @@ class AdminReports
         return $saved ?: User::where('is_admin', true)->where('is_active', true)->where('role', 'admin')->pluck('email')->filter()->unique()->values()->all();
     }
 
-    /** What the daily jobs did in the given day (default: yesterday). False when it could not be sent. */
-    public function sendCronActivity(?Carbon $day = null): bool
+    /** Where domains:sync leaves its result for the daily report. */
+    public const DOMAIN_SYNC_CACHE = 'reports.domain_sync';
+
+    /** Keeps the sync result until the midnight report picks it up. */
+    public static function rememberDomainSync(array $report): void
+    {
+        Cache::put(self::DOMAIN_SYNC_CACHE, [...$report, 'ran_at' => now()->toISOString()], now()->addDays(2));
+    }
+
+    /** The daily report for the given day (default: yesterday). False when it could not be sent. */
+    public function sendCronActivity(?Carbon $day = null, bool $withActivity = true): bool
     {
         $from = ($day ?? today()->subDay())->copy()->startOfDay();
         $to = $from->copy()->endOfDay();
 
-        return $this->send($this->cronActivity($from, $to));
+        return $this->send($this->cronActivity($from, $to, $withActivity));
     }
 
-    public function cronActivity(Carbon $from, Carbon $to): AdminReport
+    public function cronActivity(Carbon $from, Carbon $to, bool $withActivity = true): AdminReport
     {
+        $sync = $this->domainSyncSections($to);
+        if (! $withActivity) {
+            return $this->report($from, $sync['notes'], $sync['sections']);
+        }
+
         $logs = ActivityLog::whereIn('action', ['automation.run', 'automation.failed'])
             ->whereBetween('created_at', [$from, $to])->orderBy('id')->get(['action', 'context', 'created_at']);
         $runs = $logs->where('action', 'automation.run')->groupBy(fn ($log) => $log->context['task'] ?? 'unknown');
@@ -106,75 +120,95 @@ class AdminReports
             (string) ($log->context['error'] ?? ''),
         ])->values()->all();
 
+        return $this->report($from, [...$notes, ...$sync['notes']], [
+            ['title' => 'Daily Tasks', 'columns' => ['Task', 'Count', 'Status'], 'rows' => $tasks],
+            ['title' => 'Errors', 'columns' => ['Task', 'Time', 'Error'], 'rows' => $failed, 'empty' => 'No task failed.'],
+            ['title' => 'Billing and Activity', 'columns' => ['', 'Count', 'Amount'], 'rows' => $billing],
+            ...$sync['sections'],
+        ]);
+    }
+
+    private function report(Carbon $from, array $notes, array $sections): AdminReport
+    {
         return new AdminReport(
-            subjectLine: config('app.name').' Cron Job Activity',
-            heading: 'Cron Job Activity',
+            subjectLine: 'Cron Job Activity & Domain Sync Report',
+            heading: 'Cron Job Activity & Domain Sync Report',
             period: 'Daily automation summary for '.$from->format('l, d F Y').' ('.config('app.timezone').')',
             notes: $notes,
-            sections: [
-                ['title' => 'Daily Tasks', 'columns' => ['Task', 'Count', 'Status'], 'rows' => $tasks],
-                ['title' => 'Errors', 'columns' => ['Task', 'Time', 'Error'], 'rows' => $failed, 'empty' => 'No task failed.'],
-                ['title' => 'Billing and Activity', 'columns' => ['', 'Count', 'Amount'], 'rows' => $billing],
-            ],
+            sections: $sections,
             url: url('/admin'),
         );
     }
 
-    /** @param array{enabled: bool, synced: list<array>, missing: list<array>, failed: list<array>, remaining: int} $report */
-    public function sendDomainSync(array $report): bool
+    /**
+     * The midnight domain sync's part of the report: the run that finished after the reported day.
+     *
+     * @return array{notes: list<string>, sections: list<array>}
+     */
+    private function domainSyncSections(Carbon $dayEnd): array
     {
-        if (! $report['enabled']) {
-            return false;
+        if (! config('billing.reports.domain_sync') || ! config('billing.domain_sync_enabled')) {
+            return ['notes' => [], 'sections' => []];
         }
 
-        return $this->send($this->domainSync($report));
+        $report = Cache::get(self::DOMAIN_SYNC_CACHE);
+        if (! is_array($report) || ! isset($report['ran_at']) || Carbon::parse($report['ran_at'])->lte($dayEnd)) {
+            return ['notes' => ['Domain sync: the midnight sync had not run when this report was made.'], 'sections' => []];
+        }
+
+        return $this->domainSync($report);
     }
 
-    public function domainSync(array $report): AdminReport
+    /** @return array{notes: list<string>, sections: list<array>} */
+    public function domainSync(array $report): array
     {
         $changed = collect($report['synced'])->filter(fn ($row) => $row['changes'] !== []);
-        $unchanged = count($report['synced']) - $changed->count();
+        $unchanged = collect($report['synced'])->filter(fn ($row) => $row['changes'] === []);
 
         $notes = [];
         if ($report['remaining'] > 0) {
-            $notes[] = "{$report['remaining']} domain(s) still need a sync. They are picked up on the next run (up to ".AutomationService::DOMAIN_SYNC_BATCH.' a day).';
+            $notes[] = "Domain sync: {$report['remaining']} domain(s) still need a sync. They are picked up on the next run (up to ".AutomationService::DOMAIN_SYNC_BATCH.' a day).';
         }
 
-        return new AdminReport(
-            subjectLine: config('app.name').' Domain Synchronisation Cron Report',
-            heading: 'Domain Synchronisation Cron Report',
-            period: 'Run at '.now()->format('d F Y H:i').' ('.config('app.timezone').'). '
-                .count($report['synced']).' synced, '.$changed->count().' updated, '.$unchanged.' already in sync, '
-                .count($report['failed']).' failed, '.count($report['missing']).' not found at the registrar.',
-            notes: $notes,
-            sections: [
-                [
-                    'title' => 'Updated',
-                    'columns' => ['Domain', 'Registrar', 'Changes'],
-                    'rows' => $changed->map(fn ($row) => [$row['domain'], $row['registrar'], implode('; ', $row['changes'])])->values()->all(),
-                    'empty' => 'No domain needed an update.',
-                ],
-                [
-                    'title' => 'Errors',
-                    'columns' => ['Domain', 'Registrar', 'Error'],
-                    'rows' => collect($report['failed'])->map(fn ($row) => [$row['domain'], $row['registrar'], $row['error']])->all(),
-                    'empty' => 'No errors.',
-                ],
-                [
-                    'title' => 'Not Found at the Registrar',
-                    'columns' => ['Domain', 'Registrar'],
-                    'rows' => collect($report['missing'])->map(fn ($row) => [$row['domain'], $row['registrar']])->all(),
-                    'empty' => 'Every domain was found.',
-                ],
-                [
-                    'title' => 'Already in Sync',
-                    'columns' => ['Domain', 'Registrar'],
-                    'rows' => collect($report['synced'])->filter(fn ($row) => $row['changes'] === [])->map(fn ($row) => [$row['domain'], $row['registrar']])->values()->all(),
-                    'empty' => 'None.',
+        $ranAt = isset($report['ran_at']) ? Carbon::parse($report['ran_at'])->timezone(config('app.timezone'))->format('d M Y H:i') : '';
+
+        return ['notes' => $notes, 'sections' => [
+            [
+                'title' => 'Domain Synchronisation'.($ranAt ? " (run at {$ranAt})" : ''),
+                'columns' => ['', 'Count'],
+                'rows' => [
+                    ['Domains synced', (string) count($report['synced'])],
+                    ['Updated', (string) $changed->count()],
+                    ['Already in sync', (string) $unchanged->count()],
+                    ['Failed', (string) count($report['failed'])],
+                    ['Not found at the registrar', (string) count($report['missing'])],
                 ],
             ],
-            url: url('/admin/domain-registrations'),
-        );
+            [
+                'title' => 'Domains Updated',
+                'columns' => ['Domain', 'Registrar', 'Changes'],
+                'rows' => $changed->map(fn ($row) => [$row['domain'], $row['registrar'], implode('; ', $row['changes'])])->values()->all(),
+                'empty' => 'No domain needed an update.',
+            ],
+            [
+                'title' => 'Domain Sync Errors',
+                'columns' => ['Domain', 'Registrar', 'Error'],
+                'rows' => collect($report['failed'])->map(fn ($row) => [$row['domain'], $row['registrar'], $row['error']])->all(),
+                'empty' => 'No errors.',
+            ],
+            [
+                'title' => 'Domains Not Found at the Registrar',
+                'columns' => ['Domain', 'Registrar'],
+                'rows' => collect($report['missing'])->map(fn ($row) => [$row['domain'], $row['registrar']])->all(),
+                'empty' => 'Every domain was found.',
+            ],
+            [
+                'title' => 'Domains Already in Sync',
+                'columns' => ['Domain', 'Registrar'],
+                'rows' => $unchanged->map(fn ($row) => [$row['domain'], $row['registrar']])->values()->all(),
+                'empty' => 'None.',
+            ],
+        ]];
     }
 
     private function send(AdminReport $mail): bool

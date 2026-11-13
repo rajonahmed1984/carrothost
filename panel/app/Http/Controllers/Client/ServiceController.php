@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
+use App\Services\CancellationService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
 use Illuminate\Http\Request;
@@ -29,6 +30,10 @@ class ServiceController extends Controller
         'service.upgraded' => 'Plan changed',
         'service.package_changed' => 'Server package changed',
         'service.welcome_sent' => 'Welcome email sent',
+        'service.cancellation_requested' => 'Cancellation requested',
+        'service.cancellation_accepted' => 'Cancellation request accepted',
+        'service.cancellation_rejected' => 'Cancellation request declined',
+        'service.cancelled' => 'Service cancelled',
     ];
 
     public function index(Request $request)
@@ -289,6 +294,26 @@ class ServiceController extends Controller
             'panel_url' => $live && $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
             // One-click login works (the list's Quick Action signs in instead of opening the login page).
             'can_sso' => $live && $port && ServiceTools::hasTools($service),
+            'cancellation' => $service->cancellation_requested_at && in_array($service->status, CancellationService::LIVE, true) ? [
+                'type' => $service->cancellation_type,
+                'requested_at' => $service->cancellation_requested_at->toIso8601String(),
+                'accepted_at' => $service->cancellation_accepted_at?->toIso8601String(),
+            ] : null,
         ];
+    }
+
+    /* ---------- Cancellation ---------- */
+
+    public function requestCancellation(Request $request, int $id, CancellationService $cancellations, ServiceTools $tools)
+    {
+        $service = $request->user('client')->services()->findOrFail($id);
+        $data = $request->validate([
+            'type' => ['required', Rule::in(array_keys(CancellationService::TYPES))],
+            'reason' => 'required|string|min:5|max:2000',
+        ]);
+
+        $cancellations->request($service, $data['type'], $data['reason']);
+
+        return $this->show($request, $id, $tools);
     }
 }

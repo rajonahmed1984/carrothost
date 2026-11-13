@@ -11,6 +11,11 @@
 @endforeach
 
 @endforeach
+@if ($body !== null && $body !== '')
+Message
+{{ $body }}
+
+@endif
 @if ($items)
 Items
 @foreach ($items as [$description, $amount])

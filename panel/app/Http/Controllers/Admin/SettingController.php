@@ -56,6 +56,9 @@ class SettingController extends Controller
                 'notify_invoice_created' => (bool) config('billing.admin_notifications.invoice_created'),
                 'notify_invoice_paid' => (bool) config('billing.admin_notifications.invoice_paid'),
                 'notify_order_status' => (bool) config('billing.admin_notifications.order_status'),
+                'notify_cancellation_request' => (bool) config('billing.admin_notifications.cancellation_request'),
+                'notify_ticket' => (bool) config('billing.admin_notifications.ticket'),
+                'notify_chat' => (bool) config('billing.admin_notifications.chat'),
                 'domain_allow_register' => (bool) config('billing.domains.allow_register'),
                 'domain_allow_transfer' => (bool) config('billing.domains.allow_transfer'),
                 'domain_allow_own' => (bool) config('billing.domains.allow_own'),
@@ -141,6 +144,9 @@ class SettingController extends Controller
             'notify_invoice_created' => 'boolean',
             'notify_invoice_paid' => 'boolean',
             'notify_order_status' => 'boolean',
+            'notify_cancellation_request' => 'boolean',
+            'notify_ticket' => 'boolean',
+            'notify_chat' => 'boolean',
             'report_recipients' => ['sometimes', 'nullable', 'string', 'max:500', function ($attribute, $value, $fail) {
                 foreach (\App\Services\AdminReports::parseRecipients($value) as $email) {
                     if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {

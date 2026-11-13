@@ -28,6 +28,8 @@ class AdminNotice extends Mailable
         public ?string $total,
         public string $url,
         public string $button,
+        public ?string $hostOf = null,
+        public ?string $body = null,
     ) {}
 
     public function envelope(): Envelope
@@ -37,6 +39,28 @@ class AdminNotice extends Mailable
 
     public function content(): Content
     {
+        // Reverse DNS is slow, so it is looked up here, in the queue worker, not during checkout.
+        if ($this->hostOf !== null) {
+            $host = self::host($this->hostOf);
+            $this->hostOf = null;
+            foreach ($this->groups as $i => $group) {
+                if (array_key_exists('Host', $group['rows'])) {
+                    $this->groups[$i]['rows']['Host'] = $host;
+                }
+            }
+        }
+
         return new Content(view: 'emails.admin-notice', text: 'emails.admin-notice-text');
+    }
+
+    /** Reverse DNS of a public address, when it has one. */
+    private static function host(string $ip): ?string
+    {
+        if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return null;
+        }
+        $host = @gethostbyaddr($ip);
+
+        return $host && $host !== $ip ? $host : null;
     }
 }

@@ -23,6 +23,11 @@
         </p>
     @endforeach
 
+    @if ($body !== null && $body !== '')
+        <p style="margin:16px 0 4px;"><strong>Message</strong></p>
+        <div style="margin:0;padding:10px 12px;border-left:3px solid #fdba74;background:#fff7ed;">{!! nl2br(e($body), false) !!}</div>
+    @endif
+
     @if ($items)
         <p style="margin:16px 0 6px;"><strong>Items</strong></p>
         <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">

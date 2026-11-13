@@ -63,11 +63,24 @@ bKash and SSLCommerz charge a USD invoice in BDT at that rate; PayPal charges US
 Changing a client's currency converts their renewal amounts and credit, and needs their
 unpaid invoices paid or cancelled first.
 
-**Admin reports**: at midnight the admins get the **Cron Job Activity** email
-(what the daily jobs did the day before, plus errors and tasks that did not run), then the
-domain sync runs and sends the **Domain Synchronisation Cron Report**. Turn them off or choose
-recipients under Settings → Automation → Admin Reports. Send one by hand with
-`php artisan reports:cron-activity --date=2026-11-05` or `php artisan domains:sync`.
+**Admin reports**: at midnight the domain sync runs, then the admins get one
+**Cron Job Activity & Domain Sync Report** email: what the daily jobs did the day before (errors
+and tasks that did not run included) and what the sync changed. Turn either part off or choose
+recipients under Settings → Automation → Admin Reports. Send it by hand with
+`php artisan reports:cron-activity --date=2026-11-05` (run `php artisan domains:sync` first to
+include a fresh sync).
+
+**Admin notifications** (new order, invoice created or paid, order accepted or cancelled,
+cancellation requests, new tickets and customer replies, the first unread chat message) go through the queue, the same way customer emails do, so the
+`queue:work` cron entry must be running.
+
+**Cancellation requests**: on a service page the client picks Immediate or End of Billing
+Period and gives a reason. Nothing changes until an admin acts on it: the request shows under
+Products/Services → Pending Cancellation (and the admins are emailed) with Accept and Reject.
+Accepting cancels the service's unpaid renewal invoices (on a merged invoice only its line is
+removed), then marks the service Cancelled in the portal and suspends the account on its server
+(not terminated, so nothing is deleted): at once for Immediate, on the due date for End of Billing
+Period (the daily `billing:terminate` run). An accepted service is not billed again.
 
 **Configure a working mailer before going live.** Without one, no admin can receive a code
 and nobody can sign in to the admin panel. To recover, set `MAIL_MAILER=log` and read the

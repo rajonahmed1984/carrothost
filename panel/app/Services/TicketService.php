@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Mail\CustomerNotice;
-use App\Mail\TicketNotification;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Ticket;
@@ -35,7 +34,7 @@ class TicketService
         });
 
         ActivityLog::record('ticket.opened', $ticket);
-        $this->notifyStaff($ticket, "New ticket #{$ticket->number}: {$ticket->subject}", "{$client->name} opened a new ticket.", $data['message']);
+        app(AdminNotifier::class)->ticket($ticket, $data['message']);
 
         return $ticket;
     }
@@ -79,7 +78,7 @@ class TicketService
                 ));
             }
         } else {
-            $this->notifyStaff($ticket, "Customer reply on #{$ticket->number}: {$ticket->subject}", "{$ticket->client->name} replied.", $message);
+            app(AdminNotifier::class)->ticket($ticket, $message, reply: true);
         }
 
         return $ticket;
@@ -97,15 +96,8 @@ class TicketService
         return Ticket::where('status', 'answered')->where('last_reply_at', '<', now()->subDays($days))->update(['status' => 'closed']);
     }
 
-    private function notifyStaff(Ticket $ticket, string $subject, string $heading, string $message): void
-    {
-        foreach (User::where('is_admin', true)->where('is_active', true)->pluck('email') as $email) {
-            $this->send($email, new TicketNotification($subject, $heading, $message, url("tickets/{$ticket->id}")));
-        }
-    }
-
     /** A mail outage must never lose the reply itself. */
-    private function send(string $email, TicketNotification|CustomerNotice $mail): void
+    private function send(string $email, CustomerNotice $mail): void
     {
         try {
             Mail::to($email)->send($mail);

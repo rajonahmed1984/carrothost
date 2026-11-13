@@ -13,6 +13,7 @@ use App\Models\Client;
 use App\Provisioning\ReportsAccountStatus;
 use App\Provisioning\WebdockModule;
 use App\Services\AutomationService;
+use App\Services\CancellationService;
 use App\Services\DashboardService;
 use App\Services\ServiceTools;
 use App\Services\VpsTools;
@@ -31,8 +32,8 @@ class ServiceController extends Controller
             // "needs_action" is the dashboard's Pending Module Actions: failed, set up by hand, or awaiting accept.
             ->when($request->query('status'), fn ($q, $status) => match ($status) {
                 'needs_action' => $q->whereIn('provision_status', DashboardService::SERVICE_ACTIONS),
-                // The dashboard's Pending Cancellations: set to terminate at the end of the cycle, not yet terminated.
-                'pending_cancellation' => $q->where('terminate_end_of_cycle', true)->whereIn('status', ['active', 'suspended', 'pending']),
+                // The dashboard's Pending Cancellations: client requests, and services set to terminate at the end of the cycle.
+                'pending_cancellation' => CancellationService::pending($q),
                 default => $q->where('status', $status),
             })
             // From the Products list: one plan's services.
@@ -63,6 +64,15 @@ class ServiceController extends Controller
     public function show(Service $service)
     {
         return $this->detail($service);
+    }
+
+    /** Accept or reject the client's cancellation request. */
+    public function cancellation(Request $request, Service $service, CancellationService $cancellations)
+    {
+        $decision = $request->validate(['decision' => 'required|in:accept,reject'])['decision'];
+        $decision === 'accept' ? $cancellations->accept($service) : $cancellations->reject($service);
+
+        return $this->detail($service->refresh());
     }
 
     /**

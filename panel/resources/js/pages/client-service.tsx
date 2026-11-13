@@ -24,6 +24,7 @@ type Detail = {
     usage: { disk_used: number | null; disk_limit: number | null; bw_used: number | null; bw_limit: number | null; metrics: Metric[]; updated_at: string | null };
     invoices: { id: number; number: string; status: string; currency: string; total: string; due_date: string }[];
     activity: { id: number; title: string; by: string; at: string | null }[];
+    cancellation: { type: string; requested_at: string; accepted_at: string | null } | null;
 };
 
 const tabs = [
@@ -249,6 +250,45 @@ function PasswordModal({ s, onClose, onDone }: { s: Detail; onClose: () => void;
     );
 }
 
+function CancelModal({ s, onClose, onDone }: { s: Detail; onClose: () => void; onDone: (fresh: Detail) => void }) {
+    const [type, setType] = useState<'end_of_period' | 'immediate'>('end_of_period');
+    const [reason, setReason] = useState('');
+    const send = useMutation({
+        mutationFn: async () => (await api.post<Detail>(`/client/services/${s.id}/cancel`, { type, reason })).data,
+        onSuccess: onDone,
+    });
+
+    return (
+        <Modal title="Request Cancellation" onClose={onClose}>
+            <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="space-y-4">
+                <p className="text-sm text-slate-600">
+                    Cancel <strong className="text-slate-900">{s.product.name}{s.domain ? ` - ${s.domain}` : ''}</strong>. Our team reviews your request. Once it is accepted, the service is cancelled and unpaid renewal invoices for it are cancelled.
+                </p>
+                <Field label="Cancellation type">
+                    <div className="space-y-2">
+                        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-soft)]">
+                            <input type="radio" name="type" className="mt-0.5" checked={type === 'end_of_period'} onChange={() => setType('end_of_period')} />
+                            <span><strong className="text-slate-900">End of Billing Period</strong><span className="block text-slate-500">Keep using it until {s.next_due_date ? shortDate(s.next_due_date) : 'the next due date'}, then it is cancelled.</span></span>
+                        </label>
+                        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50">
+                            <input type="radio" name="type" className="mt-0.5" checked={type === 'immediate'} onChange={() => setType('immediate')} />
+                            <span><strong className="text-slate-900">Immediate</strong><span className="block text-slate-500">The service is cancelled as soon as our team accepts the request.</span></span>
+                        </label>
+                    </div>
+                </Field>
+                <Field label="Reason for cancelling">
+                    <textarea className="ui-input min-h-24" required minLength={5} maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us why you are leaving" />
+                </Field>
+                <ErrorNote error={send.error} />
+                <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={onClose}>Keep Service</Button>
+                    <Button variant="danger" disabled={send.isPending || reason.trim().length < 5}><CircleX size={14} /> {send.isPending ? 'Sending...' : 'Request Cancellation'}</Button>
+                </div>
+            </form>
+        </Modal>
+    );
+}
+
 /** The customer's page for one service. cPanel and Webuzo accounts get the full control panel tools. */
 export function ClientServicePage({ canManage }: { canManage: boolean }) {
     const { id } = useParams();
@@ -261,7 +301,7 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
     const qc = useQueryClient();
     const [params, setParams] = useSearchParams();
     const tab = tabs.find((t) => t.key === params.get('tab'))?.key ?? 'overview';
-    const [dialog, setDialog] = useState<'password' | 'upgrade' | null>(null);
+    const [dialog, setDialog] = useState<'password' | 'upgrade' | 'cancel' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
     const panel = usePanelLogin(s.id);
     const reveal = useMutation({ mutationFn: async () => (await api.post<{ password: string | null }>(`/client/services/${s.id}/password`)).data });
@@ -277,6 +317,7 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
     const panelLabel = panelName(s.product.module);
     const days = s.next_due_date ? daysUntil(s.next_due_date) : null;
     const host = s.server?.hostname ?? null;
+    const canCancel = canManage && !s.cancellation && ['active', 'suspended', 'pending'].includes(s.status);
     const subjectFor = (what: string) => `/tickets/new?service=${s.id}&subject=${encodeURIComponent(`${what}: ${s.product.name}${s.domain ? ` - ${s.domain}` : ''}`)}`;
     const diskPct = pct(s.usage.disk_used, s.usage.disk_limit);
     const bwPct = pct(s.usage.bw_used, s.usage.bw_limit);
@@ -299,6 +340,13 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                 </p>
             )}
             {s.status === 'suspended' && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">This service is suspended. Pay any overdue invoice below to bring it back, or open a ticket if you think this is a mistake.</p>}
+            {s.cancellation && (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    {s.cancellation.accepted_at
+                        ? `Your cancellation request was accepted. This service is cancelled on ${s.next_due_date ? shortDate(s.next_due_date) : 'its due date'} and will not be renewed.`
+                        : `You asked to cancel this service on ${new Date(s.cancellation.requested_at).toLocaleDateString('en-GB')} (${s.cancellation.type === 'immediate' ? 'Immediate' : 'End of Billing Period'}). Our team is reviewing the request; the service carries on until then.`} Changed your mind? Open a ticket.
+                </p>
+            )}
             {s.status === 'pending' && <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">This service is being set up. Its login details appear here, and are emailed to you, once it is ready.</p>}
             {s.pending_upgrade && (
                 <p className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
@@ -364,10 +412,10 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                             {tools && hosting && <button type="button" role="menuitem" className={menuItem} onClick={() => setDialog('password')}><KeyRound size={14} className="text-slate-400" /> Change Password</button>}
                             <button type="button" role="menuitem" className={menuItem} onClick={() => setParams({ tab: 'invoices' }, { replace: true })}><FileText size={14} className="text-slate-400" /> View Invoices</button>
                             <Link role="menuitem" className={menuItem} to={`/tickets/new?service=${s.id}`}><Headset size={14} className="text-slate-400" /> Get Support</Link>
-                            {!['cancelled', 'terminated'].includes(s.status) && (
+                            {canCancel && (
                                 <>
                                     <div className="my-1 border-t border-slate-100" />
-                                    <Link role="menuitem" className={`${menuItem} text-rose-600 hover:bg-rose-50`} to={subjectFor('Cancellation request')}><CircleX size={14} /> Request Cancellation</Link>
+                                    <button type="button" role="menuitem" className={`${menuItem} text-rose-600 hover:bg-rose-50`} onClick={() => setDialog('cancel')}><CircleX size={14} /> Request Cancellation</button>
                                 </>
                             )}
                         </Dropdown>
@@ -499,7 +547,7 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                                     {canManage && s.can_upgrade && <Tile icon={<ArrowUpDown size={18} />} tone="bg-sky-100 text-sky-700" name="Upgrade / Downgrade" onClick={() => setDialog('upgrade')} />}
                                     {canManage && active && <Tile icon={<Globe size={18} />} tone="bg-purple-100 text-purple-700" name="Change Domain" to={subjectFor('Change primary domain')} />}
                                     <Tile icon={<Headset size={18} />} tone="bg-cyan-100 text-cyan-700" name="Open Support Ticket" to={`/tickets/new?service=${s.id}`} />
-                                    {!['cancelled', 'terminated'].includes(s.status) && <Tile icon={<CircleX size={18} />} tone="bg-rose-100 text-rose-600" name="Request Cancellation" to={subjectFor('Cancellation request')} />}
+                                    {canCancel && <Tile icon={<CircleX size={18} />} tone="bg-rose-100 text-rose-600" name="Request Cancellation" onClick={() => setDialog('cancel')} />}
                                 </div>
                             </SectionCard>
                         </div>
@@ -590,6 +638,9 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
 
             {dialog === 'password' && (
                 <PasswordModal s={s} onClose={() => setDialog(null)} onDone={(data) => { setDialog(null); fresh(data); reveal.reset(); setShowPassword(false); setNotice(`Your ${panelLabel} password has been changed.`); }} />
+            )}
+            {dialog === 'cancel' && (
+                <CancelModal s={s} onClose={() => setDialog(null)} onDone={(data) => { setDialog(null); fresh(data); setNotice('Your cancellation request has been sent.'); }} />
             )}
             {dialog === 'upgrade' && (
                 <UpgradeModal

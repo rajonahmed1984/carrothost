@@ -41,7 +41,7 @@ type Values = {
     termination_enabled: boolean; terminate_after_days: number; reminder_before_due_days: number; overdue_notice_1: number; overdue_notice_2: number;
     overdue_notice_3: number; domain_reminder_days: string; usage_update_enabled: boolean; domain_sync_enabled: boolean;
     cron_report_enabled: boolean; domain_sync_report_enabled: boolean; report_recipients: string | null;
-    notify_new_order: boolean; notify_invoice_created: boolean; notify_invoice_paid: boolean; notify_order_status: boolean;
+    notify_new_order: boolean; notify_invoice_created: boolean; notify_invoice_paid: boolean; notify_order_status: boolean; notify_cancellation_request: boolean; notify_ticket: boolean; notify_chat: boolean;
     sms_enabled: boolean; sms_api_url: string | null; sms_customer_id: string | null; sms_whitelisted_ip: string | null;
     sms_invoice_created_enabled: boolean; sms_invoice_paid_enabled: boolean; sms_invoice_reminder_enabled: boolean;
     sms_invoice_created_template: string; sms_invoice_paid_template: string; sms_invoice_reminder_template: string;
@@ -429,12 +429,15 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
                     </Section>
                     <Section title="Admin Reports & Notifications">
                         <div className="grid gap-3 md:grid-cols-2">
-                            <Check checked={values.cron_report_enabled} onChange={set('cron_report_enabled')} label="Email the daily Cron Job Activity report at midnight" />
-                            <Check checked={values.domain_sync_report_enabled} onChange={set('domain_sync_report_enabled')} label="Email the Domain Synchronisation Cron Report after the midnight sync" />
+                            <Check checked={values.cron_report_enabled} onChange={set('cron_report_enabled')} label="Daily report at midnight: what the cron jobs did" />
+                            <Check checked={values.domain_sync_report_enabled} onChange={set('domain_sync_report_enabled')} label="Daily report at midnight: what the domain sync changed" />
                             <Check checked={values.notify_new_order} onChange={set('notify_new_order')} label="Email when a client places a new order" />
                             <Check checked={values.notify_invoice_created} onChange={set('notify_invoice_created')} label="Email when an invoice is created (renewals, add funds, manual)" />
                             <Check checked={values.notify_invoice_paid} onChange={set('notify_invoice_paid')} label="Email when an invoice is paid" />
                             <Check checked={values.notify_order_status} onChange={set('notify_order_status')} label="Email when an order is accepted or cancelled" />
+                            <Check checked={values.notify_cancellation_request} onChange={set('notify_cancellation_request')} label="Email when a client requests a cancellation" />
+                            <Check checked={values.notify_ticket} onChange={set('notify_ticket')} label="Email when a client opens or replies to a ticket" />
+                            <Check checked={values.notify_chat} onChange={set('notify_chat')} label="Email when a client starts a chat" />
                         </div>
                         <Field label="Send reports and notifications to" hint="Comma separated. Leave blank to send to every admin.">
                             <Input placeholder="admin@example.com, billing@example.com" {...text('report_recipients')} />

@@ -126,7 +126,7 @@ Artisan::command('services:server-status', function (App\Services\AutomationServ
     $this->info(count(array_filter($rows, fn ($r) => $r['server_suspended'] === false)).' account(s) still running on the server. Run billing:enforce-suspensions to suspend them.');
 })->purpose('Show what the server says about each account the panel shows as suspended (changes nothing)');
 
-Artisan::command('domains:sync {--no-report : Do not email the Domain Synchronisation Cron Report}', function (App\Services\AutomationService $automation, App\Services\AdminReports $reports) {
+Artisan::command('domains:sync', function (App\Services\AutomationService $automation) {
     try {
         $report = $automation->syncDomainsReport();
     } catch (Throwable $e) {
@@ -137,20 +137,22 @@ Artisan::command('domains:sync {--no-report : Do not email the Domain Synchronis
     ActivityLog::record('automation.run', context: ['task' => 'domain_sync', 'count' => count($report['synced'])]);
     $this->info('domain_sync: '.count($report['synced']).' synced, '.count($report['failed']).' failed, '.count($report['missing']).' not found');
 
-    if ($report['enabled'] && config('billing.reports.domain_sync') && ! $this->option('no-report')) {
-        $this->info($reports->sendDomainSync($report) ? 'Domain sync report emailed.' : 'Domain sync report could not be sent.');
+    // The midnight report that runs right after this one includes what it did.
+    if ($report['enabled']) {
+        App\Services\AdminReports::rememberDomainSync($report);
     }
-})->purpose('Copy expiry and status from the registrars and email the sync report');
+})->purpose('Copy expiry and status from the registrars; the daily report lists what changed');
 
 Artisan::command('reports:cron-activity {--date= : The day to report on (Y-m-d); default yesterday} {--force : Send even when the report is turned off}', function (App\Services\AdminReports $reports) {
-    if (! config('billing.reports.cron_activity') && ! $this->option('force')) {
-        $this->info('The Cron Job Activity report is turned off in Settings.');
+    $activity = config('billing.reports.cron_activity') || $this->option('force');
+    if (! $activity && ! (config('billing.reports.domain_sync') && config('billing.domain_sync_enabled'))) {
+        $this->info('The daily report is turned off in Settings.');
 
         return;
     }
     $day = $this->option('date') ? Illuminate\Support\Carbon::parse($this->option('date')) : null;
-    $this->info($reports->sendCronActivity($day) ? 'Cron Job Activity report emailed.' : 'Cron Job Activity report could not be sent.');
-})->purpose('Email the admins what the daily jobs did');
+    $this->info($reports->sendCronActivity($day, $activity) ? 'Daily report emailed.' : 'Daily report could not be sent.');
+})->purpose('Email the admins what the daily jobs did and what the domain sync changed');
 
 Artisan::command('audit:verify', function () {
     // Walks the audit trail's hash chain. A changed row fails its own hash; a removed one breaks the link.
@@ -214,9 +216,10 @@ Artisan::command('security:check', function () {
 Schedule::call(fn () => Illuminate\Support\Facades\Cache::put('scheduler.heartbeat', now()->toISOString(), now()->addDay()))->everyMinute()->name('scheduler-heartbeat');
 
 // Midnight: first the report on the day that just ended, then the domain sync and its report.
+// Same minute, in this order: the scheduler runs them one after the other, so the report includes the sync.
+Schedule::command('domains:sync')->dailyAt('00:00')->withoutOverlapping();
 Schedule::command('reports:cron-activity')->dailyAt('00:00');
 Schedule::command('audit:verify')->dailyAt('04:30');
-Schedule::command('domains:sync')->dailyAt('00:00')->withoutOverlapping();
 Schedule::command('billing:renewals')->dailyAt('01:00');
 Schedule::command('billing:expire-domains')->dailyAt('01:15');
 Schedule::command('billing:terminate')->dailyAt('02:30');

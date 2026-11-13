@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Mail\AdminNotice;
+use App\Models\ChatMessage;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Service;
+use App\Models\Ticket;
+use App\Models\User;
 use App\Support\MailFrom;
 use App\Support\PaymentMethods;
 use Illuminate\Support\Facades\Log;
@@ -13,10 +17,13 @@ use Throwable;
 
 /**
  * Emails the admins when something needs their eye: a new order, an invoice raised outside an
- * order, a payment, an order accepted or cancelled. Each kind can be turned off in Settings >
- * Automation; they go to the report recipients there, else every admin.
+ * order, a payment, an order accepted or cancelled, a cancellation request, a support ticket or
+ * chat. Each kind can be turned off in Settings > Automation; they go to the report recipients
+ * there, else every admin. Tickets and chats also go to every active staff member.
  *
- * Sent after the response, so a slow mail server or reverse DNS lookup never delays checkout.
+ * Queued like the customer emails, so a slow mail server or reverse DNS lookup never delays
+ * checkout. (Sending after the response was dropped: on LiteSpeed the PHP process can end once
+ * the response is out, and the email was lost.)
  */
 class AdminNotifier
 {
@@ -44,15 +51,120 @@ class AdminNotifier
                         'Payment Method' => PaymentMethods::label($order->payment_method),
                     ]],
                     $this->customer($client),
-                    ['title' => 'ISP Information', 'rows' => ['IP' => $ip, 'Host' => $this->host($ip)]],
+                    ['title' => 'ISP Information', 'rows' => ['IP' => $ip, 'Host' => null]],
                 ],
                 items: $invoice ? $this->items($invoice) : [],
                 totalLabel: 'Total Due Today',
                 total: $invoice ? $this->money($invoice, $invoice->total) : null,
                 url: url("/admin/orders/{$order->id}"),
                 button: 'View order',
+                hostOf: $ip,
             );
         });
+    }
+
+    /** A client asked to cancel a service from its page. */
+    public function cancellationRequest(Service $service, string $type, string $reason): void
+    {
+        $this->later('cancellation_request', function () use ($service, $type, $reason) {
+            $service->loadMissing('client', 'product');
+            $client = $service->client;
+            $when = $type === 'immediate' ? 'Immediate' : 'End of Billing Period'.($service->next_due_date ? ' ('.$service->next_due_date->format('d M Y').')' : '');
+
+            return new AdminNotice(
+                sender: MailFrom::SUPPORT,
+                subjectLine: "Cancellation request - {$client->name}".($service->domain ? " ({$service->domain})" : ''),
+                heading: 'Cancellation Request',
+                intro: "{$client->name} asked to cancel a service. Nothing changes until you accept it under Pending Cancellations: then the service is cancelled and its account suspended on the server.",
+                groups: [
+                    ['title' => 'Service', 'rows' => [
+                        'Service ID' => (string) $service->id,
+                        'Product' => $service->product?->name,
+                        'Domain' => $service->domain,
+                        'Status' => ucfirst((string) $service->status),
+                        'Next Due Date' => $service->next_due_date?->format('d M Y'),
+                    ]],
+                    ['title' => 'Request', 'rows' => [
+                        'Cancellation Type' => $when,
+                    ]],
+                    $this->customer($client),
+                ],
+                items: [],
+                totalLabel: null,
+                total: null,
+                url: url('/admin/products-services?status=pending_cancellation'),
+                button: 'View pending cancellations',
+                body: $this->clip($reason),
+            );
+        }, staff: true);
+    }
+
+    /** A client opened a ticket, or replied to one ($reply). */
+    public function ticket(Ticket $ticket, string $message, bool $reply = false): void
+    {
+        $this->later('ticket', function () use ($ticket, $message, $reply) {
+            $ticket->loadMissing('client', 'service.product');
+            $client = $ticket->client;
+
+            return new AdminNotice(
+                sender: MailFrom::SUPPORT,
+                subjectLine: ($reply ? 'Customer reply' : 'New ticket')." #{$ticket->number}: {$ticket->subject}",
+                heading: $reply ? 'Customer Reply' : 'New Support Ticket',
+                intro: $reply ? "{$client->name} replied to ticket #{$ticket->number}." : "{$client->name} opened a new ticket.",
+                groups: [
+                    ['title' => 'Ticket', 'rows' => [
+                        'Ticket' => "#{$ticket->number}",
+                        'Subject' => $ticket->subject,
+                        'Department' => ucfirst((string) $ticket->department),
+                        'Priority' => ucfirst((string) $ticket->priority),
+                        'Service' => $ticket->service ? trim(($ticket->service->product?->name ?? 'Service').($ticket->service->domain ? " - {$ticket->service->domain}" : '')) : null,
+                    ]],
+                    $this->customer($client),
+                ],
+                items: [],
+                totalLabel: null,
+                total: null,
+                url: url("/admin/tickets/{$ticket->id}"),
+                button: 'View ticket',
+                body: $this->clip($message),
+            );
+        }, staff: true);
+    }
+
+    /**
+     * A client wrote in the support chat. Only the first message staff have not seen yet is
+     * emailed, so a conversation sends one email, not one per line.
+     */
+    public function chat(ChatMessage $chat, int $staffReadId): void
+    {
+        $earlierUnread = ChatMessage::where('client_id', $chat->client_id)->whereNull('user_id')
+            ->where('id', '<', $chat->id)->where('id', '>', $staffReadId)->exists();
+        if ($earlierUnread) {
+            return;
+        }
+
+        $this->later('chat', function () use ($chat) {
+            $client = $chat->client;
+
+            return new AdminNotice(
+                sender: MailFrom::SUPPORT,
+                subjectLine: "New chat message - {$client->name}",
+                heading: 'New Chat Message',
+                intro: "{$client->name} wrote in the support chat.",
+                groups: [$this->customer($client)],
+                items: [],
+                totalLabel: null,
+                total: null,
+                url: url('/admin/chats/'.$client->id),
+                button: 'Open chat',
+                body: $this->clip($chat->message ?: ($chat->attachment_name ? "Sent a file: {$chat->attachment_name}" : '')),
+            );
+        }, staff: true);
+    }
+
+    private function clip(string $text): string
+    {
+        return mb_strimwidth(trim($text), 0, 2000, '...');
     }
 
     public function orderAccepted(Order $order): void
@@ -178,36 +290,27 @@ class AdminNotifier
         return $invoice->currency.' '.number_format((float) $amount, 2);
     }
 
-    /** Reverse DNS of the buyer's address, when it has one. */
-    private function host(?string $ip): ?string
-    {
-        if (! $ip || ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            return null;
-        }
-        $host = @gethostbyaddr($ip);
-
-        return $host && $host !== $ip ? $host : null;
-    }
-
-    /** Builds and sends once the response has gone out (or at the end of a console command). */
-    private function later(string $kind, callable $build): void
+    /** Builds now and queues the email; the queue worker (cron, every minute) sends it. */
+    private function later(string $kind, callable $build, bool $staff = false): void
     {
         if (! config("billing.admin_notifications.{$kind}", true)) {
             return;
         }
 
-        // Not through the queue: these must go out even where no queue worker runs.
-        app()->terminating(function () use ($kind, $build) {
-            $to = $this->reports->recipients();
-            if ($to === []) {
-                return;
-            }
+        $to = $this->reports->recipients();
+        if ($staff) {
+            // Support staff answer tickets and chats too, not only the report recipients.
+            $to = collect($to)->merge(User::where('is_admin', true)->where('is_active', true)->pluck('email'))
+                ->filter()->map(fn ($e) => strtolower(trim($e)))->unique()->values()->all();
+        }
+        if ($to === []) {
+            return;
+        }
 
-            try {
-                Mail::to($to)->send($build());
-            } catch (Throwable $e) {
-                Log::warning("Could not send the {$kind} admin notification: ".$e->getMessage());
-            }
-        });
+        try {
+            Mail::to($to)->queue($build());
+        } catch (Throwable $e) {
+            Log::warning("Could not queue the {$kind} admin notification: ".$e->getMessage());
+        }
     }
 }

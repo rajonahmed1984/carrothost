@@ -21,6 +21,8 @@ function useStatusParam(): [string, (value: string) => void] {
 export type Service = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; provision_status: string;
     provision_error: string | null; remote_id: string | null; next_due_date: string | null;
+    terminate_end_of_cycle?: boolean; terminate_reason?: string | null; cancellation_type?: string | null; cancellation_reason?: string | null;
+    cancellation_requested_at?: string | null; cancellation_accepted_at?: string | null;
     client: { id: number; name: string }; product: { name: string; module: string | null; group?: { id: number; name: string } | null }; server: { name: string } | null;
 };
 
@@ -28,6 +30,37 @@ const confirmText: Record<string, string> = {
     suspend: 'Suspend this account? The customer site goes offline.',
     terminate: 'Terminate this account? This permanently deletes the customer files, email and databases from the server.',
 };
+
+/** A client's cancellation request in the services list, with Accept / Reject while it waits. */
+function CancellationNote({ service: s }: { service: Service }) {
+    const qc = useQueryClient();
+    const decide = useMutation({
+        mutationFn: (decision: 'accept' | 'reject') => api.post(`/services/${s.id}/cancellation`, { decision }),
+        onSettled: () => qc.invalidateQueries({ queryKey: ['/services'] }),
+        onError: (e) => alertDialog(errorMessage(e)),
+    });
+
+    if (!s.cancellation_requested_at) {
+        return s.terminate_end_of_cycle ? <div className="mt-1 text-xs font-semibold text-rose-700">Terminates end of cycle</div> : null;
+    }
+    const type = s.cancellation_type === 'immediate' ? 'Immediate' : 'End of period';
+
+    return (
+        <div className="mt-1 max-w-60 text-xs">
+            <span className="font-semibold text-rose-700">{s.cancellation_accepted_at ? `Cancellation accepted · ${type}` : `Cancellation requested · ${type}`}</span>
+            <span className="text-slate-500"> · {new Date(s.cancellation_requested_at).toLocaleDateString()}</span>
+            {s.cancellation_reason && <div className="truncate text-slate-500" title={s.cancellation_reason}>{s.cancellation_reason}</div>}
+            {s.cancellation_accepted_at
+                ? <div className="text-slate-500">Cancels on {s.next_due_date ?? 'its due date'}</div>
+                : (
+                    <div className="mt-1 flex gap-3">
+                        <Button variant="link" disabled={decide.isPending} onClick={() => ask(`Accept this cancellation? Unpaid renewal invoices for it are cancelled; the service is then cancelled in the portal and its account suspended on the server${s.cancellation_type === 'immediate' ? ' now' : ` on ${s.next_due_date ?? 'its due date'}`}.`, () => decide.mutate('accept'))}>Accept</Button>
+                        <Button variant="link-danger" disabled={decide.isPending} onClick={() => ask('Reject this cancellation request? The service carries on as it is.', () => decide.mutate('reject'))}>Reject</Button>
+                    </div>
+                )}
+        </div>
+    );
+}
 
 export function ServiceActions({ service }: { service: Service }) {
     const qc = useQueryClient();
@@ -181,7 +214,15 @@ export function ServicesPage() {
                         ),
                         align: 'right',
                     },
-                    { header: 'Status', cell: (s) => <Status value={s.status} /> },
+                    {
+                        header: 'Status',
+                        cell: (s) => (
+                            <>
+                                <Status value={s.status} />
+                                {['active', 'suspended', 'pending'].includes(s.status) && <CancellationNote service={s} />}
+                            </>
+                        ),
+                    },
                     {
                         header: 'Provisioning',
                         cell: (s) => (

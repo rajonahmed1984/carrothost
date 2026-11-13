@@ -18,6 +18,9 @@ class RenewalService
 
         $services = Service::with(['client', 'product'])
             ->whereIn('status', ['active', 'suspended'])
+            // Ending on the due date (set to terminate, or an accepted cancellation): not billed again.
+            ->where('terminate_end_of_cycle', false)
+            ->whereNull('cancellation_accepted_at')
             ->whereDate('next_due_date', '<=', $cutoff)
             ->get();
 
