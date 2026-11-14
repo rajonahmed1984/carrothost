@@ -280,7 +280,7 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
             <div className="min-w-0 space-y-4 md:col-span-2 xl:col-span-1">
                 <Panel title="Other Actions">
                     <div className="space-y-1 p-3">
-                        {c.status === 'active' && <Action icon={<LogIn size={14} />} disabled={impersonate.isPending} onClick={() => impersonate.mutate()}>Login as Client</Action>}
+                        {c.status !== 'closed' && <Action icon={<LogIn size={14} />} disabled={impersonate.isPending} onClick={() => impersonate.mutate()}>Login as Client</Action>}
                         <Action icon={<FileText size={14} />} onClick={() => onTab('transactions')}>View Transactions</Action>
                         <Action icon={<MessageSquare size={14} />} to={`/admin/chats/${c.id}`}>Chat with Client</Action>
                         <Action icon={<LifeBuoy size={14} />} to={`/admin/tickets?client=${c.id}`}>View Tickets</Action>

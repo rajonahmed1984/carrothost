@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Support\EmailTemplates;
 use App\Mail\PasswordResetLink;
 use App\Models\ActivityLog;
+use App\Models\Client;
 use App\Models\ClientUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -112,6 +113,6 @@ class SubUsers
             ->where('is_owner', false)
             ->where('status', 'active')
             ->when($requirePassword, fn ($q) => $q->whereNotNull('password'))
-            ->whereHas('client', fn ($q) => $q->where('status', 'active'));
+            ->whereHas('client', fn ($q) => $q->whereIn('status', Client::CAN_SIGN_IN));
     }
 }

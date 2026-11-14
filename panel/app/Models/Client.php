@@ -16,6 +16,9 @@ class Client extends Authenticatable
 
     protected $attributes = ['status' => 'active'];
 
+    /** Statuses that can sign in. Inactive only means no active service or domain right now. */
+    public const CAN_SIGN_IN = ['active', 'inactive'];
+
     protected $hidden = ['password', 'remember_token', 'login_otp_code', 'login_otp_expires_at', 'support_pin', 'support_pin_expires_at'];
 
     protected function casts(): array

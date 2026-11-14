@@ -100,6 +100,7 @@ $daily = [
     'billing:expire-domains' => ['expireDomains', 'domain_expiry', 'Mark domains past their expiry date as expired'],
     'billing:terminate' => ['terminate', 'terminations', 'Terminate end-of-cycle and long-overdue services'],
     'billing:update-usage' => ['updateUsage', 'usage', 'Refresh disk and bandwidth usage from the servers'],
+    'clients:sync-status' => ['syncClientStatus', 'client_status', 'Mark clients with no active service or domain Inactive, and back to Active when they have one'],
     'billing:enforce-suspensions' => ['enforceSuspensions', 'enforce_suspensions', 'Suspend on the server every account the panel shows as suspended'],
 ];
 foreach ($daily as $name => [$method, $task, $purpose]) {
@@ -230,6 +231,7 @@ Schedule::command('registrars:sync-tlds')->dailyAt('03:45');
 Schedule::command('registrars:sync')->dailyAt('04:00');
 Schedule::command('billing:suspend-overdue')->everyMinute()->withoutOverlapping();
 Schedule::command('billing:enforce-suspensions')->dailyAt('02:15')->withoutOverlapping();
+Schedule::command('clients:sync-status')->dailyAt('02:45');
 Schedule::command('tickets:auto-close')->dailyAt('03:00');
 // Shared hosting has no long-running worker, so cron drains the queue each minute.
 Schedule::command('queue:work --stop-when-empty --max-time=50')->everyMinute()->withoutOverlapping();

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\ProvisionService;
 use App\Jobs\SendInvoiceSms;
 use App\Models\ActivityLog;
+use App\Models\Client;
 use App\Models\Domain;
 use App\Models\DomainReminder;
 use App\Models\Invoice;
@@ -123,6 +124,21 @@ class AutomationService
         }
 
         return $sent;
+    }
+
+    /**
+     * A client with no active service and no active domain becomes Inactive; one that has either again
+     * becomes Active. Login and every feature stay the same either way. Closed clients are left alone.
+     */
+    public function syncClientStatus(): int
+    {
+        $live = fn ($q) => $q->where(fn ($q) => $q->whereHas('services', fn ($s) => $s->where('status', 'active'))
+            ->orWhereHas('domains', fn ($d) => $d->where('status', 'active')));
+
+        $inactive = Client::where('status', 'active')->whereNot($live)->update(['status' => 'inactive']);
+        $active = Client::where('status', 'inactive')->where($live)->update(['status' => 'active']);
+
+        return $inactive + $active;
     }
 
     /** Active domains past their expiry date become Expired, unless the registrar says otherwise on its next sync. */

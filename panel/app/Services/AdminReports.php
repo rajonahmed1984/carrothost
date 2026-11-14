@@ -30,6 +30,7 @@ class AdminReports
         'domain_expiry' => 'Domains marked expired',
         'suspensions' => 'Services suspended',
         'terminations' => 'Services terminated',
+        'client_status' => 'Clients marked active/inactive',
         'ticket_auto_close' => 'Tickets auto-closed',
         'domain_sync' => 'Domains synced with registrars',
         'usage' => 'Service usage updated',

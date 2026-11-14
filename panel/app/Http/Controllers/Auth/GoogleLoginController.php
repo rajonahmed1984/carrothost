@@ -81,7 +81,7 @@ class GoogleLoginController extends Controller
     {
         abort_unless(LoginOtpService::isLocalDev(), 404);
 
-        return ['clients' => Client::where('status', 'active')->orderBy('name')->limit(20)->get(['id', 'name', 'email'])];
+        return ['clients' => Client::whereIn('status', Client::CAN_SIGN_IN)->orderBy('name')->limit(20)->get(['id', 'name', 'email'])];
     }
 
     /** Stands in for Google's callback while no Google keys are set. Only ever reaches the client guard. */

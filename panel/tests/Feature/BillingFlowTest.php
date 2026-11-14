@@ -433,6 +433,30 @@ class BillingFlowTest extends TestCase
         $this->postJson('/api/client/login', ['email' => 'none@example.com', 'password' => 'correct-horse'])->assertUnprocessable();
     }
 
+    public function test_cron_marks_clients_without_active_services_inactive_and_they_can_still_log_in(): void
+    {
+        Queue::fake();
+        $product = Product::create(['name' => 'Starter', 'type' => 'other']);
+        $product->prices()->create(['cycle' => 'monthly', 'price' => '10.00']);
+        $idle = Client::create(['name' => 'Idle', 'email' => 'idle@example.com', 'password' => 'correct-horse']);
+        $busy = Client::create(['name' => 'Busy', 'email' => 'busy@example.com']);
+        $closed = Client::create(['name' => 'Shut', 'email' => 'shut@example.com', 'status' => 'closed']);
+        app(BillingService::class)->createOrder($idle, [['product_id' => $product->id, 'cycle' => 'monthly']]);
+        $idle->services()->update(['status' => 'terminated']);
+        app(BillingService::class)->createOrder($busy, [['product_id' => $product->id, 'cycle' => 'monthly']]);
+        $busy->services()->update(['status' => 'active']);
+
+        $this->artisan('clients:sync-status')->assertSuccessful();
+
+        $this->assertSame(['inactive', 'active', 'closed'], [$idle->fresh()->status, $busy->fresh()->status, $closed->fresh()->status]);
+        $this->postJson('/api/client/login', ['email' => 'idle@example.com', 'password' => 'correct-horse'])->assertOk();
+
+        // A new active service brings the client back to Active on the next run.
+        $idle->services()->update(['status' => 'active']);
+        $this->artisan('clients:sync-status')->assertSuccessful();
+        $this->assertSame('active', $idle->fresh()->status);
+    }
+
     public function test_admin_login_and_detail_routes(): void
     {
         $admin = User::factory()->create();

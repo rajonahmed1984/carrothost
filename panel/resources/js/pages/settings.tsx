@@ -59,7 +59,7 @@ const emptySecrets = { recaptcha_secret_key: '', recaptcha_api_key: '', mail_pas
 const TASKS: [string, string][] = [
     ['renewals', 'Renewal invoices'], ['suspensions', 'Suspend overdue'], ['terminations', 'Terminate'], ['invoice_reminders', 'Payment reminders'],
     ['domain_reminders', 'Domain reminders'], ['domain_expiry', 'Expire domains'], ['domain_sync', 'Domain sync'], ['usage', 'Usage update'], ['enforce_suspensions', 'Server suspensions'],
-    ['ticket_auto_close', 'Close tickets'],
+    ['client_status', 'Client status'], ['ticket_auto_close', 'Close tickets'],
 ];
 
 /** Whether cron is running the scheduler, and when each daily job last ran. */

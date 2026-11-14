@@ -18,7 +18,8 @@ class Portal
             'label' => 'CarrotHost',
             'recaptcha_action' => 'LOGIN',
             'min_password' => 10,
-            'scope' => ['status' => 'active'],
+            // Inactive (no live services) still signs in with every feature; only Closed is locked out.
+            'scope' => ['status' => \App\Models\Client::CAN_SIGN_IN],
         ],
         self::ADMIN => [
             'guard' => 'web',
@@ -64,7 +65,7 @@ class Portal
     public static function allows(string $portal, Authenticatable $user): bool
     {
         foreach (self::scope($portal) as $column => $value) {
-            if ($user->{$column} !== $value) {
+            if (is_array($value) ? ! in_array($user->{$column}, $value, true) : $user->{$column} !== $value) {
                 return false;
             }
         }

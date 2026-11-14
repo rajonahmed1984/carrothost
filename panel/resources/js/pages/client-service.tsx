@@ -276,13 +276,13 @@ function CancelModal({ s, onClose, onDone }: { s: Detail; onClose: () => void; o
                         </label>
                     </div>
                 </Field>
-                <Field label="Reason for cancelling">
+                <Field label="Reason for cancelling" hint="At least 5 characters.">
                     <textarea className="ui-input min-h-24" required minLength={5} maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us why you are leaving" />
                 </Field>
                 <ErrorNote error={send.error} />
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={onClose}>Keep Service</Button>
-                    <Button variant="danger" disabled={send.isPending || reason.trim().length < 5}><CircleX size={14} /> {send.isPending ? 'Sending...' : 'Request Cancellation'}</Button>
+                    <Button variant="danger" disabled={send.isPending || reason.trim() === ''}><CircleX size={14} /> {send.isPending ? 'Sending...' : 'Request Cancellation'}</Button>
                 </div>
             </form>
         </Modal>
