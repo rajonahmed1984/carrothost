@@ -15,7 +15,10 @@ type WalletInfo = {
     balance: number; balance_bdt: number; unfunded: number; average_rate: number | null;
 };
 type Registrar = { code: string; name: string; reseller_id: string | null; has_api_key: boolean; currency: string; last_synced_at: string | null; sync_error: string | null; connection_ok: boolean | null; connection_error: string | null; connection_checked_at: string | null; wallet: WalletInfo;
-    api_balance: string | null; api_balance_at: string | null };
+    api_balance: string | null; api_balance_bdt: number | null; api_balance_at: string | null };
+/** The account history as the registrar keeps it: receipt = money added, debit = charge, credit = refund. */
+type RegistrarTxn = { id: string; type: 'receipt' | 'debit' | 'credit'; at: string; description: string; amount: string };
+type TxnPage = { page: number; pages: number; total: number; currency: string; balance: string | null; balance_bdt: number | null; balance_at: string | null; rows: RegistrarTxn[] };
 type Deposit = { id: number; paid_on: string; method: string; amount_bdt: string; fee_bdt: string; credited: string; reference: string | null; note: string | null; rate: number };
 type Charge = {
     id: number; type: 'debit' | 'credit'; charged_at: string; description: string | null; amount: string; action: string; source: 'sync' | 'manual';
@@ -37,13 +40,12 @@ type Report = {
         paid_not_done: { domain_id: number; domain: string; registrar: string; paid_at: string; amount: number; invoice_id: number; invoice: string; client_id: number }[];
         done_not_paid: { charge_id: number; domain_id: number; domain: string | null; registrar: string; charged_at: string; action: string; cost_bdt: number; client_id: number | null }[];
         below_cost: { charge_id: number; domain_id: number; domain: string | null; registrar: string; charged_at: string; cost_bdt: number; sale: number; loss: number; client_id: number | null }[];
-        unmatched: { id: number; registrar_code: string; description: string | null; amount: string; charged_at: string; cost_bdt: number }[];
+        unmatched: { id: number; registrar_code: string; description: string | null; amount: string; action: string; charged_at: string; cost_bdt: number }[];
     };
     domains: DomainCost[];
     unpriced: { registrar: string; tld: string; action: string; reason: 'no_price' | 'no_rate' }[];
 };
 
-const methods = [['bank', 'Bank'], ['card', 'Card'], ['bkash', 'bKash'], ['other', 'Other']] as const;
 const actions = ['register', 'renew', 'transfer', 'other'];
 const label = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
 const inCurrency = (v: string | number, currency: string) => money(v, currency);
@@ -230,167 +232,109 @@ function DomainPicker({ value, onChange }: { value: { id: number; name: string }
     );
 }
 
-function DepositForm({ registrar, onSaved }: { registrar: Registrar; onSaved: (l: Ledger) => void }) {
-    const [form, setForm] = useState({ paid_on: today(), method: 'bank', amount_bdt: '', fee_bdt: '', credited: '', reference: '', note: '' });
-    const bdt = registrar.currency === 'BDT';
-    const rate = Number(form.credited) > 0 ? (Number(form.amount_bdt) + Number(form.fee_bdt || 0)) / Number(form.credited) : null;
-    const save = useMutation({
-        mutationFn: async () => (await api.post<Ledger>(`/registrars/${registrar.code}/deposits`, form)).data,
-        onSuccess: (l) => { onSaved(l); setForm({ ...form, amount_bdt: '', fee_bdt: '', credited: '', reference: '', note: '' }); },
-    });
-
-    return (
-        <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3 rounded-xl border border-slate-200 p-3">
-            <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Date"><Input type="date" required max={today()} value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} /></Field>
-                <Field label="Paid by"><Select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}>{methods.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
-                <Field label="Reference"><Input maxLength={255} placeholder="Bank ref, TrxID..." value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
-                <Field label="Amount sent (BDT)"><Input type="number" required min="0.01" step="0.01" value={form.amount_bdt} onChange={(e) => setForm({ ...form, amount_bdt: e.target.value, ...(bdt && !form.credited ? { credited: e.target.value } : {}) })} /></Field>
-                <Field label="Fee (BDT)" hint="Bank, card or bKash charge"><Input type="number" min="0" step="0.01" placeholder="0.00" value={form.fee_bdt} onChange={(e) => setForm({ ...form, fee_bdt: e.target.value })} /></Field>
-                <Field label={`Credited to account (${registrar.currency})`} hint="What the registrar added to your balance"><Input type="number" required min="0.01" step="0.01" value={form.credited} onChange={(e) => setForm({ ...form, credited: e.target.value })} /></Field>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs text-slate-600">
-                    {rate !== null ? <>Effective cost: <strong className="text-slate-900">{bdt ? `৳${rate.toFixed(4)} per ৳1 of balance` : `৳${rate.toFixed(2)} per $1`}</strong> (fee included)</> : 'Fill in the amounts to see the effective rate.'}
-                </span>
-                <Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Add Deposit'}</Button>
-            </div>
-            <ErrorNote error={save.error} />
-        </form>
-    );
-}
-
-function ChargeForm({ registrar, onSaved }: { registrar: Registrar; onSaved: (l: Ledger) => void }) {
-    const [form, setForm] = useState({ charged_at: today(), type: 'debit', action: 'renew', amount: '', description: '' });
-    const [domain, setDomain] = useState<{ id: number; name: string } | null>(null);
-    const save = useMutation({
-        mutationFn: async () => (await api.post<Ledger>(`/registrars/${registrar.code}/charges`, { ...form, domain_id: domain?.id ?? null })).data,
-        onSuccess: (l) => { onSaved(l); setForm({ ...form, amount: '', description: '' }); setDomain(null); },
-    });
-
-    return (
-        <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-3 rounded-xl border border-slate-200 p-3">
-            <div className="grid gap-3 sm:grid-cols-4">
-                <Field label="Date"><Input type="date" required max={today()} value={form.charged_at} onChange={(e) => setForm({ ...form, charged_at: e.target.value })} /></Field>
-                <Field label="Type"><Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="debit">Charge</option><option value="credit">Refund from registrar</option></Select></Field>
-                <Field label="For"><Select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value })}>{actions.map((a) => <option key={a} value={a}>{label(a)}</option>)}</Select></Field>
-                <Field label={`Amount (${registrar.currency})`}><Input type="number" required min="0.01" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-                <div><span className="mb-1 block text-xs font-semibold text-slate-600">Domain</span><DomainPicker value={domain} onChange={setDomain} /></div>
-                <Field label="Description"><Input maxLength={255} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-            </div>
-            <ErrorNote error={save.error} />
-            <div className="flex justify-end"><Button disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Add Charge'}</Button></div>
-        </form>
-    );
-}
-
-/** Link a synced or manual charge to the right domain. */
-function MatchCharge({ registrar, charge, onSaved }: { registrar: Registrar; charge: Charge; onSaved: (l: Ledger) => void }) {
+/** Links a charge the sync could not match to its domain, from the profit report's check list. */
+function MatchCharge({ code, chargeId, action }: { code: string; chargeId: number; action: string }) {
+    const qc = useQueryClient();
     const [open, setOpen] = useState(false);
     const save = useMutation({
-        mutationFn: async (d: { id: number; name: string } | null) => (await api.put<Ledger>(`/registrars/${registrar.code}/charges/${charge.id}`, { domain_id: d?.id ?? null, action: charge.action })).data,
-        onSuccess: (l) => { setOpen(false); onSaved(l); },
+        mutationFn: async (d: { id: number; name: string }) => (await api.put(`/registrars/${code}/charges/${chargeId}`, { domain_id: d.id, action })).data,
+        onSuccess: () => { setOpen(false); refreshKeys(qc, code); },
         onError: (e) => alertDialog(errorMessage(e)),
     });
 
-    if (!open) return <Button variant="link" onClick={() => setOpen(true)}>{charge.domain ? charge.domain.name : 'Match domain'}</Button>;
+    if (!open) return <Button variant="link" onClick={() => setOpen(true)}>Match domain</Button>;
 
     return <div className="w-56"><DomainPicker value={null} onChange={(d) => d && save.mutate(d)} /></div>;
 }
 
+const txnStyle: Record<RegistrarTxn['type'], [string, string, string]> = {
+    receipt: ['Payment', 'bg-emerald-50 text-emerald-700', 'text-emerald-700'],
+    debit: ['Charge', 'bg-rose-50 text-rose-700', 'text-slate-900'],
+    credit: ['Refund', 'bg-sky-50 text-sky-700', 'text-sky-700'],
+};
+
+/** Payments into the account, charges and refunds, read live from the registrar, newest first. */
+function RegistrarHistory({ registrar }: { registrar: Registrar }) {
+    const qc = useQueryClient();
+    const [page, setPage] = useState(1);
+    const history = useQuery({
+        queryKey: ['/registrars/transactions', registrar.code, page],
+        queryFn: async () => (await api.get<TxnPage>(`/registrars/${registrar.code}/transactions`, { params: { page } })).data,
+        placeholderData: keepPreviousData,
+        retry: false,
+    });
+    // Opening the history also re-reads the balance, so the list behind the modal catches up.
+    useEffect(() => { if (history.data) qc.invalidateQueries({ queryKey: ['registrars'] }); }, [history.data?.balance]);
+    const cur = registrar.currency;
+
+    if (history.isError) return <ErrorNote error={history.error} />;
+    if (!history.data) return <p className="py-8 text-center text-sm text-slate-500">Reading the history from {registrar.name}...</p>;
+    const d = history.data;
+
+    return (
+        <div className="space-y-3">
+            {d.rows.length === 0 ? <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">The registrar has no transactions on this account yet.</p> : (
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                    <ul className="divide-y divide-slate-100 md:hidden">
+                        {d.rows.map((t) => (
+                            <li key={t.id} className="flex items-start justify-between gap-3 px-3 py-2.5 text-sm">
+                                <div className="min-w-0">
+                                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${txnStyle[t.type][1]}`}>{txnStyle[t.type][0]}</span>
+                                    <div className="mt-1 text-slate-700">{t.description || '-'}</div>
+                                    <div className="text-[11px] text-slate-500">{new Date(t.at).toLocaleString()}</div>
+                                </div>
+                                <span className={`shrink-0 font-semibold tabular-nums ${txnStyle[t.type][2]}`}>{t.type === 'debit' ? '-' : '+'}{inCurrency(t.amount, cur)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <table className="hidden w-full text-sm md:table">
+                        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Description</th><th className="px-3 py-2 text-right">Amount</th></tr></thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {d.rows.map((t) => (
+                                <tr key={t.id}>
+                                    <td className="px-3 py-2 whitespace-nowrap tabular-nums">{new Date(t.at).toLocaleDateString('en-GB')}<span className="block text-[11px] text-slate-500">{new Date(t.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></td>
+                                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${txnStyle[t.type][1]}`}>{txnStyle[t.type][0]}</span></td>
+                                    <td className="px-3 py-2 text-slate-700">{t.description || '-'}</td>
+                                    <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap tabular-nums ${txnStyle[t.type][2]}`}>{t.type === 'debit' ? '-' : '+'}{inCurrency(t.amount, cur)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span>{d.total} transaction(s) at {registrar.name}{history.isFetching ? ' · loading...' : ''}</span>
+                {d.pages > 1 && (
+                    <span className="flex items-center gap-2">
+                        <Button type="button" variant="ghost" disabled={page <= 1 || history.isFetching} onClick={() => setPage(page - 1)}>Newer</Button>
+                        <span>Page {d.page} of {d.pages}</span>
+                        <Button type="button" variant="ghost" disabled={page >= d.pages || history.isFetching} onClick={() => setPage(page + 1)}>Older</Button>
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export function WalletModal({ registrar, onClose }: { registrar: Registrar; onClose: () => void }) {
     const qc = useQueryClient();
-    const key = ['/registrars/ledger', registrar.code];
-    const ledger = useQuery({ queryKey: key, queryFn: async () => (await api.get<Ledger>(`/registrars/${registrar.code}/ledger`)).data });
-    const [tab, setTab] = useState<'deposits' | 'charges'>('deposits');
-    const saved = (l: Ledger) => { qc.setQueryData(key, l); refreshKeys(qc, registrar.code); };
-    const removeDeposit = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/deposits/${id}`)).data, onSuccess: saved, onError: (e) => alertDialog(errorMessage(e)) });
-    const removeCharge = useMutation({ mutationFn: async (id: number) => (await api.delete<Ledger>(`/registrars/${registrar.code}/charges/${id}`)).data, onSuccess: saved, onError: (e) => alertDialog(errorMessage(e)) });
-    const w = ledger.data?.wallet ?? registrar.wallet;
+    const fresh = qc.getQueryData<Registrar[]>(['registrars'])?.find((r) => r.code === registrar.code) ?? registrar;
     const cur = registrar.currency;
 
     return (
         <Modal wide title={`${registrar.name} wallet`} onClose={onClose}>
             <div className="space-y-4">
-                <div className="grid gap-2 sm:grid-cols-4">
-                    {([
-                        ['Balance', inCurrency(w.balance, cur), `worth ${money(w.balance_bdt)}`],
-                        ['Deposited', inCurrency(w.credited, cur), `${money(w.sent_bdt)} + ${money(w.fees_bdt)} fees`],
-                        ['Spent on domains', inCurrency(w.spent, cur), w.returned ? `${inCurrency(w.returned, cur)} refunded` : `${w.deposits} deposit(s)`],
-                        ['Average cost', w.average_rate === null ? '-' : cur === 'BDT' ? `৳${w.average_rate.toFixed(4)} / ৳1` : `৳${w.average_rate.toFixed(2)} / $1`, 'fees included'],
-                    ] as [string, string, string][]).map(([k, v, h]) => (
-                        <div key={k} className="rounded-xl bg-slate-50 px-3 py-2.5"><div className="text-xs text-slate-500">{k}</div><div className="font-semibold text-slate-900 tabular-nums">{v}</div><div className="text-[11px] text-slate-500">{h}</div></div>
-                    ))}
+                <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl bg-emerald-50 px-3 py-2.5 ring-1 ring-emerald-100">
+                        <div className="text-xs text-emerald-800">Available balance</div>
+                        <div className="text-lg font-bold text-emerald-900 tabular-nums">{fresh.api_balance === null ? '-' : inCurrency(fresh.api_balance, cur)}</div>
+                        <div className="text-[11px] text-emerald-800/80">{fresh.api_balance_bdt !== null && cur !== 'BDT' ? `worth ${money(fresh.api_balance_bdt)} · ` : ''}{fresh.api_balance_at ? `read ${new Date(fresh.api_balance_at).toLocaleString()}` : 'not read yet'}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5"><div className="text-xs text-slate-500">Spent on domains</div><div className="font-semibold text-slate-900 tabular-nums">{inCurrency(fresh.wallet.spent, cur)}</div><div className="text-[11px] text-slate-500">{fresh.last_synced_at ? `synced charges · last sync ${new Date(fresh.last_synced_at).toLocaleDateString('en-GB')}` : 'not synced yet'}</div></div>
                 </div>
-                {w.unfunded > 0 && <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"><AlertTriangle size={14} className="mt-0.5 shrink-0" /> Charges of {inCurrency(w.unfunded, cur)} are more than the deposits recorded, so they are costed at the last known rate. Add the deposits (or an opening balance) that paid for them.</p>}
 
-                <nav className="flex gap-1 border-b border-slate-200">
-                    {(['deposits', 'charges'] as const).map((t) => (
-                        <button key={t} type="button" onClick={() => setTab(t)} className={`-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm font-medium ${tab === t ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                            {t === 'deposits' ? `Deposits (${ledger.data?.deposits.length ?? 0})` : `Charges (${ledger.data?.charges.length ?? 0})`}
-                        </button>
-                    ))}
-                </nav>
-
-                <QueryState query={ledger}>
-                    {ledger.data && tab === 'deposits' && (
-                        <div className="space-y-3">
-                            <DepositForm registrar={registrar} onSaved={saved} />
-                            <p className="text-xs text-slate-500">Starting now with money already in the account? Add it once as a deposit dated before your first tracked charge, at the rate you paid for it.</p>
-                            {ledger.data.deposits.length === 0 ? <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">No deposits recorded yet.</p> : (
-                                <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                    <table className="w-full min-w-[40rem] text-sm">
-                                        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Paid by</th><th className="px-3 py-2 text-right">Sent</th><th className="px-3 py-2 text-right">Fee</th><th className="px-3 py-2 text-right">Credited</th><th className="px-3 py-2 text-right">Rate</th><th className="px-3 py-2" /></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {ledger.data.deposits.map((d) => (
-                                                <tr key={d.id}>
-                                                    <td className="px-3 py-2 tabular-nums">{d.paid_on}{(d.reference || d.note) && <span className="block text-[11px] text-slate-500">{[d.reference, d.note].filter(Boolean).join(' · ')}</span>}</td>
-                                                    <td className="px-3 py-2">{methods.find(([v]) => v === d.method)?.[1] ?? d.method}</td>
-                                                    <td className="px-3 py-2 text-right tabular-nums">{money(d.amount_bdt)}</td>
-                                                    <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{money(d.fee_bdt)}</td>
-                                                    <td className="px-3 py-2 text-right font-semibold tabular-nums">{inCurrency(d.credited, cur)}</td>
-                                                    <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{cur === 'BDT' ? d.rate.toFixed(4) : `৳${d.rate.toFixed(2)}`}</td>
-                                                    <td className="px-3 py-2 text-right"><button type="button" aria-label="Delete deposit" className="icon-btn h-8 w-8 text-rose-600" disabled={removeDeposit.isPending} onClick={() => ask('Delete this deposit? Domain costs are recalculated.', () => removeDeposit.mutate(d.id))}><Trash2 size={14} /></button></td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    {ledger.data && tab === 'charges' && (
-                        <div className="space-y-3">
-                            <ChargeForm registrar={registrar} onSaved={saved} />
-                            <p className="text-xs text-slate-500">Synced charges arrive daily. Add charges by hand only while sync is not working, so nothing is counted twice.</p>
-                            {ledger.data.charges.length === 0 ? <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">No charges yet. Sync, or add them by hand.</p> : (
-                                <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                    <table className="w-full min-w-[46rem] text-sm">
-                                        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Description</th><th className="px-3 py-2">Domain</th><th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-right">Cost (BDT)</th><th className="px-3 py-2" /></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {ledger.data.charges.map((c) => (
-                                                <tr key={c.id}>
-                                                    <td className="px-3 py-2 whitespace-nowrap tabular-nums">{c.charged_at.slice(0, 10)}</td>
-                                                    <td className="px-3 py-2 text-slate-700">
-                                                        {c.description || label(c.action)}
-                                                        <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 uppercase">{c.source}</span>
-                                                        {c.type === 'credit' && <span className="ml-1 rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">Refund</span>}
-                                                    </td>
-                                                    <td className="px-3 py-2"><MatchCharge registrar={registrar} charge={c} onSaved={saved} /></td>
-                                                    <td className={`px-3 py-2 text-right tabular-nums ${c.type === 'credit' ? 'text-sky-700' : ''}`}>{c.type === 'credit' ? '-' : ''}{inCurrency(c.amount, cur)}</td>
-                                                    <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(c.cost_bdt)}{c.unfunded && <span title="More than the deposits recorded: costed at the last known rate" className="ml-1 text-amber-600">*</span>}</td>
-                                                    <td className="px-3 py-2 text-right">{c.source === 'manual' && <button type="button" aria-label="Delete charge" className="icon-btn h-8 w-8 text-rose-600" disabled={removeCharge.isPending} onClick={() => ask('Delete this charge?', () => removeCharge.mutate(c.id))}><Trash2 size={14} /></button>}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </QueryState>
+                <h3 className="border-b border-slate-200 pb-2 text-sm font-semibold text-slate-800">Transactions</h3>
+                <RegistrarHistory registrar={registrar} />
             </div>
         </Modal>
     );
@@ -569,8 +513,8 @@ function DomainProfitReport({ registrars }: { registrars: Registrar[] }) {
                             tone="bg-slate-200 text-slate-700"
                             rows={r.checks.unmatched}
                             empty="Every charge is linked to a domain."
-                            hint="Open the wallet's Charges tab and match each to its domain."
-                            render={(x) => <><span className="min-w-0 truncate text-slate-700">{x.description || 'Charge'}</span><span className="text-xs text-slate-500">{registrars.find((y) => y.code === x.registrar_code)?.name} · {x.charged_at} · {money(x.cost_bdt)}</span></>}
+                            hint="Match each to its domain so its cost counts against that domain."
+                            render={(x) => <><span className="min-w-0 truncate text-slate-700">{x.description || 'Charge'}</span><span className="text-xs text-slate-500">{registrars.find((y) => y.code === x.registrar_code)?.name} · {x.charged_at} · {money(x.cost_bdt)}</span><MatchCharge code={x.registrar_code} chargeId={x.id} action={x.action} /></>}
                         />
                     </div>
                 </section>
@@ -615,7 +559,12 @@ export function RegistrarsPage() {
                             { header: 'Reseller ID', cell: (r) => r.reseller_id ?? '-' },
                             { header: 'Currency', cell: (r) => r.currency },
                             { header: 'Connection', cell: (r) => <ConnectionStatus registrar={r} checking={checking.includes(r.code)} /> },
-                            { header: 'Wallet Balance', cell: (r) => <button type="button" className="table-action-link text-right tabular-nums" onClick={() => setWallet(r)}>{inCurrency(r.wallet.balance, r.currency)}<span className="block text-[11px] text-slate-500">worth {money(r.wallet.balance_bdt)}</span>{r.api_balance !== null && <span className="block text-[11px] text-slate-500" title={r.api_balance_at ? `Read from the registrar ${new Date(r.api_balance_at).toLocaleString()}` : undefined}>Registrar says {inCurrency(r.api_balance, r.currency)}</span>}</button>, align: 'right' },
+                            { header: 'Wallet Balance', cell: (r) => (
+                                <button type="button" className="table-action-link text-right tabular-nums" onClick={() => setWallet(r)} title={r.api_balance_at ? `Available at the registrar, read ${new Date(r.api_balance_at).toLocaleString()}` : 'Not read from the registrar yet: sync to read it'}>
+                                    {r.api_balance === null ? '-' : inCurrency(r.api_balance, r.currency)}
+                                    <span className="block text-[11px] text-slate-500">{r.api_balance === null ? 'Sync to read the balance' : r.currency !== 'BDT' && r.api_balance_bdt !== null ? `worth ${money(r.api_balance_bdt)}` : 'available'}</span>
+                                </button>
+                            ), align: 'right' },
                             {
                                 header: 'Last Sync',
                                 cell: (r) => r.sync_error

@@ -11,6 +11,7 @@ use App\Services\LogicBoxesClient;
 use App\Services\RegistrarLedger;
 use App\Services\RegistrarSync;
 use App\Services\RegistrarTldSync;
+use App\Support\Currency;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,6 +31,8 @@ class RegistrarController extends Controller
             'has_api_key' => (bool) $saved->get($code)?->api_key,
             'currency' => $saved->get($code)?->currency ?? 'USD',
             'api_balance' => $saved->get($code)?->api_balance,
+            // The registrar's balance is the money really available there, so it leads the column.
+            'api_balance_bdt' => $saved->get($code)?->api_balance === null ? null : round(Currency::toBase($saved->get($code)->api_balance, $saved->get($code)->currency ?? 'USD'), 2),
             'api_balance_at' => $saved->get($code)?->api_balance_at?->toISOString(),
             'last_synced_at' => $saved->get($code)?->last_synced_at?->toISOString(),
             'sync_error' => $saved->get($code)?->sync_error,
@@ -70,6 +73,63 @@ class RegistrarController extends Controller
                 ->map(fn ($d) => [...$d->toArray(), 'rate' => round($d->rate(), 4)]),
             'charges' => RegistrarCharge::with('domain:id,name,client_id')->where('registrar_code', $code)->latest('charged_at')->latest('id')->limit(1000)->get()
                 ->map(fn ($c) => [...$c->toArray(), 'cost_bdt' => $book['costs'][$c->id]['cost_bdt'] ?? 0, 'unfunded' => $book['costs'][$c->id]['unfunded'] ?? false]),
+        ];
+    }
+
+    /**
+     * The account's history as the registrar keeps it, newest first: payments into the account as
+     * well as domain charges and refunds. Read live, so it matches the registrar's own panel.
+     * GET registrars/{code}/transactions?page=1
+     */
+    public function transactions(Request $request, string $code, RegistrarSync $sync)
+    {
+        $this->known($code);
+        $registrar = Registrar::where('code', $code)->first();
+        if (! $registrar?->api_key || ! $registrar->reseller_id) {
+            throw ValidationException::withMessages(['registrar' => 'Save the reseller ID and API key first.']);
+        }
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 50;
+
+        try {
+            $client = new LogicBoxesClient($registrar);
+            $rows = fn (array $result) => collect($result)->filter(fn ($row, $key) => is_array($row) && is_numeric($key))->map(fn ($row) => $sync->parse($row))->filter()->values();
+
+            // The API pages oldest first on some brands: a small first page shows which way it runs.
+            $probe = $client->transactions(1, 10);
+            $total = (int) ($probe['recsindb'] ?? 0);
+            $sample = $rows($probe);
+            $oldestFirst = $sample->count() > 1 && $sample->first()['at']->lt($sample->last()['at']);
+            $pages = max(1, (int) ceil($total / $perPage));
+            $page = min($page, $pages);
+
+            $list = $total === 0 ? collect() : $rows($client->transactions($oldestFirst ? $pages - $page + 1 : $page, $perPage))->sortByDesc(fn ($r) => $r['at']->timestamp)->values();
+
+            try {
+                $registrar->refreshApiBalance($client->balance());
+            } catch (Throwable) {
+                // The history is what was asked for; a stale balance is still shown.
+            }
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages(['registrar' => 'The registrar did not answer: '.$e->getMessage()]);
+        }
+
+        return [
+            'page' => $page,
+            'pages' => $pages,
+            'total' => $total,
+            'currency' => $registrar->currency,
+            'balance' => $registrar->api_balance,
+            'balance_bdt' => $registrar->api_balance === null ? null : round(Currency::toBase($registrar->api_balance, $registrar->currency), 2),
+            'balance_at' => $registrar->api_balance_at?->toISOString(),
+            'rows' => $list->map(fn ($r) => [
+                'id' => $r['id'],
+                // receipt = money added to the account; debit = a charge; credit = a refund.
+                'type' => $r['type'],
+                'at' => $r['at']->toISOString(),
+                'description' => $r['description'],
+                'amount' => $r['amount'],
+            ]),
         ];
     }
 
@@ -115,8 +175,7 @@ class RegistrarController extends Controller
     public function updateCharge(Request $request, string $code, RegistrarCharge $charge, RegistrarLedger $ledger)
     {
         abort_unless($charge->registrar_code === $code, 404);
-        $data = $this->chargeFields($request, $charge->source === 'manual');
-        $charge->update($data);
+        $charge->update($this->chargeFields($request, false));
 
         return $this->ledger($code, $ledger);
     }

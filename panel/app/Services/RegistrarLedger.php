@@ -351,7 +351,7 @@ class RegistrarLedger
         }
 
         $unmatched = RegistrarCharge::whereIn('registrar_code', $codes)->where('type', 'debit')->whereNull('domain_id')->latest('charged_at')->limit(100)->get()
-            ->map(fn ($c) => [...$c->only('id', 'registrar_code', 'description', 'amount'), 'charged_at' => $c->charged_at->toDateString(), 'cost_bdt' => $ledgers[$c->registrar_code]['costs'][$c->id]['cost_bdt'] ?? 0.0]);
+            ->map(fn ($c) => [...$c->only('id', 'registrar_code', 'description', 'amount', 'action'), 'charged_at' => $c->charged_at->toDateString(), 'cost_bdt' => $ledgers[$c->registrar_code]['costs'][$c->id]['cost_bdt'] ?? 0.0]);
 
         return [
             'tracked' => $tracked,

@@ -63,6 +63,43 @@ class RegistrarLedgerTest extends TestCase
         $this->assertSame('.com', $report['tlds'][0]['tld']);
     }
 
+    public function test_wallet_history_lists_payments_and_charges_newest_first_with_the_live_balance(): void
+    {
+        $row = fn (string $id, string $type, int $daysAgo, string $desc, string $amount) => ['reseller_transaction.transactionid' => $id, 'reseller_transaction.transactiontype' => $type, 'reseller_transaction.transactiondate' => (string) now()->subDays($daysAgo)->timestamp, 'reseller_transaction.description' => $desc, 'reseller_transaction.sellingamount' => $amount];
+        // This brand pages oldest first.
+        Http::fake([
+            'httpapi.com/api/billing/reseller-transactions/search.json*' => Http::response([
+                'recsonpage' => '3', 'recsindb' => '3',
+                '1' => $row('902', 'receipt', 30, 'Funds added', '200'),
+                '2' => $row('901', 'invoice', 19, 'Renewal of example.com for 1 year', '-11.50'),
+                '3' => $row('903', 'credit', 5, 'Refund for cancelled order', '3'),
+            ]),
+            'httpapi.com/api/billing/reseller-balance.json*' => Http::response(['sellingcurrencybalance' => '191.50']),
+        ]);
+
+        $this->getJson('/api/registrars/stargate/transactions')->assertOk()
+            ->assertJsonPath('total', 3)
+            ->assertJsonPath('balance', '191.50')
+            ->assertJsonPath('rows.0.id', '903')
+            ->assertJsonPath('rows.0.type', 'credit')
+            ->assertJsonPath('rows.1.type', 'debit')
+            ->assertJsonPath('rows.1.amount', '11.50')
+            ->assertJsonPath('rows.2.type', 'receipt')
+            ->assertJsonPath('rows.2.amount', '200.00');
+
+        // The list page now leads with the registrar's balance, converted to BDT.
+        $listed = collect($this->getJson('/api/registrars')->assertOk()->json())->firstWhere('code', 'stargate');
+        $this->assertSame('191.50', $listed['api_balance']);
+        $this->assertNotNull($listed['api_balance_bdt']);
+    }
+
+    public function test_wallet_history_explains_a_registrar_that_does_not_answer(): void
+    {
+        Http::fake(['httpapi.com/*' => Http::response('<html>Attention Required! | Cloudflare</html>', 403)]);
+
+        $this->getJson('/api/registrars/stargate/transactions')->assertUnprocessable()->assertJsonValidationErrors('registrar');
+    }
+
     public function test_sync_copies_charges_and_matches_domains(): void
     {
         $domain = $this->domain('example.com');

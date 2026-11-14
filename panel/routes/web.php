@@ -214,6 +214,7 @@ Route::prefix('api')->group(function () {
         Route::get('registrars', [Admin\RegistrarController::class, 'index']);
         Route::get('registrars/profit', [Admin\RegistrarController::class, 'profit']);
         Route::get('registrars/{code}/ledger', [Admin\RegistrarController::class, 'ledger']);
+        Route::get('registrars/{code}/transactions', [Admin\RegistrarController::class, 'transactions'])->middleware('throttle:30,1');
         Route::post('registrars/{code}/deposits', [Admin\RegistrarController::class, 'storeDeposit']);
         Route::delete('registrars/{code}/deposits/{deposit}', [Admin\RegistrarController::class, 'destroyDeposit']);
         Route::post('registrars/{code}/charges', [Admin\RegistrarController::class, 'storeCharge']);
