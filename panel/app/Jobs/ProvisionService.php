@@ -103,7 +103,8 @@ class ProvisionService implements ShouldQueue
     {
         $account = $module->create($service);
 
-        return ['remote_id' => $account['remote_id'], 'credentials' => $account];
+        // The account exists now, so the service is live (an order accepted in bulk reaches here still Pending).
+        return ['status' => 'active', 'remote_id' => $account['remote_id'], 'credentials' => $account];
     }
 
     private function suspend(ProvisioningModule $module, Service $service): array

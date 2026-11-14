@@ -8,14 +8,15 @@ import { alertDialog, confirmDialog } from '../dialog';
 
 const RichEditor = lazy(() => import('../editor'));
 
-export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; status: string; currency?: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
+export type Client = { id: number; name: string; company: string | null; email: string; phone: string | null; address: string | null; city: string | null; state?: string | null; postcode?: string | null; country?: string | null; status: string; currency?: string; services_count: number; active_services_count?: number; domains_count: number; active_domains_count?: number; created_at: string };
 
 export function ClientForm({ client, onClose }: { client: Client | null; onClose: () => void }) {
     const qc = useQueryClient();
     const branding = useBranding();
     const [form, setForm] = useState({
         name: client?.name ?? '', company: client?.company ?? '', email: client?.email ?? '', phone: client?.phone ?? '',
-        address: client?.address ?? '', city: client?.city ?? '', status: client?.status ?? 'active', password: '',
+        address: client?.address ?? '', city: client?.city ?? '', state: client?.state ?? '', postcode: client?.postcode ?? '',
+        country: client?.country ?? 'BD', status: client?.status ?? 'active', password: '',
         currency: client?.currency ?? branding.default_currency ?? 'BDT',
     });
     const currencyChanged = !!client && (client.currency ?? 'BDT') !== form.currency;
@@ -37,6 +38,9 @@ export function ClientForm({ client, onClose }: { client: Client | null; onClose
                     <Field label="Phone"><Input value={form.phone} onChange={set('phone')} /></Field>
                     <Field label="Address"><Input value={form.address} onChange={set('address')} /></Field>
                     <Field label="City"><Input value={form.city} onChange={set('city')} /></Field>
+                    <Field label="State / division"><Input value={form.state} onChange={set('state')} /></Field>
+                    <Field label="Postcode"><Input value={form.postcode} onChange={set('postcode')} /></Field>
+                    <Field label="Country" hint="2-letter code, e.g. BD"><Input maxLength={2} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value.toUpperCase() })} /></Field>
                 </div>
                 <Field label="Login password" hint={client ? 'Leave blank to keep the current password. At least 10 characters.' : 'Lets the client sign in at /login. At least 10 characters.'}><Input type="password" autoComplete="new-password" minLength={10} value={form.password} onChange={set('password')} /></Field>
                 <Field label="Status">

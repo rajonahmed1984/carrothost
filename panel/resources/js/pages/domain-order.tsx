@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { ErrorNote, QueryState } from '../ui';
+import { RegistrantFields, useRegistrantForm, type RegistrantGaps } from './registrant';
 
 type Tld = { tld: string; register_price: string; renew_price: string; transfer_price: string; is_spotlight: boolean; epp_required: boolean };
-type Options = { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
+type Options = RegistrantGaps & { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
 type Lookup = { domain: string; status: 'available' | 'taken' | 'premium' | 'unknown' };
 type Action = 'register' | 'transfer';
 
@@ -58,6 +59,7 @@ function DomainOrder({ options }: { options: Options & { currency: string } }) {
     const [epp, setEpp] = useState('');
     const [filter, setFilter] = useState('');
     const [showAll, setShowAll] = useState(false);
+    const registrant = useRegistrantForm();
 
     const tld = domain ? tldFor(domain, options.tlds) : undefined;
     const lookup = useQuery({
@@ -68,7 +70,7 @@ function DomainOrder({ options }: { options: Options & { currency: string } }) {
         retry: false,
     });
     const order = useMutation({
-        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders/domain', { name: domain, action, years: action === 'transfer' ? 1 : years, epp_code: action === 'transfer' ? epp || null : null })).data,
+        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders/domain', { name: domain, action, years: action === 'transfer' ? 1 : years, epp_code: action === 'transfer' ? epp || null : null, contact: registrant.values })).data,
         onSuccess: ({ invoice_id }) => navigate(`/invoices/${invoice_id}`),
     });
 
@@ -200,6 +202,7 @@ function DomainOrder({ options }: { options: Options & { currency: string } }) {
                                         <div className="flex justify-between gap-3"><dt className="text-slate-500">Renews at</dt><dd className="tabular-nums">{money(tld.renew_price)} / yr</dd></div>
                                         <div className="flex justify-between gap-3 border-t border-slate-100 pt-2 text-base font-bold text-slate-900"><dt>Total due today</dt><dd className="text-accent tabular-nums">{money(total)}</dd></div>
                                     </dl>
+                                    <RegistrantFields missing={options.registrant_missing} form={registrant} />
                                     <ErrorNote error={order.error} />
                                     <button className="ui-btn ui-btn-primary h-11 w-full justify-center text-sm" disabled={order.isPending || blocked}>
                                         {order.isPending ? <><Loader2 size={15} className="animate-spin" /> Placing order...</> : <><ShoppingCart size={15} /> {blocked ? 'Not available' : action === 'transfer' ? 'Order Transfer' : 'Register Now'}</>}

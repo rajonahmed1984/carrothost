@@ -522,6 +522,8 @@ class ClientController extends Controller
             'phone' => 'nullable|string|max:32',
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postcode' => 'nullable|string|max:16',
             'country' => 'nullable|string|size:2',
             'status' => 'nullable|in:active,inactive,closed',
             'notes' => 'nullable|string',

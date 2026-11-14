@@ -283,7 +283,7 @@ export type Tab = { key: string; label: string };
 
 export function FilterTabs({ tabs, value, onChange }: { tabs: Tab[]; value: string; onChange: (key: string) => void }) {
     return (
-        <div className="hide-scrollbar flex gap-2 overflow-x-auto border-b border-slate-200 px-4 py-3">
+        <div className="hide-scrollbar flex gap-2 overflow-x-auto border-b border-slate-200 px-4 py-3 md:flex-wrap md:overflow-visible">
             {tabs.map((tab) => (
                 <button key={tab.label} type="button" aria-pressed={tab.key === value} onClick={() => onChange(tab.key)} className={`filter-tab ${tab.key === value ? 'filter-tab-active' : ''}`}>{tab.label}</button>
             ))}
@@ -455,13 +455,15 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
     // Rendered on body: the page's fade-in transform would otherwise size the
     // fixed backdrop to the content area instead of the whole screen.
     return createPortal(
-        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 sm:pt-16" role="dialog" aria-modal="true" aria-label={title}>
-            <div className={`w-full ${wide ? 'max-w-5xl' : 'max-w-lg'} rounded-2xl border border-slate-200 bg-white shadow-xl`}>
-                <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        // Phones: a sheet that slides up from the bottom, like a native app. Larger screens: a centred dialog.
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/60 sm:items-start sm:overflow-y-auto sm:p-4 sm:pt-16" role="dialog" aria-modal="true" aria-label={title}>
+            <div className={`sheet-up flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:max-h-none sm:rounded-2xl ${wide ? 'sm:max-w-5xl' : 'sm:max-w-lg'}`}>
+                <span aria-hidden className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-300 sm:hidden" />
+                <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
                     <h2 className="font-semibold text-slate-900">{title}</h2>
                     <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={16} /></button>
                 </header>
-                <div className="p-4">{children}</div>
+                <div className="safe-bottom overflow-y-auto p-4">{children}</div>
             </div>
         </div>,
         document.body,

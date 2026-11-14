@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Client;
+use App\Models\Domain;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -32,6 +33,51 @@ class DomainContact
         return [...$data, 'company' => trim((string) ($data['company'] ?? '')) ?: 'N/A', 'country' => strtoupper($data['country'])];
     }
 
+    /** Client profile fields a registrar needs, in form order. */
+    public const PROFILE_FIELDS = [
+        'name' => 'Full name',
+        'email' => 'Email',
+        'address' => 'Address',
+        'city' => 'City',
+        'state' => 'State / division',
+        'postcode' => 'Postcode',
+        'country' => 'Country',
+        'phone' => 'Phone',
+    ];
+
+    /**
+     * What the client's profile still lacks for a domain registration, as profile field => label.
+     * Empty when the registrar has everything it needs.
+     */
+    public static function missing(Client $client): array
+    {
+        $c = self::defaults($client);
+        $values = [
+            'name' => $c['name'], 'email' => $c['email'], 'address' => $c['address'], 'city' => $c['city'],
+            'state' => $c['state'], 'postcode' => $c['zipcode'], 'country' => $c['country'],
+            // Without a country code the registrar cannot dial it either.
+            'phone' => strlen($c['phone']) >= 4 && $c['phone_cc'] !== '' ? $c['phone'] : '',
+        ];
+
+        return array_filter(self::PROFILE_FIELDS, fn ($label, $field) => trim((string) $values[$field]) === '', ARRAY_FILTER_USE_BOTH);
+    }
+
+    /** Everything a domain in an order still needs before it can go to the registrar, as labels. */
+    public static function gaps(Domain $domain): array
+    {
+        if (! in_array($domain->action, ['register', 'transfer'], true)) {
+            return [];
+        }
+
+        $gaps = array_values(self::missing($domain->client));
+        $nameservers = array_values(array_filter($domain->nameservers ?? [])) ?: Domain::defaultNameservers();
+        if ($domain->action === 'register' && count($nameservers) < 2) {
+            $gaps[] = 'Nameservers (at least two)';
+        }
+
+        return $gaps;
+    }
+
     /** The client's profile in the registrar's shape, to check and complete. */
     public static function defaults(Client $client): array
     {
@@ -52,9 +98,9 @@ class DomainContact
             'email' => (string) $client->email,
             'address' => (string) ($client->address ?? ''),
             'city' => (string) ($client->city ?? ''),
-            'state' => (string) ($client->city ?? ''),
+            'state' => (string) ($client->state ?: $client->city ?? ''),
             'country' => $country,
-            'zipcode' => '',
+            'zipcode' => (string) ($client->postcode ?? ''),
             'phone_cc' => $cc,
             'phone' => $phone,
         ];

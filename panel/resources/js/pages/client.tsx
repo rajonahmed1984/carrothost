@@ -242,7 +242,7 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
         <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div className="min-w-0 space-y-4">
                 <Panel title="Client Information" footer={<Action icon={<UserPen size={14} />} onClick={onEdit}>Edit Client</Action>}>
-                    <Rows rows={[['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country]]} />
+                    <Rows rows={[['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['State', c.state], ['Postcode', c.postcode], ['Country', c.country]]} />
                 </Panel>
                 <Panel title="Other Information">
                     <Rows rows={[
@@ -796,9 +796,9 @@ function ClientSelector({ current }: { current: PickerClient }) {
     return (
         <Dropdown
             label="Switch client"
-            buttonClassName="ui-input flex min-w-[280px] max-w-md cursor-pointer items-center justify-between gap-2 bg-white py-1.5 text-left text-xs font-semibold text-slate-800"
+            buttonClassName="ui-input flex w-full sm:min-w-[280px] max-w-md cursor-pointer items-center justify-between gap-2 bg-white py-1.5 text-left text-xs font-semibold text-slate-800"
             button={<><span className="truncate">{label(current)}</span><ChevronDown size={14} className="shrink-0 text-slate-400" /></>}
-            menuClassName="w-[24rem] text-xs"
+            menuClassName="w-[min(24rem,calc(100vw-2rem))] text-xs"
         >
             <div className="border-b border-slate-100 p-2">
                 <input
@@ -856,10 +856,13 @@ export function ClientDetailPage() {
         <QueryState query={query}>
             {c && (
                 <div className="space-y-4">
-                    {/* The client picker sits in the tab bar, on the right where there is room. */}
-                    <div className="card flex flex-col overflow-hidden xl:flex-row xl:items-center">
-                        <div className="min-w-0 flex-1 [&>div]:border-b-0"><FilterTabs tabs={tabs} value={tab} onChange={setTab} /></div>
-                        <div className="shrink-0 px-4 pb-3 xl:py-3 xl:pl-0"><ClientSelector current={c} /></div>
+                    {/* The client picker on its own row above the tabs, so it never covers one. */}
+                    <div className="card overflow-hidden">
+                        <div className="flex items-center gap-2 border-b border-slate-100 px-4 pt-3 pb-2">
+                            <span className="shrink-0 text-xs text-slate-500">Client:</span>
+                            <div className="min-w-0 flex-1 sm:flex-none"><ClientSelector current={c} /></div>
+                        </div>
+                        <div className="[&>div]:border-b-0"><FilterTabs tabs={tabs} value={tab} onChange={setTab} /></div>
                     </div>
 
                     {tab === 'summary' && <Summary key={c.notes ?? ''} c={c} onEdit={() => setEditing(true)} onInvoice={() => setInvoicing(true)} onTab={setTab} />}
@@ -867,7 +870,7 @@ export function ClientDetailPage() {
                     {tab === 'profile' && (
                         <Card title="Profile" action={<Button onClick={() => setEditing(true)}><UserPen size={14} /> Edit Profile</Button>}>
                             <dl className="grid gap-x-8 sm:grid-cols-2">
-                                {([['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['Country', c.country], ['Status', <Status key="s" value={c.status} />], ['Signup Date', new Date(c.created_at).toLocaleDateString('en-GB')], ['Currency', c.currency ?? 'BDT'], ['Credit Balance', money(c.credit_balance, c.currency)]] as [string, ReactNode][]).map(([label, value]) => (
+                                {([['Name', c.name], ['Company', c.company], ['Email', c.email], ['Phone', c.phone], ['Address', c.address], ['City', c.city], ['State', c.state], ['Postcode', c.postcode], ['Country', c.country], ['Status', <Status key="s" value={c.status} />], ['Signup Date', new Date(c.created_at).toLocaleDateString('en-GB')], ['Currency', c.currency ?? 'BDT'], ['Credit Balance', money(c.credit_balance, c.currency)]] as [string, ReactNode][]).map(([label, value]) => (
                                     <div key={label} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm">
                                         <dt className="text-slate-500">{label}</dt>
                                         <dd className="text-right font-medium break-words text-slate-800">{value || '-'}</dd>

@@ -267,7 +267,7 @@ class DomainRegistrar
     private function customerFor(LogicBoxesClient $client, array $contact): string
     {
         return $client->customerId($contact['email'])
-            ?? $client->signupCustomer($contact, Str::password(14, symbols: false).'a1A');
+            ?? $client->signupCustomer($contact, Str::password(10, symbols: false).'a1A');
     }
 
     /** @return list<string> */

@@ -324,16 +324,19 @@ class BillingService
     {
         $product = $service->product;
         $alreadySetUp = $service->remote_id || in_array($service->provision_status, ['queued', 'running', 'done'], true);
+        $provision = $alreadySetUp ? $service->provision_status : match (true) {
+            ! $product->module, $product->setup_mode === 'manual' => 'manual_required',
+            $product->setup_mode === 'accept' => 'awaiting_accept',
+            default => 'queued',
+        };
 
         $service->update([
-            'status' => 'active',
+            // Paid is not set up: a service waiting for an admin (acceptance or manual setup) stays
+            // Pending until it is accepted. One being created now is Active.
+            ...$alreadySetUp || $provision === 'queued' ? ['status' => 'active'] : [],
             'next_due_date' => now()->addMonthsNoOverflow($this->cycleMonths($service->cycle))->toDateString(),
             'renewal_invoiced_for' => null,
-            ...$alreadySetUp ? [] : ['provision_status' => match (true) {
-                ! $product->module, $product->setup_mode === 'manual' => 'manual_required',
-                $product->setup_mode === 'accept' => 'awaiting_accept',
-                default => 'queued',
-            }],
+            ...$alreadySetUp ? [] : ['provision_status' => $provision],
         ]);
 
         if (! $alreadySetUp && $service->provision_status === 'queued') {

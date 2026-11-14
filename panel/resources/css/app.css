@@ -43,6 +43,12 @@ h1, h2, h3 {
     font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
 }
 
+/* Long emails, URLs and IDs wrap inside their box instead of running out of it. */
+dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .bg-dashboard {
     background:
         radial-gradient(circle at 15% 15%, var(--accent-glow), transparent 55%),
@@ -296,7 +302,7 @@ h1, h2, h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .fade-in { animation: none; }
+    .fade-in, .sheet-up { animation: none; }
     .progress-track > span { left: 0; width: 100%; opacity: 0.5; animation: none; }
     html { scroll-behavior: auto; }
 }
@@ -307,6 +313,19 @@ h1, h2, h3 {
 
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
+}
+
+/* Clears the notch and the home bar on phones opened full screen. */
+.safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+.safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+@keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
 .pb-safe-nav {
@@ -332,5 +351,19 @@ h1, h2, h3 {
     /* Stops iOS zooming the page when a field takes focus. */
     .ui-input {
         font-size: 16px;
+    }
+
+    /* Thumb-sized buttons, no grey flash on tap, no rubber-band pull revealing the page behind. */
+    .ui-btn {
+        min-height: 2.75rem;
+    }
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+    body {
+        overscroll-behavior-y: none;
+    }
+    .sheet-up {
+        animation: sheet-up 0.22s ease-out;
     }
 }

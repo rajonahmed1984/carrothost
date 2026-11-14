@@ -15,6 +15,7 @@ use App\Services\BillingService;
 use App\Services\CustomerMailer;
 use App\Services\InvoiceActions;
 use App\Services\ServiceTools;
+use App\Support\DomainContact;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -75,6 +76,8 @@ class OrderController extends Controller
                 'amount_due' => $u->amount_due,
                 'status' => $u->status,
             ])->values(),
+            // What each domain still needs before it can go to the registrar (empty = nothing).
+            'registration_gaps' => $order->domains->mapWithKeys(fn ($d) => [$d->id => DomainContact::gaps($d->setRelation('client', $order->client))]),
             // Orders placed before the amount was saved fall back to their invoices.
             'amount' => (float) $order->amount > 0 ? $order->amount : number_format((float) $order->invoices->sum('total'), 2, '.', ''),
             // A fresh, unique username and a strong password for each account not yet created.

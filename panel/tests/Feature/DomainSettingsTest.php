@@ -25,7 +25,7 @@ class DomainSettingsTest extends TestCase
 
     private function signIn(): Client
     {
-        $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse']);
+        $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse', ...self::REGISTRANT]);
         $this->loginClientWithCode('mine@example.com', 'correct-horse');
 
         return $client;
@@ -72,6 +72,41 @@ class DomainSettingsTest extends TestCase
 
         Settings::save(['domain_allow_transfer' => false]);
         $this->postJson('/api/client/orders/domain', ['name' => 'other.com', 'action' => 'transfer', 'years' => 1])->assertJsonValidationErrors('action');
+    }
+
+    public function test_checkout_asks_for_missing_registrant_details_and_saves_them(): void
+    {
+        Settings::save(['nameserver_1' => 'ns1.carrothost.com', 'nameserver_2' => 'ns2.carrothost.com']);
+        $client = Client::create(['name' => 'Mine', 'email' => 'mine@example.com', 'password' => 'correct-horse', ...self::REGISTRANT, 'postcode' => null, 'state' => null, 'city' => null]);
+        $this->loginClientWithCode('mine@example.com', 'correct-horse');
+
+        $this->getJson('/api/client/store/domains')->assertOk()
+            ->assertJsonPath('registrant_missing', ['city' => 'City', 'state' => 'State / division', 'postcode' => 'Postcode']);
+
+        $this->postJson('/api/client/orders/domain', ['name' => 'gap.com', 'action' => 'register', 'years' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors(['contact.city', 'contact.postcode']);
+        $this->assertSame(0, $client->domains()->count());
+
+        // What checkout sends fills the gaps only; the saved address is not overwritten.
+        $this->postJson('/api/client/orders/domain', ['name' => 'gap.com', 'action' => 'register', 'years' => 1, 'contact' => ['city' => 'Dhaka', 'postcode' => '1230', 'address' => 'Somewhere else']])
+            ->assertCreated();
+        $client->refresh();
+        $this->assertSame(['Dhaka', '1230', '1 Road'], [$client->city, $client->postcode, $client->address]);
+        $this->getJson('/api/client/store/domains')->assertJsonPath('registrant_missing', []);
+    }
+
+    public function test_admin_order_page_lists_what_the_registrar_still_needs(): void
+    {
+        Settings::save(['nameserver_1' => 'ns1.carrothost.com', 'nameserver_2' => 'ns2.carrothost.com']);
+        $client = Client::create(['name' => 'A', 'email' => 'a@example.com', ...self::REGISTRANT]);
+        $order = app(\App\Services\BillingService::class)->createOrder($client, [], [['name' => 'gap.com', 'action' => 'register', 'years' => 1]]);
+        $client->update(['postcode' => null]);
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+
+        $domainId = $order->domains()->value('id');
+        $this->actingAs($admin)->getJson("/api/orders/{$order->id}")->assertOk()
+            ->assertJsonPath("registration_gaps.{$domainId}", ['Postcode']);
     }
 
     public function test_hosting_order_can_register_its_domain_when_allowed(): void

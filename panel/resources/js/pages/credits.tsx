@@ -110,18 +110,30 @@ export function CreditHistoryPage() {
                             <Link to="/add-funds" className="inline-flex items-center rounded-xl border border-[var(--accent)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]">Add Funds</Link>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
+                        <label className="hidden items-center gap-2 text-sm font-semibold text-slate-700 md:flex">
                             Show
                             <span className="w-20"><Select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}>{[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}</Select></span>
                             entries
                         </label>
-                        <div className="relative w-60">
+                        <div className="relative w-full md:w-60">
                             <Input type="search" aria-label="Search credit history" placeholder="Search..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
                             <Search size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" />
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
+                    <ul className="divide-y divide-slate-100 border-t border-slate-100 md:hidden">
+                        {shown.length === 0 && <li className="px-5 py-10 text-center text-sm text-slate-500">{data.history.length ? 'Nothing matches your search.' : 'No credit history yet.'}</li>}
+                        {shown.map((r) => (
+                            <li key={r.id} className="flex items-start justify-between gap-3 px-4 py-3.5">
+                                <div className="min-w-0">
+                                    <div className="text-sm text-slate-800">{r.invoice ? <Link to={`/invoices/${r.invoice.id}`} className="text-accent">{r.description}</Link> : r.description}</div>
+                                    <div className="mt-0.5 text-xs text-slate-500">{new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                </div>
+                                <span className={`shrink-0 text-sm font-semibold tabular-nums ${Number(r.amount) < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(r.amount, data.currency)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="hidden overflow-x-auto md:block">
                         <table className="w-full min-w-[40rem] text-left text-sm">
                             <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
                                 <tr>{['Id #', 'Description', 'Date', 'Amount'].map((h) => <th key={h} className={`px-5 py-3 font-semibold ${h === 'Amount' ? 'text-right' : ''}`}>{h}</th>)}</tr>

@@ -91,6 +91,8 @@ type OrderDetail = {
         recurring_amount: string;
         registrar: string | null;
     }[];
+    /** Per domain id: what the registrar still needs (client details, nameservers). Empty = ready. */
+    registration_gaps?: Record<number, string[]>;
     invoices: {
         id: number;
         number: string;
@@ -685,6 +687,15 @@ export function OrderDetailPage() {
                                                             <span>Send Confirmation Email</span>
                                                         </label>
                                                     </div>
+                                                    {(o.registration_gaps?.[d.id]?.length ?? 0) > 0 && (
+                                                        <div role="alert" className="mt-3 flex flex-wrap items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                                            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                                                            <span className="flex-1">
+                                                                <strong>Missing for the registrar:</strong> {o.registration_gaps?.[d.id]?.join(', ')}. The registration will fail until these are filled.
+                                                            </span>
+                                                            <Link to={`/admin/clients/${o.client.id}`} className="font-semibold text-accent hover:underline">Edit client profile</Link>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         </tr>

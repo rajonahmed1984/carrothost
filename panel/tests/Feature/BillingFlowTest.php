@@ -138,6 +138,28 @@ class BillingFlowTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_paid_order_waiting_for_acceptance_stays_pending_until_accepted(): void
+    {
+        Queue::fake();
+        $invoice = $this->orderInvoice();
+        Product::first()->update(['setup_mode' => 'accept']);
+
+        app(BillingService::class)->recordPayment($invoice, 'manual', 'TX1', '4300.00');
+
+        $service = Service::first();
+        $this->assertSame(['pending', 'awaiting_accept'], [$service->status, $service->provision_status]);
+        $this->assertSame('pending', \App\Models\Order::find($invoice->order_id)->status);
+        Queue::assertNothingPushed();
+
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $this->actingAs($admin)->postJson("/api/orders/{$invoice->order_id}/accept", ['send_welcome_email' => false])->assertOk();
+
+        $this->assertSame(['active', 'queued'], [$service->refresh()->status, $service->provision_status]);
+        $this->assertSame('active', \App\Models\Order::find($invoice->order_id)->status);
+        Queue::assertPushed(ProvisionService::class);
+    }
+
     public function test_cpanel_provisioning_stores_encrypted_credentials(): void
     {
         Http::fake(['*' => Http::response(['metadata' => ['result' => 1]])]);

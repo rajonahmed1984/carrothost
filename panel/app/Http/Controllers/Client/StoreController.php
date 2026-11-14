@@ -12,6 +12,7 @@ use App\Models\Tld;
 use App\Services\AdminNotifier;
 use App\Services\BillingService;
 use App\Services\DomainLookup;
+use App\Support\DomainContact;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -59,6 +60,9 @@ class StoreController extends Controller
             'transfer' => (bool) $options['allow_transfer'],
             'own' => (bool) $options['allow_own'],
             'nameservers' => Domain::defaultNameservers(),
+            // What a domain registration needs from the profile, so checkout can ask for the gaps.
+            'registrant' => $request->user('client')->only(array_keys(DomainContact::PROFILE_FIELDS)),
+            'registrant_missing' => DomainContact::missing($request->user('client')),
             'lookup' => (bool) $lookup->provider(),
             'premium' => (bool) $options['premium_enabled'],
             'tlds' => $sells
@@ -123,6 +127,8 @@ class StoreController extends Controller
             throw ValidationException::withMessages(['vps_image' => 'Choose one of the operating systems listed.']);
         }
 
+        $this->completeRegistrant($request, $domains);
+
         $order = $billing->createOrder($request->user('client'), [
             ['product_id' => $product->id, 'cycle' => $data['cycle'], 'domain' => $domain, 'module_options' => $image ? ['image' => $image] : null],
         ], $domains);
@@ -146,11 +152,54 @@ class StoreController extends Controller
         app(DomainLookup::class)->ensureOrderable(strtolower($data['name']), $data['action'], 'name');
         $data['epp_code'] = $this->eppCode($data['action'], $data['name'], $data['epp_code'] ?? null);
 
+        $this->completeRegistrant($request, [$data]);
+
         $order = $billing->createOrder($request->user('client'), [], [$data]);
         ActivityLog::record('order.created', $order, ['by' => 'client']);
         $this->placed($order, $request);
 
         return response()->json(['invoice_id' => $order->invoices()->value('id')], 201);
+    }
+
+    /**
+     * A domain registration needs the registrant's full contact. Checkout sends what the profile
+     * lacked; it fills only empty profile fields, and an order still missing any is refused.
+     */
+    private function completeRegistrant(Request $request, array $domains): void
+    {
+        if (! $domains) {
+            return;
+        }
+
+        $client = $request->user('client');
+        $sent = $request->validate([
+            'contact' => 'nullable|array',
+            'contact.name' => 'nullable|string|max:255',
+            'contact.address' => 'nullable|string|max:64',
+            'contact.city' => 'nullable|string|max:64',
+            'contact.state' => 'nullable|string|max:64',
+            'contact.postcode' => 'nullable|string|max:16',
+            'contact.country' => 'nullable|string|size:2|alpha',
+            'contact.phone' => 'nullable|string|max:32',
+        ])['contact'] ?? [];
+
+        $changes = collect($sent)
+            ->map(fn ($value) => trim((string) $value))
+            ->filter(fn ($value, $field) => $value !== '' && trim((string) $client->{$field}) === '')
+            ->all();
+        if (isset($changes['country'])) {
+            $changes['country'] = strtoupper($changes['country']);
+        }
+        if ($changes) {
+            $client->update($changes);
+            ActivityLog::record('client.profile_updated', $client, ['by' => 'client', 'fields' => array_keys($changes), 'at' => 'checkout']);
+        }
+
+        if ($missing = DomainContact::missing($client->refresh())) {
+            throw ValidationException::withMessages(collect($missing)
+                ->mapWithKeys(fn ($label, $field) => ["contact.{$field}" => "{$label} is needed to register the domain."])
+                ->all());
+        }
     }
 
     /** The address the order came from, for the order page and the admins' new order email. */

@@ -17,7 +17,7 @@ use Illuminate\Validation\Rule;
 /** The account menu: details, contacts, emails, support PIN and sign-in sessions. */
 class AccountSettingsController extends Controller
 {
-    private const PROFILE = ['name', 'company', 'email', 'phone', 'address', 'city', 'country'];
+    private const PROFILE = ['name', 'company', 'email', 'phone', 'address', 'city', 'state', 'postcode', 'country'];
 
     public function profile(Request $request)
     {
@@ -49,6 +49,8 @@ class AccountSettingsController extends Controller
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postcode' => 'nullable|string|max:16',
             'country' => 'required|string|size:2|alpha',
         ]);
 

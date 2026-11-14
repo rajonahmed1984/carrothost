@@ -18,6 +18,13 @@ return new class extends Migration
                 ->whereIn('services.status', ['pending', 'active'])
                 ->where('services.provision_status', 'awaiting_accept'))
             ->update(['status' => 'pending', 'updated_at' => now()]);
+
+        // The same payment marked the service Active although no account was created yet.
+        DB::table('services')
+            ->where('status', 'active')
+            ->where('provision_status', 'awaiting_accept')
+            ->whereNull('remote_id')
+            ->update(['status' => 'pending', 'updated_at' => now()]);
     }
 
     public function down(): void

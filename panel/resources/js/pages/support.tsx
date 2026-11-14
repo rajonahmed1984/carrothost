@@ -261,12 +261,12 @@ const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour:
 
 function TicketStat({ icon, tone, valueTone, label, value, note }: { icon: ReactNode; tone: string; valueTone: string; label: string; value: number; note: string }) {
     return (
-        <section className="card flex items-center gap-4 p-5">
-            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${tone}`}>{icon}</span>
+        <section className="card flex items-center gap-3 p-3 sm:gap-4 sm:p-5">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-12 sm:w-12 ${tone}`}>{icon}</span>
             <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-800">{label}</div>
-                <div className={`text-2xl font-bold tabular-nums ${valueTone}`}>{value}</div>
-                <div className="text-xs text-slate-500">{note}</div>
+                <div className="truncate text-xs font-semibold text-slate-800 sm:text-sm">{label}</div>
+                <div className={`text-xl font-bold tabular-nums sm:text-2xl ${valueTone}`}>{value}</div>
+                <div className="hidden text-xs text-slate-500 sm:block">{note}</div>
             </div>
         </section>
     );
@@ -298,7 +298,7 @@ export function ClientTicketsPage() {
     return (
         <div className="space-y-5">
             <QueryState query={query}>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                     <TicketStat icon={<MessageSquare size={22} />} tone="bg-emerald-100 text-emerald-700" valueTone="text-emerald-700" label="Pending Tickets" value={count('open')} note="Open tickets" />
                     <TicketStat icon={<Clock size={22} />} tone="bg-sky-100 text-sky-700" valueTone="text-sky-700" label="In Progress Tickets" value={count('customer_reply', 'on_hold')} note="Being processed" />
                     <TicketStat icon={<Reply size={22} />} tone="bg-orange-100 text-orange-600" valueTone="text-orange-600" label="Answered Tickets" value={count('answered')} note="Awaiting your response" />
@@ -306,26 +306,26 @@ export function ClientTicketsPage() {
                 </div>
 
                 <section className="card overflow-hidden">
-                    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 p-5">
-                        <div className="flex flex-wrap items-end gap-3">
-                            <div className="relative w-60">
+                    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 p-4 md:p-5">
+                        <div className="grid w-full grid-cols-2 items-end gap-3 md:flex md:w-auto md:flex-wrap">
+                            <div className="relative col-span-2 md:w-60">
                                 <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
                                 <input type="search" aria-label="Search tickets" className="ui-input pl-9" placeholder="Search tickets..." value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
                             </div>
-                            <label className="w-40 text-xs font-medium text-slate-600">Status
+                            <label className="text-xs font-medium text-slate-600 md:w-40">Status
                                 <Select value={status} onChange={(e) => reset(setStatus)(e.target.value)}>
                                     <option value="">All Status</option>
                                     <option value="active">All except closed</option>
                                     {Object.entries(ticketStatusLabel).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                                 </Select>
                             </label>
-                            <label className="w-44 text-xs font-medium text-slate-600">Department
+                            <label className="text-xs font-medium text-slate-600 md:w-44">Department
                                 <Select value={department} onChange={(e) => reset(setDepartment)(e.target.value)}>
                                     <option value="">All Departments</option>
                                     {query.data?.departments.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
                                 </Select>
                             </label>
-                            <label className="w-40 text-xs font-medium text-slate-600">Sort By
+                            <label className="hidden text-xs font-medium text-slate-600 md:block md:w-40">Sort By
                                 <Select value={sort} onChange={(e) => setSort(e.target.value)}>
                                     <option value="latest">Latest First</option>
                                     <option value="oldest">Oldest First</option>
@@ -333,10 +333,29 @@ export function ClientTicketsPage() {
                                 </Select>
                             </label>
                         </div>
-                        <Link to="/tickets/new" className="ui-btn ui-btn-primary"><Plus size={14} /> Open Ticket</Link>
+                        <Link to="/tickets/new" className="ui-btn ui-btn-primary w-full justify-center md:w-auto"><Plus size={14} /> Open Ticket</Link>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <ul className="divide-y divide-slate-100 md:hidden">
+                        {shown.length === 0 && <li className="px-5 py-12 text-center text-sm text-slate-500">{all.length ? 'No tickets match these filters.' : 'You have no support tickets. Open one if you need help with a service or a bill.'}</li>}
+                        {shown.map((t) => (
+                            <li key={t.id}>
+                                <Link to={`/tickets/${t.id}`} className="flex items-center gap-3 px-4 py-3.5 transition active:bg-slate-100">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="truncate text-xs font-semibold text-slate-500">#{t.number} · {departments[t.department] ?? t.department}</span>
+                                            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${ticketStatusPill[t.status] ?? ticketStatusPill.closed}`}>{ticketStatusLabel[t.status] ?? t.status}</span>
+                                        </div>
+                                        <div className="mt-0.5 line-clamp-2 font-semibold text-slate-900">{t.subject}</div>
+                                        <div className="mt-0.5 text-xs text-slate-500">Updated {fullDate(updated(t))}, {clock(updated(t))}</div>
+                                    </div>
+                                    <ChevronRight size={16} className="shrink-0 text-slate-300" />
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="hidden overflow-x-auto md:block">
                         <table className="w-full min-w-[56rem] text-left text-sm">
                             <thead className="border-b border-slate-200 text-xs text-slate-700">
                                 <tr>{['Ticket ID', 'Subject', 'Department', 'Status', 'Priority', 'Last Updated', 'Actions'].map((h) => <th key={h} className={`px-5 py-3 font-semibold ${h === 'Actions' ? 'text-center' : ''}`}>{h}</th>)}</tr>
@@ -353,10 +372,10 @@ export function ClientTicketsPage() {
                                     return (
                                         <tr key={t.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
                                             <td className="px-5 py-3.5">
-                                                <Link to={`/admin/tickets/${t.id}`} className="font-semibold text-slate-900 hover:text-accent">#{t.number}</Link>
+                                                <Link to={`/tickets/${t.id}`} className="font-semibold text-slate-900 hover:text-accent">#{t.number}</Link>
                                                 <div className="text-xs text-slate-500">Created: {fullDate(t.created_at)}</div>
                                             </td>
-                                            <td className="max-w-72 px-5 py-3.5 text-slate-800"><Link to={`/admin/tickets/${t.id}`} className="line-clamp-2 hover:text-accent">{t.subject}</Link></td>
+                                            <td className="max-w-72 px-5 py-3.5 text-slate-800"><Link to={`/tickets/${t.id}`} className="line-clamp-2 hover:text-accent">{t.subject}</Link></td>
                                             <td className="px-5 py-3.5">
                                                 <span className="flex items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${dept.tone}`}>{dept.icon}</span>{departments[t.department] ?? t.department}</span>
                                             </td>
@@ -364,7 +383,7 @@ export function ClientTicketsPage() {
                                             <td className="px-5 py-3.5"><span className={`inline-block rounded-md border px-2.5 py-1 text-xs font-semibold capitalize ${priorityPill[t.priority] ?? priorityPill.low}`}>{t.priority}</span></td>
                                             <td className="px-5 py-3.5 whitespace-nowrap"><div className="text-slate-800">{fullDate(updated(t))}</div><div className="text-xs text-slate-500">{clock(updated(t))}</div></td>
                                             <td className="px-5 py-3.5 text-center">
-                                                <Link to={`/admin/tickets/${t.id}`} aria-label={`View ticket #${t.number}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[var(--accent)] hover:text-accent"><Eye size={16} /></Link>
+                                                <Link to={`/tickets/${t.id}`} aria-label={`View ticket #${t.number}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-[var(--accent)] hover:text-accent"><Eye size={16} /></Link>
                                             </td>
                                         </tr>
                                     );

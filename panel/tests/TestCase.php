@@ -9,6 +9,9 @@ use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
+    /** A client profile complete enough for a domain registration. */
+    protected const REGISTRANT = ['phone' => '+880 1712345678', 'address' => '1 Road', 'city' => 'Dhaka', 'state' => 'Dhaka', 'postcode' => '1207', 'country' => 'BD'];
+
     /**
      * Signs a customer (or a user of their account) in the way the client area does: password,
      * then the emailed code, which every sign-in needs. Returns the code step's response.

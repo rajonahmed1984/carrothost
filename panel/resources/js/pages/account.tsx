@@ -66,7 +66,7 @@ export function ProfileHeader({ activeTab }: { activeTab: string; breadcrumb?: s
 
     return (
         <div className="mb-6">
-            <div className="flex flex-wrap items-center gap-6 border-b border-slate-200 text-xs font-medium">
+            <div className="hide-scrollbar -mx-3 flex items-center gap-6 overflow-x-auto border-b border-slate-200 px-3 text-xs font-medium whitespace-nowrap sm:mx-0 sm:flex-wrap sm:px-0">
                 {tabs.map((t) => {
                     const Icon = t.icon;
                     const isActive = t.key === activeTab;
@@ -131,6 +131,8 @@ type Profile = {
     phone: string | null;
     address: string | null;
     city: string | null;
+    state?: string | null;
+    postcode?: string | null;
     country: string;
 };
 
@@ -140,12 +142,12 @@ function DetailsForm({ data }: { data: Profile }) {
     const [firstName, setFirstName] = useState(data.first_name ?? parts[0] ?? '');
     const [lastName, setLastName] = useState(data.last_name ?? parts.slice(1).join(' ') ?? '');
     const [company, setCompany] = useState(data.company ?? '');
-    const [phone, setPhone] = useState(data.phone ?? '1787-882277');
-    const [address1, setAddress1] = useState(data.address ?? '270/ka, West Agargaon');
+    const [phone, setPhone] = useState(data.phone ?? '');
+    const [address1, setAddress1] = useState(data.address ?? '');
     const [address2, setAddress2] = useState('');
-    const [city, setCity] = useState(data.city ?? 'Dhaka');
-    const [stateRegion, setStateRegion] = useState(data.city ?? 'Dhaka');
-    const [zipCode, setZipCode] = useState('1207');
+    const [city, setCity] = useState(data.city ?? '');
+    const [stateRegion, setStateRegion] = useState(data.state ?? '');
+    const [zipCode, setZipCode] = useState(data.postcode ?? '');
     const [country, setCountry] = useState(data.country ?? 'BD');
     const [vatNumber, setVatNumber] = useState('');
     const [saved, setSaved] = useState(false);
@@ -161,6 +163,8 @@ function DetailsForm({ data }: { data: Profile }) {
                 phone: phone || null,
                 address: address1 || null,
                 city: city || null,
+                state: stateRegion || null,
+                postcode: zipCode || null,
                 country: country || 'BD',
             })).data;
         },

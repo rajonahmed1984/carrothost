@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, ArrowRight, ArrowRightLeft, ArrowUpDown, Bell, Building2, CalendarDays, ChevronDown, ChevronRight, CircleCheck, CircleX, Clock, CreditCard, Download, ExternalLink, Eye, FileText, Filter, Globe, HardDrive, Headset, History, Info,
-    LayoutList, LockKeyhole, LogOut, Menu, MessageSquareText, MoreVertical, Package, Plus, Printer, Search, Server, ShieldCheck, ShoppingCart, User, X, Contact, KeyRound, Mail, MonitorSmartphone, Power,
+    LayoutDashboard, LayoutList, LockKeyhole, LogOut, Menu, MoreHorizontal, Receipt, MessageSquareText, MoreVertical, Package, Plus, Printer, Search, Server, ShieldCheck, ShoppingCart, User, X, Contact, KeyRound, Mail, MonitorSmartphone, Power,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { PanelLogo, panelName } from '../panel-logo';
 import { ClientServicePage, PanelLoginButton } from './client-service';
 import { ClientDomainPage } from './client-domain';
 import { DomainOrderPage } from './domain-order';
+import { RegistrantFields, useRegistrantForm, type RegistrantGaps } from './registrant';
 
 type Overview = {
     services: { id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; product: { name: string } }[];
@@ -45,16 +46,17 @@ function IconBox({ children, small }: { children: ReactNode; small?: boolean }) 
 
 function StatCard({ icon, value, label, badge, to, action }: { icon: ReactNode; value: number; label: string; badge?: ReactNode; to: string; action: string }) {
     return (
-        <section className="card flex flex-col">
-            <div className="flex items-center gap-4 p-5">
-                <IconBox>{icon}</IconBox>
+        <section className="card relative flex flex-col transition active:scale-[0.98] sm:active:scale-100">
+            <div className="flex items-start gap-3 p-3 sm:items-center sm:gap-4 sm:p-5">
+                <span className="hidden sm:block"><IconBox>{icon}</IconBox></span>
+                <span className="sm:hidden"><IconBox small>{icon}</IconBox></span>
                 <div className="min-w-0">
-                    <div className="text-2xl font-bold text-slate-900 tabular-nums">{value}</div>
-                    <div className="text-sm text-slate-600">{label}</div>
+                    <div className="text-xl font-bold text-slate-900 tabular-nums sm:text-2xl">{value}</div>
+                    <div className="truncate text-xs text-slate-600 sm:text-sm">{label}</div>
                     {badge}
                 </div>
             </div>
-            <Link to={to} className="mt-auto flex items-center justify-end gap-1.5 border-t border-slate-200 px-5 py-3 text-xs font-semibold text-accent hover:underline">{action} <ArrowRight size={14} /></Link>
+            <Link to={to} className="mt-auto flex items-center justify-end gap-1.5 border-t border-slate-200 px-5 py-3 text-xs font-semibold text-accent hover:underline max-sm:absolute max-sm:inset-0 max-sm:border-0 max-sm:p-0 max-sm:text-[0px]">{action} <ArrowRight size={14} className="max-sm:hidden" /></Link>
         </section>
     );
 }
@@ -80,7 +82,7 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
             {d && (
                 <div className="space-y-5">
 
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                         {can('products') && <StatCard icon={<Server size={24} />} value={d.services.filter((x) => x.status === 'active').length} label="Services" to="/services" action="Manage Services" />}
                         {can('domains') && <StatCard icon={<Globe size={24} />} value={d.domains.filter((x) => x.status === 'active').length} label="Domains" to="/domains" action="Manage Domains" />}
                         {can('tickets') && <StatCard icon={<MessageSquareText size={24} />} value={d.open_tickets} label="Open Tickets" to="/tickets" action="View Tickets" />}
@@ -88,7 +90,7 @@ function Home({ profile, firstStore }: { profile: ClientProfile; firstStore: str
                             icon={<FileText size={24} />}
                             value={unpaid.length}
                             label="Unpaid Invoices"
-                            badge={<span className={`mt-1 inline-block rounded-md px-2 py-0.5 text-[11px] font-bold ${unpaid.length ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>{unpaid.length ? `${money(unpaid.reduce((sum, i) => sum + Number(i.total), 0), unpaid[0].currency)} due` : 'All paid'}</span>}
+                            badge={<span className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold sm:px-2 sm:text-[11px] ${unpaid.length ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>{unpaid.length ? `${money(unpaid.reduce((sum, i) => sum + Number(i.total), 0), unpaid[0].currency)} due` : 'All paid'}</span>}
                             to="/invoices"
                             action="View Invoices"
                         />}
@@ -200,14 +202,46 @@ function DueDate({ date }: { date: string | null }) {
     );
 }
 
+/** One line for phone rows: "12-05-2027 · 30d left". */
+function DueInline({ date, label = 'Due' }: { date: string | null; label?: string }) {
+    if (!date) return null;
+    const days = daysUntil(date);
+
+    return (
+        <span className={days < 0 ? 'text-rose-600' : days <= 14 ? 'text-amber-700' : 'text-slate-500'}>
+            {label} {calendarDay(date).toLocaleDateString('en-GB').replaceAll('/', '-')} · {days < 0 ? `${-days}d overdue` : days === 0 ? 'today' : `${days}d left`}
+        </span>
+    );
+}
+
+/** A tappable row for phone lists: the whole row opens the record. */
+function MobileRow({ to, icon, title, aside, sub, meta }: { to: string; icon: ReactNode; title: ReactNode; aside?: ReactNode; sub?: ReactNode; meta?: ReactNode }) {
+    return (
+        <li>
+            <Link to={to} className="flex items-center gap-3 px-4 py-3.5 transition active:bg-slate-100">
+                {icon}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-semibold text-slate-900">{title}</span>
+                        {aside && <span className="shrink-0 text-sm font-semibold text-slate-900 tabular-nums">{aside}</span>}
+                    </div>
+                    {sub && <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-slate-500">{sub}</div>}
+                    {meta && <div className="mt-0.5 text-xs">{meta}</div>}
+                </div>
+                <ChevronRight size={16} className="shrink-0 text-slate-300" />
+            </Link>
+        </li>
+    );
+}
+
 function SummaryCard({ icon, tone, label, value, note }: { icon: ReactNode; tone: string; label: string; value: number; note: ReactNode }) {
     return (
-        <section className="card flex items-center gap-4 p-5">
-            <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${tone}`}>{icon}</span>
+        <section className="card flex items-center gap-3 p-3 sm:gap-4 sm:p-5">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14 [&>svg]:h-5 [&>svg]:w-5 sm:[&>svg]:h-[26px] sm:[&>svg]:w-[26px] ${tone}`}>{icon}</span>
             <div className="min-w-0">
-                <div className="text-sm text-slate-600">{label}</div>
-                <div className="text-2xl font-bold text-slate-900 tabular-nums">{value}</div>
-                <div className="text-xs">{note}</div>
+                <div className="truncate text-xs text-slate-600 sm:text-sm">{label}</div>
+                <div className="text-xl font-bold text-slate-900 tabular-nums sm:text-2xl">{value}</div>
+                <div className="hidden text-xs sm:block">{note}</div>
             </div>
         </section>
     );
@@ -271,7 +305,7 @@ function MyServices({ orderTo, canManage }: { orderTo: string; canManage: boolea
     return (
         <div className="space-y-5">
             <QueryState query={query}>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                     <SummaryCard icon={<Package size={26} />} tone="bg-emerald-100 text-emerald-700" label="Total Services" value={all.length} note={<span className="text-slate-500">All services in your account</span>} />
                     <SummaryCard icon={<CircleCheck size={26} />} tone="bg-sky-100 text-sky-700" label="Active Services" value={count('active')} note={<span className="text-emerald-700">Currently active</span>} />
                     <SummaryCard icon={<Clock size={26} />} tone="bg-amber-100 text-amber-700" label="Pending Services" value={count('pending')} note={<span className="text-amber-700">Awaiting setup</span>} />
@@ -292,35 +326,50 @@ function MyServices({ orderTo, canManage }: { orderTo: string; canManage: boolea
                                 </button>
                             ))}
                         </div>
-                        <div className="flex gap-2 py-2">
+                        <div className="hidden gap-2 py-2 md:flex">
                             <Button type="button" variant="ghost" disabled={!rows.length} onClick={exportCsv}><Download size={14} /> Export List</Button>
                             <Link to={orderTo} className="ui-btn ui-btn-primary"><Plus size={14} /> Order New Service</Link>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
+                        <label className="hidden items-center gap-2 text-sm font-semibold text-slate-700 md:flex">
                             Show
                             <span className="w-20"><Select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}>{[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}</Select></span>
                             entries
                         </label>
-                        <div className="flex flex-wrap gap-2">
-                            <span className="w-36"><Select aria-label="Status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+                        <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:flex-wrap">
+                            <span className="md:w-36"><Select aria-label="Status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
                                 <option value="">All Status</option>
                                 {['active', 'pending', 'suspended', 'terminated', 'cancelled'].map((x) => <option key={x} value={x}>{x[0].toUpperCase() + x.slice(1)}</option>)}
                             </Select></span>
-                            <span className="w-40"><Select aria-label="Category" value={group} onChange={(e) => { setGroup(e.target.value); setPage(1); }}>
+                            <span className="md:w-40"><Select aria-label="Category" value={group} onChange={(e) => { setGroup(e.target.value); setPage(1); }}>
                                 <option value="">All Categories</option>
                                 {groups.map((g) => <option key={g} value={g}>{g}</option>)}
                             </Select></span>
-                            <div className="relative w-56">
+                            <div className="relative col-span-2 md:w-56">
                                 <Input type="search" aria-label="Search services" placeholder="Search service..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
                                 <Search size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <ul className="divide-y divide-slate-100 border-t border-slate-100 md:hidden">
+                        {shown.length === 0 && <li className="px-5 py-10 text-center text-sm text-slate-500">{all.length ? 'No services match these filters.' : 'You have no services yet.'}</li>}
+                        {shown.map((x) => (
+                            <MobileRow
+                                key={x.id}
+                                to={`/services/${x.id}`}
+                                icon={<PanelLogo module={x.product.module} type={x.product.type} />}
+                                title={x.product.name}
+                                aside={money(x.recurring_amount)}
+                                sub={<><span className="truncate">{x.domain ?? 'No domain'}</span><span className="inline-flex shrink-0 items-center gap-1.5 capitalize"><span className={`h-2 w-2 rounded-full ${statusDot[x.status] ?? 'bg-slate-400'}`} />{x.status}</span></>}
+                                meta={<DueInline date={x.next_due_date} />}
+                            />
+                        ))}
+                    </ul>
+
+                    <div className="hidden overflow-x-auto md:block">
                         <table className="w-full min-w-[60rem] text-left text-sm">
                             <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
                                 <tr>{header('name', 'Product / Service')}{header('group', 'Category')}{header('price', 'Pricing')}{header('due', 'Next Due Date')}{header('status', 'Status')}{header(null, 'Quick Action')}{header(null, 'Action')}</tr>
@@ -369,13 +418,13 @@ function MyServices({ orderTo, canManage }: { orderTo: string; canManage: boolea
                     </div>
                 </section>
 
-                <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-sky-200 bg-sky-50/70 p-5">
+                <section className="flex flex-col items-stretch gap-3 rounded-2xl border border-sky-200 bg-sky-50/70 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 sm:p-5">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white"><Info size={18} /></span>
                     <div className="min-w-0 flex-1">
                         <div className="font-semibold text-slate-900">Need to add a new service?</div>
                         <div className="text-sm text-slate-600">Browse our products and order the perfect hosting solution for your needs.</div>
                     </div>
-                    <Link to={orderTo} className="ui-btn ui-btn-primary"><ShoppingCart size={14} /> Order New Service</Link>
+                    <Link to={orderTo} className="ui-btn ui-btn-primary justify-center"><ShoppingCart size={14} /> Order New Service</Link>
                 </section>
             </QueryState>
         </div>
@@ -448,7 +497,7 @@ function MyDomains() {
     return (
         <div className="space-y-5">
             <QueryState query={query}>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                     <SummaryCard icon={<Globe size={26} />} tone="bg-emerald-100 text-emerald-700" label="Total Domains" value={all.length} note={<span className="text-slate-500">All domains in your account</span>} />
                     <SummaryCard icon={<CircleCheck size={26} />} tone="bg-sky-100 text-sky-700" label="Active Domains" value={all.filter((d) => d.status === 'active').length} note={<span className="text-emerald-700">Currently active domains</span>} />
                     <SummaryCard icon={<Clock size={26} />} tone="bg-amber-100 text-amber-700" label="Expiring Soon" value={soon.length} note={<span className="text-amber-700">Within 30 days</span>} />
@@ -469,15 +518,15 @@ function MyDomains() {
                                 </button>
                             ))}
                         </div>
-                        <div className="flex flex-wrap gap-2 py-2">
+                        <div className="flex w-full flex-wrap gap-2 py-2 md:w-auto">
                             {all.length > 5 && (
-                                <div className="relative w-52">
+                                <div className="relative w-full md:w-52">
                                     <Input type="search" aria-label="Search domains" placeholder="Search domain..." value={search} onChange={(e) => setSearch(e.target.value)} />
                                     <Search size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" />
                                 </div>
                             )}
-                            <Button type="button" variant="ghost" disabled={!rows.length} onClick={exportCsv}><Download size={14} /> Export List</Button>
-                            <Link to={tab === 'transfer' ? '/order-domain?action=transfer' : '/order-domain'} className="ui-btn ui-btn-primary"><Plus size={14} /> {tab === 'transfer' ? 'Transfer a Domain' : 'Order New Domain'}</Link>
+                            <span className="hidden md:inline-flex"><Button type="button" variant="ghost" disabled={!rows.length} onClick={exportCsv}><Download size={14} /> Export List</Button></span>
+                            <Link to={tab === 'transfer' ? '/order-domain?action=transfer' : '/order-domain'} className="ui-btn ui-btn-primary w-full justify-center md:w-auto"><Plus size={14} /> {tab === 'transfer' ? 'Transfer a Domain' : 'Order New Domain'}</Link>
                         </div>
                     </div>
 
@@ -489,7 +538,21 @@ function MyDomains() {
                             )}
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                        <ul className="divide-y divide-slate-100 md:hidden">
+                            {rows.map((d) => (
+                                <MobileRow
+                                    key={d.id}
+                                    to={`/domains/${d.id}`}
+                                    icon={<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Globe size={18} /></span>}
+                                    title={d.name}
+                                    aside={money(d.recurring_amount)}
+                                    sub={<><span>{d.action === 'transfer' ? 'Transferred' : 'Registered'}{d.auto_renew ? ' · Auto renew' : ''}</span><DomainStatus status={d.status} /></>}
+                                    meta={isPast(d.status) ? null : <DueInline date={d.expires_at} label="Expires" />}
+                                />
+                            ))}
+                        </ul>
+                        <div className="hidden overflow-x-auto md:block">
                             <table className="w-full min-w-[52rem] text-left text-sm">
                                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
                                     <tr>{['Domain', 'Registered', 'Expiry Date', 'Renewal', 'Auto Renew', 'Status', 'Action'].map((h) => <th key={h} className="px-5 py-3 font-semibold whitespace-nowrap">{h}</th>)}</tr>
@@ -514,6 +577,7 @@ function MyDomains() {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
                     {rows.length > 0 && <div className="border-t border-slate-200 px-5 py-3 text-sm text-slate-600">Showing {rows.length} of {all.length} domains</div>}
                 </section>
@@ -583,12 +647,12 @@ function MyInvoices() {
     };
 
     const stat = (icon: ReactNode, tone: string, label: string, count: number, note: ReactNode) => (
-        <div className="flex items-center gap-4 p-5">
-            <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${tone}`}>{icon}</span>
+        <div className="flex items-center gap-3 p-3 sm:gap-4 sm:p-5">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 [&>svg]:h-5 [&>svg]:w-5 sm:[&>svg]:h-[26px] sm:[&>svg]:w-[26px] ${tone}`}>{icon}</span>
             <div className="min-w-0">
-                <div className="text-sm text-slate-600">{label}</div>
-                <div className="text-2xl font-bold text-slate-900 tabular-nums">{count}</div>
-                <div className="text-xs">{note}</div>
+                <div className="truncate text-xs text-slate-600 sm:text-sm">{label}</div>
+                <div className="text-xl font-bold text-slate-900 tabular-nums sm:text-2xl">{count}</div>
+                <div className="hidden text-xs sm:block">{note}</div>
             </div>
         </div>
     );
@@ -596,7 +660,7 @@ function MyInvoices() {
     return (
         <div className="space-y-5">
             <QueryState query={query}>
-                <section className="card grid divide-y divide-slate-200 sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4 xl:divide-x">
+                <section className="card grid grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-slate-200">
                     {stat(<FileText size={26} />, 'bg-sky-100 text-sky-700', 'Total Invoices', all.length, <span className="text-slate-500">All invoices in your account</span>)}
                     {stat(<CircleCheck size={26} />, 'bg-emerald-100 text-emerald-700', 'Paid Invoices', byStatus('paid').length, <span className="text-emerald-700">Total {money(sum(byStatus('paid')))}</span>)}
                     {stat(<Clock size={26} />, 'bg-amber-100 text-amber-700', 'Unpaid Invoices', byStatus('unpaid').length, <span className="text-amber-700">Total {money(sum(byStatus('unpaid')))}</span>)}
@@ -607,7 +671,7 @@ function MyInvoices() {
                     <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">
                         <h3 className="text-base font-bold text-slate-900">Invoices</h3>
                         <div className="flex gap-2">
-                            <Button type="button" variant="ghost" disabled={!rows.length} onClick={downloadAll}><Download size={14} /> Download All</Button>
+                            <span className="hidden md:inline-flex"><Button type="button" variant="ghost" disabled={!rows.length} onClick={downloadAll}><Download size={14} /> Download All</Button></span>
                             <Button type="button" variant="ghost" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}><Filter size={14} /> Filters{status && ' (1)'}</Button>
                         </div>
                     </div>
@@ -625,19 +689,34 @@ function MyInvoices() {
                             ))}
                         </div>
                     )}
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
+                        <label className="hidden items-center gap-2 text-sm font-semibold text-slate-700 md:flex">
                             Show
                             <span className="w-20"><Select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}>{[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}</Select></span>
                             entries
                         </label>
-                        <div className="relative w-60">
+                        <div className="relative w-full md:w-60">
                             <Input type="search" aria-label="Search invoices" placeholder="Search invoice..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
                             <Search size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" />
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <ul className="divide-y divide-slate-100 border-t border-slate-100 md:hidden">
+                        {shown.length === 0 && <li className="px-5 py-10 text-center text-sm text-slate-500">{all.length ? 'No invoices match these filters.' : 'You have no invoices yet.'}</li>}
+                        {shown.map((i) => (
+                            <MobileRow
+                                key={i.id}
+                                to={`/invoices/${i.id}`}
+                                icon={<span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${i.status === 'unpaid' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}><FileText size={18} /></span>}
+                                title={`Invoice #${i.number}`}
+                                aside={money(i.total, i.currency)}
+                                sub={<><span>{longDate(i.created_at)}</span><InvoicePill invoice={i} /></>}
+                                meta={i.status === 'unpaid' ? <span className="font-semibold text-accent">Due {longDate(i.due_date)} · Tap to pay</span> : null}
+                            />
+                        ))}
+                    </ul>
+
+                    <div className="hidden overflow-x-auto md:block">
                         <table className="w-full min-w-[46rem] text-left text-sm">
                             <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
                                 <tr>{header('number', 'Invoice ID')}{header('created', 'Invoice Date')}{header('due', 'Due Date')}{header('amount', 'Amount')}{header('status', 'Status')}{header(null, 'Action')}</tr>
@@ -957,7 +1036,7 @@ type StoreGroup = { id: number; name: string; slug: string; headline: string | n
 const useStore = (enabled = true) => useQuery({ queryKey: ['client-store'], queryFn: async () => (await api.get<StoreGroup[]>('/client/store')).data, enabled });
 
 type Tld = { tld: string; register_price: string; renew_price: string; transfer_price: string; is_spotlight: boolean; epp_required: boolean };
-type DomainOptions = { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
+type DomainOptions = RegistrantGaps & { register: boolean; transfer: boolean; own: boolean; nameservers: string[]; tlds: Tld[]; lookup: boolean; premium: boolean };
 
 type DomainAction = 'register' | 'transfer' | 'own';
 
@@ -1002,8 +1081,10 @@ function ProductCard({ product }: { product: StoreProduct }) {
     const [picked, setAction] = useState<DomainAction | null>(null);
     const action = picked && allowed.includes(picked) ? picked : (allowed[0] ?? 'own');
     const price = product.prices.find((p) => p.cycle === cycle);
+    const registrant = useRegistrantForm();
+    const needsRegistrant = !!domain && action !== 'own';
     const order = useMutation({
-        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders', { product_id: product.id, cycle, domain: domain || null, domain_action: domain ? action : null, epp_code: action === 'transfer' ? epp || null : null, vps_image: osChoices.length ? os : null })).data,
+        mutationFn: async () => (await api.post<{ invoice_id: number }>('/client/orders', { product_id: product.id, cycle, domain: domain || null, domain_action: domain ? action : null, epp_code: action === 'transfer' ? epp || null : null, vps_image: osChoices.length ? os : null, contact: needsRegistrant ? registrant.values : null })).data,
         onSuccess: ({ invoice_id }) => navigate(`/invoices/${invoice_id}`),
     });
 
@@ -1050,6 +1131,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
                             <Field label="EPP code"><Input required={tldFor(domain, options.tlds)?.epp_required ?? true} autoComplete="off" value={epp} onChange={(e) => setEpp(e.target.value)} /></Field>
                         )}
                         {options && action === 'own' && domain && <Nameservers list={options.nameservers} />}
+                        {options && needsRegistrant && <RegistrantFields missing={options.registrant_missing} form={registrant} />}
                     </>
                 )}
                 <ErrorNote error={order.error} />
@@ -1135,6 +1217,24 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
         setDrawerOpen(false);
     }, [pathname, title, brand]);
 
+    // Phones get an app-style bar: the tab pages show the logo, every other page a back arrow.
+    const tabRoots = ['/', '/services', '/domains', '/invoices'];
+    const backTo = tabRoots.includes(pathname) ? null : pathname === '/tickets/new' ? '/tickets' : parent ? parent[0].slice(0, -1) : '/';
+    const tabItem = (to: string, label: string, Icon: typeof Package, active: boolean, badge = 0) => (
+        <Link key={to} to={to} className={`relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition active:scale-95 ${active ? 'text-accent' : 'text-slate-500'}`}>
+            <Icon size={21} strokeWidth={active ? 2.4 : 2} />
+            {label}
+            {badge > 0 && <span className="absolute top-1.5 left-1/2 ml-2 min-w-4 rounded-full bg-rose-600 px-1 text-[9px] leading-4 font-bold text-white">{badge > 99 ? '99+' : badge}</span>}
+        </Link>
+    );
+    const tabsShown = [
+        tabItem('/', 'Home', LayoutDashboard, pathname === '/'),
+        can('products') && tabItem('/services', 'Services', Package, pathname.startsWith('/services')),
+        can('domains') && tabItem('/domains', 'Domains', Globe, pathname.startsWith('/domains')),
+        can('invoices') && tabItem('/invoices', 'Invoices', Receipt, pathname.startsWith('/invoices'), unpaidCount),
+    ].filter(Boolean);
+    const supportBadge = (badges.data?.unread_chat ?? 0) + (badges.data?.answered_tickets ?? 0);
+
     return (
         <div className="bg-dashboard print:bg-white">
             <div className="flex min-h-screen flex-col md:flex-row">
@@ -1190,11 +1290,13 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                             <Button variant="ghost" disabled={stopImpersonating.isPending} onClick={() => stopImpersonating.mutate()}>Back to admin</Button>
                         </div>
                     )}
-                    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b print:hidden border-slate-300/70 bg-white/80 px-3 py-2 backdrop-blur md:px-6 md:py-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                            <button type="button" aria-label="Open menu" className="icon-btn md:hidden" onClick={() => setDrawerOpen(true)}><Menu size={20} /></button>
+                    <header className="safe-top sticky top-0 z-20 flex items-center justify-between gap-2 border-b print:hidden border-slate-300/70 bg-white/90 px-2 py-2 backdrop-blur md:gap-3 md:bg-white/80 md:px-6 md:py-3">
+                        <div className="flex min-w-0 items-center gap-2 md:gap-3">
+                            {backTo
+                                ? <Link to={backTo} aria-label="Back" className="icon-btn h-10 w-10 md:hidden"><ArrowLeft size={20} /></Link>
+                                : <Link to="/" aria-label="Home" className="md:hidden"><LogoIcon className="h-9 w-9 rounded-xl bg-white p-0.5" /></Link>}
                             <div className="min-w-0">
-                                <h1 className="truncate text-base font-semibold text-slate-900 md:text-lg">{pathname === '/' ? <>Welcome back, {profile.name}! <span aria-hidden>👋</span></> : title}</h1>
+                                <h1 className="truncate text-base font-semibold text-slate-900 md:text-lg">{pathname === '/' ? <><span className="md:hidden">Hi, {profile.name.split(' ')[0]}</span><span className="hidden md:inline">Welcome back, {profile.name}!</span> <span aria-hidden>👋</span></> : title}</h1>
                                 <nav aria-label="Breadcrumb" className="hidden items-center gap-1.5 text-xs text-slate-500 sm:flex">
                                     <Link to="/" className="text-accent hover:underline">Home</Link>
                                     {crumbs.map(([label, to]) => (
@@ -1208,11 +1310,11 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                         </div>
                         <div className="flex min-w-0 items-center gap-2">
                             <Notifications chat={badges.data?.unread_chat ?? 0} tickets={badges.data?.answered_tickets ?? 0} invoices={unpaidCount} />
-                            <span className="h-8 w-px bg-slate-200" />
+                            <span className="hidden h-8 w-px bg-slate-200 md:block" />
                             <AccountMenu profile={profile} busy={logout.isPending} onLogout={() => logout.mutate()} />
                         </div>
                     </header>
-                    <main key={pathname} className="fade-in w-full print:p-0 px-3 py-4 sm:px-4 md:px-6 md:py-6">
+                    <main key={pathname} className="fade-in pb-safe-nav w-full print:p-0 px-3 py-4 sm:px-4 md:px-6 md:py-6">
                         <Routes>
                             <Route path="/" element={<Home profile={profile} firstStore={store.data?.[0] ? `/store/${store.data[0].slug}` : null} />} />
                             {/* A page the signed-in user may not use falls through to the dashboard. */}
@@ -1245,6 +1347,15 @@ export function CustomerArea({ profile }: { profile: ClientProfile }) {
                     </main>
                 </div>
             </div>
+
+            <nav aria-label="Main" className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid border-t border-slate-200 bg-white/95 backdrop-blur print:hidden md:hidden" style={{ gridTemplateColumns: `repeat(${tabsShown.length + 1}, minmax(0, 1fr))` }}>
+                {tabsShown}
+                <button type="button" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)} className={`relative flex cursor-pointer flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition active:scale-95 ${drawerOpen ? 'text-accent' : 'text-slate-500'}`}>
+                    <MoreHorizontal size={21} />
+                    More
+                    {supportBadge > 0 && <span className="absolute top-1.5 left-1/2 ml-2 min-w-4 rounded-full bg-rose-600 px-1 text-[9px] leading-4 font-bold text-white">{supportBadge}</span>}
+                </button>
+            </nav>
         </div>
     );
 }
