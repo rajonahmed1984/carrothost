@@ -63,6 +63,8 @@ class ClientTabsTest extends TestCase
     {
         app(CreditService::class)->add($this->client, '30.00', 'Goodwill');
         $invoice = $this->invoice('100.00');
+        // Too little to pay it in full, so an admin applies it by hand.
+        app(CreditService::class)->applyToInvoice($invoice);
         $this->assertSame('70.00', $invoice->refresh()->total);
 
         $this->bulk('mark_cancelled', [$invoice])->assertOk();
@@ -134,6 +136,7 @@ class ClientTabsTest extends TestCase
     {
         app(CreditService::class)->add($this->client, '10.00', 'Goodwill');
         $invoice = $this->invoice('100.00');
+        app(CreditService::class)->applyToInvoice($invoice);
         $line = $invoice->items()->where('description', 'Hosting')->sole();
 
         $this->putJson("/api/invoices/{$invoice->id}", [

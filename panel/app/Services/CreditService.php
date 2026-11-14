@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * A client's credit balance. Every change is a ClientCredit row, and credit pays
- * unpaid invoices by itself: when it is added, and when a new invoice is raised.
+ * A client's credit balance. Every change is a ClientCredit row. Credit pays an unpaid invoice
+ * by itself (when it is added, and when a new invoice is raised) only when it covers the whole
+ * balance; a smaller amount stays on the account until an admin applies it from the invoice.
  */
 class CreditService
 {
@@ -58,7 +59,7 @@ class CreditService
         return $credit;
     }
 
-    /** Pays the client's unpaid invoices from credit, the one falling due first first, until the credit runs out. */
+    /** Pays in full, from credit, each unpaid invoice the credit still covers, the one falling due first first. */
     public function applyToDueInvoices(Client $client): void
     {
         $invoices = $client->invoices()->where('status', 'unpaid')
@@ -70,20 +71,25 @@ class CreditService
                 return;
             }
 
-            $this->applyToInvoice($invoice);
+            $this->applyToInvoice($invoice, inFullOnly: true);
         }
     }
 
     /**
      * Uses as much credit as the invoice still needs. It shows on the invoice as a
-     * "Credit applied" line that lowers the total.
+     * "Credit applied" line that lowers the total. $inFullOnly uses none unless the credit
+     * covers the whole balance, so automatic payment never leaves an invoice part-paid.
      * Returns the amount used.
      */
-    public function applyToInvoice(Invoice $invoice, ?string $limit = null): string
+    public function applyToInvoice(Invoice $invoice, ?string $limit = null, bool $inFullOnly = false): string
     {
-        [$used, $becamePaid, $locked] = DB::transaction(function () use ($invoice, $limit) {
+        [$used, $becamePaid, $locked] = DB::transaction(function () use ($invoice, $limit, $inFullOnly) {
             $client = Client::whereKey($invoice->client_id)->lockForUpdate()->firstOrFail();
             $locked = Invoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+
+            if ($inFullOnly && bccomp((string) $client->credit_balance, $this->billing->balanceDue($locked), 2) < 0) {
+                return ['0.00', false, $locked];
+            }
 
             $used = $this->minimum((string) $client->credit_balance, $this->billing->balanceDue($locked));
             if ($limit !== null) {

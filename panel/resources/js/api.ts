@@ -27,9 +27,12 @@ api.interceptors.response.use(undefined, async (error: AxiosError) => {
 export const background = { headers: { 'X-Background': '1' } };
 
 // An admin signed out for being idle goes back to the login page, then returns here.
+// Only admin API calls count: the app also checks /client/me on every load, and an admin
+// without a customer session gets 401 there, which must not bounce them through the login page.
 api.interceptors.response.use(undefined, (error: AxiosError) => {
     const path = window.location.pathname.slice(basePath.length);
-    if (error.response?.status === 401 && path.startsWith('/admin') && !path.startsWith('/admin/login') && error.config?.url !== '/me') {
+    const url = error.config?.url ?? '';
+    if (error.response?.status === 401 && path.startsWith('/admin') && !path.startsWith('/admin/login') && url !== '/me' && !url.startsWith('/client/')) {
         window.location.assign(`${basePath}/admin/login?redirect=${encodeURIComponent(path + window.location.search)}`);
     }
     throw error;

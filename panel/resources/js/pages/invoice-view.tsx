@@ -338,6 +338,9 @@ function CreditTab({ inv, onSaved }: { inv: InvoiceFull; onSaved: (d: InvoiceFul
                         )}
                     </div>
                 )}
+                {unpaid && available > 0 && Number(inv.client.credit_balance) < Number(inv.balance) && (
+                    <p className="text-xs text-slate-500">The client's credit does not cover the whole balance, so it was not applied automatically. Apply it here to pay part of the invoice.</p>
+                )}
                 {unpaid && available <= 0 && <p className="text-xs text-slate-500">The client has no credit to apply{Number(inv.balance) <= 0 ? ', and nothing is owed' : ''}.</p>}
                 <ErrorNote error={change.error} />
             </div>

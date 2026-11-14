@@ -57,7 +57,8 @@ class AdminReportsTest extends TestCase
                 && str_contains($html, 'Renewal invoices created')
                 && collect($mail->sections[0]['rows'])->contains(fn ($row) => $row[0] === 'Renewal invoices created' && $row[1] === '4')
                 && str_contains($html, 'WHM timed out')
-                && str_contains($html, 'Services suspended: this task did not run.')
+                && str_contains($html, 'Services suspended: this task failed (WHM timed out).')
+                && str_contains($html, 'Domains marked expired: this task did not run.')
                 && ! str_contains($html, 'Cron looks stopped');
         });
     }

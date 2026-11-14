@@ -32,26 +32,43 @@ class CreditTest extends TestCase
         return app(BillingService::class)->createInvoice($this->client, [['description' => 'Hosting', 'amount' => $amount]], now()->parse($due));
     }
 
-    public function test_added_credit_pays_due_invoices_oldest_first(): void
+    public function test_added_credit_pays_due_invoices_in_full_oldest_first(): void
     {
         $later = $this->invoice('100.00', '+10 days');
         $sooner = $this->invoice('100.00', '+1 day');
 
         $this->actingAs($this->admin())
             ->postJson("/api/clients/{$this->client->id}/credits", ['type' => 'add', 'amount' => '150', 'description' => 'Refund'])
-            ->assertOk()->assertJsonPath('balance', '0.00');
+            ->assertOk()->assertJsonPath('balance', '50.00');
 
         $this->assertSame('paid', $sooner->refresh()->status);
         $this->assertSame('0.00', $sooner->total);
+        // The 50 left does not cover it, so it is not touched.
         $this->assertSame('unpaid', $later->refresh()->status);
-        $this->assertSame('50.00', $later->total);
-        $this->assertSame(['-50.00'], $later->items()->where('description', 'Credit applied')->pluck('amount')->all());
+        $this->assertSame('100.00', $later->total);
+        $this->assertFalse($later->items()->where('description', 'Credit applied')->exists());
 
         $this->getJson("/api/clients/{$this->client->id}/credits")->assertOk()
-            ->assertJsonPath('data.0.description', "Credit Applied to Invoice #{$later->number}")
-            ->assertJsonPath('data.2.description', 'Refund')
-            ->assertJsonPath('data.2.amount', '150.00')
-            ->assertJsonPath('data.2.user.name', User::first()->name);
+            ->assertJsonPath('data.0.description', "Credit Applied to Invoice #{$sooner->number}")
+            ->assertJsonPath('data.1.description', 'Refund')
+            ->assertJsonPath('data.1.amount', '150.00')
+            ->assertJsonPath('data.1.user.name', User::first()->name);
+    }
+
+    public function test_credit_that_does_not_cover_an_invoice_waits_for_an_admin(): void
+    {
+        $this->actingAs($this->admin())->postJson("/api/clients/{$this->client->id}/credits", ['type' => 'add', 'amount' => '30', 'description' => 'Goodwill']);
+        $big = $this->invoice('100.00');
+        $small = $this->invoice('25.00', '+5 days');
+
+        // A later invoice the credit covers is still paid; the bigger one is left alone.
+        $this->assertSame(['unpaid', '100.00'], [$big->refresh()->status, $big->total]);
+        $this->assertSame('paid', $small->refresh()->status);
+        $this->assertSame('5.00', $this->client->refresh()->credit_balance);
+
+        $this->postJson("/api/invoices/{$big->id}/credit", ['action' => 'apply', 'amount' => '5'])->assertOk();
+        $this->assertSame(['unpaid', '95.00'], [$big->refresh()->status, $big->total]);
+        $this->assertSame('0.00', $this->client->refresh()->credit_balance);
     }
 
     public function test_a_new_invoice_uses_the_credit_already_held(): void

@@ -88,8 +88,12 @@ class AdminReports
         foreach (self::TASKS as $task => $label) {
             $taskRuns = $runs->get($task);
             if (! $taskRuns) {
-                $tasks[] = [$label, '—', 'Did not run'];
-                $notes[] = "{$label}: this task did not run.";
+                // A task that started and crashed is not the same problem as one cron never started.
+                $failure = $failures->last(fn ($log) => ($log->context['task'] ?? null) === $task);
+                $tasks[] = [$label, '—', $failure ? 'Failed '.$failure->created_at->format('H:i') : 'Did not run'];
+                $notes[] = $failure
+                    ? "{$label}: this task failed (".($failure->context['error'] ?? 'unknown error').').'
+                    : "{$label}: this task did not run.";
 
                 continue;
             }

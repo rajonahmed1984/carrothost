@@ -48,7 +48,27 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
     );
 }
 
-export const Input = (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="ui-input" />;
+export const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (props.type === 'password' ? <PasswordInput {...props} /> : <input {...props} className="ui-input" />);
+
+/** Every password field gets an eye button to show or hide what was typed. */
+function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
+    const [visible, setVisible] = useState(false);
+
+    return (
+        <span className="relative block">
+            <input {...props} type={visible ? 'text' : 'password'} spellCheck={false} className="ui-input pr-10" />
+            <button
+                type="button"
+                onClick={() => setVisible(!visible)}
+                aria-label={visible ? 'Hide password' : 'Show password'}
+                title={visible ? 'Hide password' : 'Show password'}
+                className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-slate-400 hover:text-slate-700"
+            >
+                {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+        </span>
+    );
+}
 
 /**
  * A password or API key field. A saved value shows as dots; the eye button loads it from the server

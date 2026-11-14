@@ -139,9 +139,10 @@ class BillingService
                 if (! $order) {
                     app(AdminNotifier::class)->invoiceCreated($invoice);
                 }
-                // Credit the client already holds pays new invoices straight away. Add Funds invoices are how credit is bought, so never.
+                // Credit the client already holds pays a new invoice straight away when it covers all of it.
+                // Add Funds invoices are how credit is bought, so never.
                 if (! self::isPrepayment($invoice)) {
-                    app(CreditService::class)->applyToInvoice($invoice);
+                    app(CreditService::class)->applyToInvoice($invoice, inFullOnly: true);
                     // Queued after credit: one that credit paid in full gets only the paid SMS.
                     SendInvoiceSms::notify($invoice->id, 'invoice_created');
                 }
