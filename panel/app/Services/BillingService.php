@@ -304,8 +304,18 @@ class BillingService
             }
         }
 
+        // Paying does not accept the order: while a service still waits on an admin
+        // (acceptance or manual setup), the order stays in Pending Orders.
         if ($invoice->order_id) {
-            Order::whereKey($invoice->order_id)->where('status', 'pending')->update(['status' => 'active']);
+            $needsAdmin = Service::where('order_id', $invoice->order_id)
+                ->whereIn('status', ['pending', 'active'])
+                ->where(fn ($q) => $q->where('provision_status', 'awaiting_accept')
+                    ->orWhere(fn ($q) => $q->whereNull('remote_id')->whereIn('provision_status', ['none', 'manual_required', 'failed'])))
+                ->exists();
+
+            if (! $needsAdmin) {
+                Order::whereKey($invoice->order_id)->where('status', 'pending')->update(['status' => 'active']);
+            }
         }
     }
 
