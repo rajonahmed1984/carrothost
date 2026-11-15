@@ -103,7 +103,7 @@ class VpsProfit
     }
 
     /** @return array{0: string, 1: ?string} first and last month the VPS ran (null = still running) */
-    private function liveMonths(Service $service): array
+    public function liveMonths(Service $service): array
     {
         $start = ($service->registered_at ?? $service->created_at)->format('Y-m');
         $end = match (true) {

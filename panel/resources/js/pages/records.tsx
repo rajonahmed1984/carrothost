@@ -273,6 +273,8 @@ export function OrderDetailPage() {
     });
 
     const isPaid = o?.invoices[0]?.status === 'paid';
+    // Setting up (usernames, servers, the registrar) is only for an order still waiting to be accepted.
+    const awaitingAccept = o?.status === 'pending';
     const totalAmount = o ? (Number(o.amount) > 0 ? o.amount! : o.invoices.reduce((sum, i) => sum + Number(i.total), 0)) : 0;
 
     return (
@@ -653,6 +655,16 @@ export function OrderDetailPage() {
                                                     <Status value={isPaid ? 'paid' : 'unpaid'} />
                                                 </td>
                                             </tr>
+                                            {!awaitingAccept ? (
+                                            // Accepted already: what was chosen stays as information, not as a form to send again.
+                                            d.registrar && (
+                                                <tr className="bg-slate-50/60 border-b border-slate-200">
+                                                    <td colSpan={6} className="px-4 py-2 text-xs text-slate-600">
+                                                        Registrar: <span className="font-semibold text-slate-900">{({ resellcube: 'ResellCube', stargate: 'StarGate / UK2' } as Record<string, string>)[d.registrar] ?? d.registrar}</span>
+                                                    </td>
+                                                </tr>
+                                            )
+                                            ) : (
                                             <tr className="bg-slate-50/60 border-b border-slate-200">
                                                 <td colSpan={6} className="px-4 py-3">
                                                     <div className="flex flex-wrap items-center gap-4 text-xs">
@@ -698,6 +710,7 @@ export function OrderDetailPage() {
                                                     )}
                                                 </td>
                                             </tr>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -713,43 +726,54 @@ export function OrderDetailPage() {
 
                     {/* Action Buttons Row */}
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-2 pb-6">
-                        <Button
-                            variant="primary"
-                            disabled={accept.isPending}
-                            onClick={() => accept.mutate()}
-                        >
-                            {accept.isPending ? <Spinner className="mr-1 h-3.5 w-3.5 text-current" /> : <Check size={14} className="mr-1" />} {accept.isPending ? 'Accepting...' : 'Accept Order'}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            disabled={cancel.isPending}
-                            onClick={() => {
-                                ask(`Cancel Order #${o.id}?`, () => cancel.mutate());
-                            }}
-                        >
-                            Cancel Order
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            disabled={cancel.isPending}
-                            onClick={() => {
-                                ask(`Cancel & Refund Order #${o.id}?`, () => cancel.mutate());
-                            }}
-                        >
-                            Cancel & Refund
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => statusMutation.mutate('fraud')}
-                        >
-                            Set as Fraud
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => statusMutation.mutate('pending')}
-                        >
-                            Set Back to Pending
-                        </Button>
+                        {/* Only what still makes sense for the order's status: an accepted order cannot be accepted again. */}
+                        {awaitingAccept && (
+                            <Button
+                                variant="primary"
+                                disabled={accept.isPending}
+                                onClick={() => accept.mutate()}
+                            >
+                                {accept.isPending ? <Spinner className="mr-1 h-3.5 w-3.5 text-current" /> : <Check size={14} className="mr-1" />} {accept.isPending ? 'Accepting...' : 'Accept Order'}
+                            </Button>
+                        )}
+                        {o.status !== 'cancelled' && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    disabled={cancel.isPending}
+                                    onClick={() => {
+                                        ask(`Cancel Order #${o.id}?`, () => cancel.mutate());
+                                    }}
+                                >
+                                    Cancel Order
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    disabled={cancel.isPending}
+                                    onClick={() => {
+                                        ask(`Cancel & Refund Order #${o.id}?`, () => cancel.mutate());
+                                    }}
+                                >
+                                    Cancel & Refund
+                                </Button>
+                            </>
+                        )}
+                        {o.status !== 'fraud' && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => statusMutation.mutate('fraud')}
+                            >
+                                Set as Fraud
+                            </Button>
+                        )}
+                        {o.status !== 'pending' && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => statusMutation.mutate('pending')}
+                            >
+                                Set Back to Pending
+                            </Button>
+                        )}
                         <Button
                             variant="danger"
                             disabled={deleteMutation.isPending}

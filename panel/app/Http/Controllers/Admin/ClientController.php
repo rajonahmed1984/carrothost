@@ -15,6 +15,7 @@ use App\Models\Service;
 use App\Services\Auth\SubUsers;
 use App\Services\BillingService;
 use App\Services\ClientCurrency;
+use App\Services\ClientProfit;
 use App\Services\CreditService;
 use App\Services\CustomerMailer;
 use App\Support\EmailHtml;
@@ -49,8 +50,9 @@ class ClientController extends Controller
             ->paginate(min($request->integer('per_page', 25), 500));
     }
 
-    public function show(Client $client)
+    public function show(Client $client, ClientProfit $profit)
     {
+        $earnings = $profit->for($client);
         // Totals are in the client's currency; an invoice from before a currency change is converted.
         $currency = $client->currencyCode();
         $inClientCurrency = fn ($amount, $from) => (float) (Currency::bdtRate($from ?: 'BDT') && Currency::bdtRate($currency) ? Currency::convert((string) $amount, $from ?: 'BDT', $currency) : $amount);
@@ -80,8 +82,9 @@ class ClientController extends Controller
                 'total' => (string) ($invoiceTotals->get($status)?->total ?? '0'),
             ]]),
             'overdue_invoices' => $client->invoices()->where('status', 'unpaid')->whereDate('due_date', '<', today())->count(),
-            'gross_revenue' => Currency::fmt((clone $payments)->selectRaw('currency, sum(amount) as total')->groupBy('currency')->get()
-                ->sum(fn ($r) => $inClientCurrency($r->total, $r->currency))),
+            // Money received, less refunds; the expenses and what is left are beside it.
+            'gross_revenue' => $earnings['revenue'],
+            'profit' => $earnings,
             'service_counts' => $client->services()
                 ->join('products', 'products.id', '=', 'services.product_id')
                 ->selectRaw('products.type as type, count(*) as total, sum(case when services.status = ? then 1 else 0 end) as active', ['active'])

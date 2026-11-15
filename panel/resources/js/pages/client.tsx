@@ -45,6 +45,14 @@ export type Detail = Client & {
     credit_balance: string;
     overdue_invoices: number;
     gross_revenue: string;
+    /** Revenue less what this client costs: gateway fees, domain registrar cost and VPS cost. */
+    profit: {
+        revenue: string;
+        expenses: { gateway_fees: string; domains: string; vps: string; total: string };
+        net: string;
+        margin: number | null;
+        notes: { missing_vps_cost: number; estimated_domain_cost: boolean };
+    };
     service_counts: { type: string; total: number; active: number }[];
     services: ServiceRow[];
     domains: DomainRow[];
@@ -237,6 +245,7 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
         onError: (e) => alertDialog(errorMessage(e)),
     });
     const t = c.invoice_totals;
+    const p = c.profit;
 
     return (
         <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -262,8 +271,32 @@ function Summary({ c, onEdit, onInvoice, onTab }: { c: Detail; onEdit: () => voi
                         ['Overdue', String(c.overdue_invoices)],
                         ['Cancelled', `${t.cancelled.count} (${money(t.cancelled.total, c.currency)})`],
                         ['Gross Revenue', money(c.gross_revenue, c.currency)],
+                        ['Expenses', (
+                            <div key="expenses">
+                                <span className="text-rose-700">{Number(p.expenses.total) > 0 ? '-' : ''}{money(p.expenses.total, c.currency)}</span>
+                                {Number(p.expenses.total) > 0 && (
+                                    <div className="mt-0.5 text-[11px] font-normal text-slate-500">
+                                        {[
+                                            Number(p.expenses.gateway_fees) > 0 && `Gateway fees ${money(p.expenses.gateway_fees, c.currency)}`,
+                                            Number(p.expenses.domains) > 0 && `Domains ${money(p.expenses.domains, c.currency)}`,
+                                            Number(p.expenses.vps) > 0 && `VPS ${money(p.expenses.vps, c.currency)}`,
+                                        ].filter(Boolean).join(' · ')}
+                                    </div>
+                                )}
+                            </div>
+                        )],
+                        ['Net Profit', (
+                            <span key="net" className={`font-semibold ${Number(p.net) < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                {money(p.net, c.currency)}{p.margin !== null && <span className="ml-1 text-[11px] font-normal text-slate-500">({p.margin}%)</span>}
+                            </span>
+                        )],
                         ['Credit Balance', <span key="credit" className="font-semibold text-emerald-700">{money(c.credit_balance, c.currency)}</span>],
                     ]} />
+                    <p className="border-t border-slate-100 px-4 py-2 text-[11px] leading-snug text-slate-500">
+                        Revenue is money received less refunds. Expenses are gateway fees, domain registrar cost and VPS cost. A shared hosting server's cost is not split between its accounts.
+                        {p.notes.estimated_domain_cost && ' Some domain costs are estimated from the registrar\'s TLD prices.'}
+                        {p.notes.missing_vps_cost > 0 && ` ${p.notes.missing_vps_cost} VPS ${p.notes.missing_vps_cost === 1 ? 'has' : 'have'} no monthly cost set, so it is not counted.`}
+                    </p>
                 </Panel>
                 {credits && <ManageCredits client={c} onClose={() => setCredits(false)} />}
                 <Panel title="Products/Services" footer={<><Action icon={<ShoppingCart size={14} />} onClick={() => onTab('services')}>View Services</Action><Action icon={<Plus size={14} />} to={`/admin/active-orders?client=${c.id}`}>Add New Order</Action></>}>
