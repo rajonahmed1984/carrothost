@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BellRing, ChevronDown, ExternalLink, FileText, Globe, KeyRound, Lock, Server, ShieldCheck, Undo2, User, Wrench } from 'lucide-react';
+import { ArrowLeft, BellRing, ChevronDown, ExternalLink, FileText, Globe, KeyRound, Lock, ReceiptText, Server, ShieldCheck, Undo2, User, Wrench } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { Button, Dropdown, ErrorNote, QueryState, Status } from '../ui';
 import { day } from './client-tabs';
+import { CreateInvoiceDialog } from './invoice-records';
 import { CommandModal, EppModal, RegistrarStatus, useRegistrarCommand, useRegistrarInfo, type CommandForm } from './domain-registrar';
 import { alertDialog, confirmDialog } from '../dialog';
 
@@ -114,7 +115,9 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
     const qc = useQueryClient();
     const [form, setForm] = useState<Form>(() => toForm(d));
     const [epp, setEpp] = useState(false);
-    const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
+    const [invoicing, setInvoicing] = useState(false);
+    const navigate = useNavigate();
+    const set =<K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
     const dirty = JSON.stringify(form) !== JSON.stringify(toForm(d));
 
     const save = useMutation({
@@ -189,6 +192,7 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
                     <select id={`switch-${d.id}`} className="ui-input h-9 min-w-0 flex-1 sm:w-56 sm:flex-none" value={d.id} onChange={(e) => onSelect(Number(e.target.value))}>
                         {d.client_domains.map((o) => <option key={o.id} value={o.id}>{o.name}{o.status !== 'active' ? ` (${label(o.status)})` : ''}</option>)}
                     </select>
+                    <button type="button" onClick={() => setInvoicing(true)} className="ui-btn ui-btn-secondary h-9"><ReceiptText size={14} /> Create Invoice</button>
                     <Link to={`/admin/clients/${d.client.id}?tab=invoices`} className="ui-btn ui-btn-secondary h-9"><FileText size={14} /> View Invoices</Link>
                     <Dropdown label="More actions" buttonClassName="ui-btn ui-btn-secondary h-9" button={<>More <ChevronDown size={14} /></>} menuClassName="w-52 py-1 text-sm">
                         <Link role="menuitem" to={`/admin/clients/${d.client.id}`} className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50"><User size={14} className="text-slate-400" /> Client Profile</Link>
@@ -338,6 +342,14 @@ function DomainEditor({ d, onSelect, onBack }: { d: DomainFull; onSelect: (id: n
                 </div>
             </div>
 
+            {invoicing && (
+                <CreateInvoiceDialog
+                    clientId={d.client.id}
+                    records={[{ type: 'domain', id: d.id, label: d.name }]}
+                    onClose={() => setInvoicing(false)}
+                    onCreated={(invoice) => { setInvoicing(false); navigate(`/admin/clients/${d.client.id}?tab=invoices&view=${invoice.id}`); }}
+                />
+            )}
             {epp && <EppModal id={d.id} canFetch={live && found} onClose={() => setEpp(false)} />}
             {modal && registrar && info.data && (
                 <CommandModal id={d.id} kind={modal} domain={d.name} registrar={registrar.name} years={d.years} eppCode={d.has_epp_code} defaults={info.data.contact_defaults} onClose={() => setModal(null)} />

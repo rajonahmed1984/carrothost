@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Services\BillingService;
 use App\Services\DomainRegistrar;
 use App\Services\LogicBoxesClient;
+use App\Support\BillingPeriod;
 use App\Support\DomainContact;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -229,12 +230,12 @@ class DomainController extends Controller
             throw ValidationException::withMessages(['domain' => 'This domain cannot be renewed here. Contact support.']);
         }
 
-        $invoice = $this->unpaidRenewal($domain) ?? $billing->createInvoice($domain->client, [[
+        $invoice = $this->unpaidRenewal($domain) ?? $billing->createInvoice($domain->client, [BillingPeriod::line([
             'description' => "Domain renewal: {$domain->name} ({$domain->years} yr)",
             'amount' => $domain->recurring_amount,
             'kind' => 'renewal',
             'domain_id' => $domain->id,
-        ]], today());
+        ], BillingPeriod::forYears($domain->years, $domain->expires_at))], today());
 
         // The daily renewal run then skips this term instead of raising a second invoice.
         $domain->forceFill(['renewal_invoiced_for' => $domain->expires_at])->save();

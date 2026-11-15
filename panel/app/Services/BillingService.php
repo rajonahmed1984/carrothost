@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Tld;
+use App\Support\BillingPeriod;
 use App\Support\PaymentMethods;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -59,12 +60,12 @@ class BillingService
                     $setupOnOrder[] = $service;
                 }
 
-                $items[] = [
+                $items[] = BillingPeriod::line([
                     'description' => "{$product->name} ({$line['cycle']})".($service->domain ? " - {$service->domain}" : ''),
                     'amount' => bcadd($price->priceIn($currency), $price->setupFeeIn($currency), 2),
                     'kind' => 'new',
                     'service_id' => $service->id,
-                ];
+                ], BillingPeriod::forCycle($line['cycle'], today()));
             }
 
             foreach ($domains as $line) {
@@ -88,12 +89,12 @@ class BillingService
                     'payment_method' => $order->payment_method,
                 ]);
 
-                $items[] = [
+                $items[] = BillingPeriod::line([
                     'description' => ucfirst($line['action'])." {$name} ({$years} yr)",
                     'amount' => bcmul($unit, $years, 2),
                     'kind' => 'new',
                     'domain_id' => $domain->id,
-                ];
+                ], BillingPeriod::forYears((int) $years, today()));
             }
 
             $invoice = $this->createInvoice($client, $items, now()->addDays((int) config('billing.invoice_due_days')), $order);
@@ -117,9 +118,13 @@ class BillingService
         });
     }
 
-    public function createInvoice(Client $client, array $items, CarbonInterface $dueDate, ?Order $order = null): Invoice
+    /**
+     * @param  bool  $notify  email/SMS the client and tell the admins; false for an invoice an admin raises quietly
+     * @param  bool  $applyCredit  let credit the client holds pay it straight away
+     */
+    public function createInvoice(Client $client, array $items, CarbonInterface $dueDate, ?Order $order = null, bool $notify = true, bool $applyCredit = true): Invoice
     {
-        return DB::transaction(function () use ($client, $items, $dueDate, $order) {
+        return DB::transaction(function () use ($client, $items, $dueDate, $order, $notify, $applyCredit) {
             $total = array_reduce($items, fn (string $sum, array $item) => bcadd($sum, (string) $item['amount'], 2), '0');
 
             $invoice = Invoice::create([
@@ -133,18 +138,24 @@ class BillingService
             ]);
 
             $invoice->items()->createMany($items);
-            DB::afterCommit(function () use ($invoice, $order) {
-                $this->mailer->invoiceCreated($invoice);
-                // An order's invoice is in the admins' new order email already.
-                if (! $order) {
-                    app(AdminNotifier::class)->invoiceCreated($invoice);
+            DB::afterCommit(function () use ($invoice, $order, $notify, $applyCredit) {
+                if ($notify) {
+                    $this->mailer->invoiceCreated($invoice);
+                    // An order's invoice is in the admins' new order email already.
+                    if (! $order) {
+                        app(AdminNotifier::class)->invoiceCreated($invoice);
+                    }
                 }
                 // Credit the client already holds pays a new invoice straight away when it covers all of it.
                 // Add Funds invoices are how credit is bought, so never.
                 if (! self::isPrepayment($invoice)) {
-                    app(CreditService::class)->applyToInvoice($invoice, inFullOnly: true);
+                    if ($applyCredit) {
+                        app(CreditService::class)->applyToInvoice($invoice, inFullOnly: true);
+                    }
                     // Queued after credit: one that credit paid in full gets only the paid SMS.
-                    SendInvoiceSms::notify($invoice->id, 'invoice_created');
+                    if ($notify) {
+                        SendInvoiceSms::notify($invoice->id, 'invoice_created');
+                    }
                 }
             });
 
@@ -293,6 +304,14 @@ class BillingService
 
             // The gateway the client last paid with becomes the record's payment method.
             $paidWith = PaymentMethods::isGateway($gateway) ? ['payment_method' => $gateway] : [];
+
+            // Billed for a renewal an admin already applied by hand: record the payment, leave the dates.
+            if ($item->record_only) {
+                $item->service?->update($paidWith);
+                $item->domain?->update($paidWith);
+
+                continue;
+            }
 
             if ($item->service) {
                 $item->service->update($paidWith);

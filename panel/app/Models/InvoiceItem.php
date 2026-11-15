@@ -13,7 +13,12 @@ class InvoiceItem extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2'];
+        return [
+            'amount' => 'decimal:2',
+            'period_start' => 'date:Y-m-d',
+            'period_end' => 'date:Y-m-d',
+            'record_only' => 'boolean',
+        ];
     }
 
     public function invoice(): BelongsTo

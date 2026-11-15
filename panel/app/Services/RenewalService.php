@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\ProvisionService;
 use App\Models\Domain;
 use App\Models\Service;
+use App\Support\BillingPeriod;
 
 class RenewalService
 {
@@ -29,12 +30,12 @@ class RenewalService
                 continue;
             }
 
-            $this->billing->createInvoice($service->client, [[
+            $this->billing->createInvoice($service->client, [BillingPeriod::line([
                 'description' => "Renewal: {$service->product->name}".($service->domain ? " - {$service->domain}" : ''),
                 'amount' => $service->recurring_amount,
                 'kind' => 'renewal',
                 'service_id' => $service->id,
-            ]], $service->next_due_date);
+            ], BillingPeriod::forCycle($service->cycle, $service->next_due_date))], $service->next_due_date);
 
             $service->update(['renewal_invoiced_for' => $service->next_due_date]);
             $count++;
@@ -51,12 +52,12 @@ class RenewalService
                 continue;
             }
 
-            $this->billing->createInvoice($domain->client, [[
+            $this->billing->createInvoice($domain->client, [BillingPeriod::line([
                 'description' => "Domain renewal: {$domain->name} ({$domain->years} yr)",
                 'amount' => $domain->recurring_amount,
                 'kind' => 'renewal',
                 'domain_id' => $domain->id,
-            ]], $domain->expires_at);
+            ], BillingPeriod::forYears($domain->years, $domain->expires_at))], $domain->expires_at);
 
             $domain->update(['renewal_invoiced_for' => $domain->expires_at]);
             $count++;

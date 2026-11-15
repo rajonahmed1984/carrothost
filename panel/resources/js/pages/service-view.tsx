@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRightLeft, ArrowUpCircle, Check, ChevronDown, CreditCard, ExternalLink, Eye, FileText, Link2, Gauge, LogIn, Mail, MonitorSmartphone, NotebookPen, Package, PauseCircle, RefreshCw, Send, Settings2, Terminal, Trash2, Undo2, User, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, ArrowUpCircle, Check, ChevronDown, CreditCard, ExternalLink, Eye, FileText, Link2, Gauge, LogIn, Mail, MonitorSmartphone, NotebookPen, Package, PauseCircle, ReceiptText, RefreshCw, Send, Settings2, Terminal, Trash2, Undo2, User, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { Button, Dropdown, ErrorNote, Modal, Progress, QueryState, Spinner, Status } from '../ui';
 import { Row, Section, Toggle } from './domain-view';
+import { CreateInvoiceDialog } from './invoice-records';
 import { SendMessage } from './sales';
 import { ChangePasswordModal, TransferModal, UpgradeModal } from './service-tools';
 import { alertDialog, ask } from '../dialog';
@@ -258,7 +259,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
     const [form, setForm] = useState<Form>(() => toForm(s));
     const [login, setLogin] = useState(false);
     const [linking, setLinking] = useState(false);
-    const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | null>(null);
+    const [dialog, setDialog] = useState<'upgrade' | 'transfer' | 'message' | 'password' | 'invoice' | null>(null);
     const [notice, setNotice] = useState<ReactNode>(null);
     // What "Check with server" last read, so Suspend/Unsuspend can fix an account out of step with the panel.
     const [serverSuspended, setServerSuspended] = useState<boolean | null>(null);
@@ -428,6 +429,7 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         : s.panel_url && <a href={s.panel_url} target="_blank" rel="noreferrer" className="ui-btn ui-btn-primary h-9"><LogIn size={14} /> Control Panel</a>}
                     <Dropdown label="More actions" buttonClassName="ui-btn ui-btn-secondary h-9" button={<>More <ChevronDown size={14} /></>} menuClassName="w-60 py-1 text-sm">
                         <Link role="menuitem" to={`/admin/clients/${s.client.id}?tab=invoices`} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><FileText size={14} className="text-slate-400" /> View Invoices</Link>
+                        <button type="button" role="menuitem" onClick={() => setDialog('invoice')} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><ReceiptText size={14} className="text-slate-400" /> Create Invoice</button>
                         <button type="button" role="menuitem" onClick={() => setDialog('upgrade')} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><ArrowUpCircle size={14} className="text-slate-400" /> Upgrade/Downgrade</button>
                         <button type="button" role="menuitem" onClick={() => setDialog('transfer')} className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-slate-50"><ArrowRightLeft size={14} className="text-slate-400" /> Transfer Ownership</button>
                         <div className="my-1 border-t border-slate-100" />
@@ -779,6 +781,14 @@ function ServiceEditor({ s, onSelect, onBack }: { s: ServiceFull; onSelect: (id:
                         fresh(data);
                         navigate(`/admin/clients/${data.client.id}?tab=services&view=${data.id}`);
                     }}
+                />
+            )}
+            {dialog === 'invoice' && (
+                <CreateInvoiceDialog
+                    clientId={s.client.id}
+                    records={[{ type: 'service', id: s.id, label: `${s.product.name}${s.domain ? ` - ${s.domain}` : ''}` }]}
+                    onClose={() => setDialog(null)}
+                    onCreated={(invoice) => { setDialog(null); navigate(`/admin/clients/${s.client.id}?tab=invoices&view=${invoice.id}`); }}
                 />
             )}
             {dialog === 'message' && <SendMessage clientIds={[s.client.id]} onClose={() => setDialog(null)} onSent={(m) => { setDialog(null); setNotice(m); }} />}

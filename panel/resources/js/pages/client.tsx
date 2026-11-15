@@ -880,9 +880,9 @@ export function ClientDetailPage() {
                         </Card>
                     )}
 
-                    {tab === 'services' && <ServicesTab client={c} open={viewing} onOpen={openRecord} />}
+                    {tab === 'services' && <ServicesTab client={c} open={viewing} onOpen={openRecord} onGo={goTo} />}
 
-                    {tab === 'domains' && <DomainsTab client={c} open={viewing} onOpen={openRecord} />}
+                    {tab === 'domains' && <DomainsTab client={c} open={viewing} onOpen={openRecord} onGo={goTo} />}
 
                     {tab === 'invoices' && <InvoicesTab client={c} onCreate={() => setInvoicing(true)} open={viewing} onOpen={openRecord} edit={editingRecord} onGo={goTo} />}
 

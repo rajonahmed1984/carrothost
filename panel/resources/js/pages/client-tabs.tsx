@@ -9,6 +9,7 @@ import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
 import { TicketView } from './support';
 import { InvoiceView } from './invoice-view';
+import { CreateInvoiceDialog, type InvoiceRecord } from './invoice-records';
 import { alertDialog, ask } from '../dialog';
 
 /* The client profile tabs, in the panel's own look: cards, pale headers, pills and text actions. */
@@ -232,14 +233,43 @@ export const OpenLink = ({ onClick, children, className = '' }: { onClick: () =>
     <button type="button" onClick={onClick} className={`table-action-link cursor-pointer ${className}`}>{children}</button>
 );
 
-export function ServicesTab({ client, open, onOpen }: { client: Detail } & Viewer) {
+/** "Invoice Selected Items": the ticked records go on one invoice, with the period each covers. */
+function InvoiceSelected({ clientId, records, onGo, onDone }: { clientId: number; records: InvoiceRecord[]; onGo: GoTo; onDone: () => void }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <>
+            <Button type="button" className="h-8 px-3" onClick={() => setOpen(true)}><ReceiptText size={13} /> Invoice Selected Items</Button>
+            {open && (
+                <CreateInvoiceDialog
+                    clientId={clientId}
+                    records={records}
+                    onClose={() => setOpen(false)}
+                    // The new invoice opens in the Invoices tab.
+                    onCreated={(invoice) => { setOpen(false); onDone(); onGo('invoices', invoice.id); }}
+                />
+            )}
+        </>
+    );
+}
+
+export function ServicesTab({ client, open, onOpen, onGo }: { client: Detail; onGo: GoTo } & Viewer) {
     if (open) return <ServiceView id={open} onSelect={onOpen} onBack={() => onOpen(null)} />;
+
+    return <ServiceList client={client} onOpen={onOpen} onGo={onGo} />;
+}
+
+function ServiceList({ client, onOpen, onGo }: { client: Detail; onOpen: Viewer['onOpen']; onGo: GoTo }) {
+    const [selected, setSelected] = useState<number[]>([]);
 
     return (
         <RecordsTable
             rows={client.services}
             noun="services"
             empty="No products or services."
+            selected={selected}
+            onSelect={setSelected}
+            bulk={<InvoiceSelected clientId={client.id} onGo={onGo} onDone={() => setSelected([])} records={client.services.filter((s) => selected.includes(s.id)).map((s) => ({ type: 'service' as const, id: s.id, label: `${s.product.name}${s.domain ? ` - ${s.domain}` : ''}` }))} />}
             search={{ placeholder: 'Product, domain or status', text: (s) => `${s.product.name} ${s.domain ?? ''} ${s.status}` }}
             initialSort={{ index: 0, desc: true }}
             action={<Link to={`/admin/active-orders?client=${client.id}`} className="ui-btn ui-btn-primary"><Plus size={14} /> Add New Order</Link>}
@@ -258,14 +288,23 @@ export function ServicesTab({ client, open, onOpen }: { client: Detail } & Viewe
     );
 }
 
-export function DomainsTab({ client, open, onOpen }: { client: Detail } & Viewer) {
+export function DomainsTab({ client, open, onOpen, onGo }: { client: Detail; onGo: GoTo } & Viewer) {
     if (open) return <DomainView id={open} onSelect={onOpen} onBack={() => onOpen(null)} />;
+
+    return <DomainList client={client} onOpen={onOpen} onGo={onGo} />;
+}
+
+function DomainList({ client, onOpen, onGo }: { client: Detail; onOpen: Viewer['onOpen']; onGo: GoTo }) {
+    const [selected, setSelected] = useState<number[]>([]);
 
     return (
         <RecordsTable
             rows={client.domains}
             noun="domains"
             empty="No domains."
+            selected={selected}
+            onSelect={setSelected}
+            bulk={<InvoiceSelected clientId={client.id} onGo={onGo} onDone={() => setSelected([])} records={client.domains.filter((d) => selected.includes(d.id)).map((d) => ({ type: 'domain' as const, id: d.id, label: d.name }))} />}
             search={{ placeholder: 'Domain, registrar or status', text: (d) => `${d.name} ${d.registrar ?? ''} ${d.status}` }}
             initialSort={{ index: 0, desc: true }}
             columns={[

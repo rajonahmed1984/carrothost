@@ -244,6 +244,7 @@ Route::prefix('api')->group(function () {
         Route::post('invoices/{invoice}/email', [Admin\InvoiceController::class, 'email'])->middleware('throttle:10,1');
         Route::post('invoices/{invoice}/cancel', [Admin\InvoiceController::class, 'cancel']);
         Route::post('invoices/bulk', [Admin\InvoiceController::class, 'bulk']);
+        Route::post('invoices/from-records', [Admin\InvoiceController::class, 'fromRecords']);
         Route::put('invoices/{invoice}', [Admin\InvoiceController::class, 'update']);
         Route::delete('invoices/{invoice}', [Admin\InvoiceController::class, 'destroy']);
         Route::get('transactions', [Admin\TransactionController::class, 'index']);

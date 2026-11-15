@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Domain;
 use App\Models\Gateway;
 use App\Models\Invoice;
+use App\Models\Service;
 use App\Services\BillingService;
+use App\Services\RecordInvoicing;
 use App\Models\PaymentAttempt;
 use App\Services\CreditService;
 use App\Services\CustomerMailer;
@@ -56,6 +59,37 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice, BillingService $billing)
     {
         return $this->detail($invoice, $billing);
+    }
+
+    /**
+     * "Invoice Selected Items" and the Create Invoice button of a service or domain: one renewal
+     * invoice for the picked records of a client, with the period each line covers.
+     */
+    public function fromRecords(Request $request, RecordInvoicing $invoicing)
+    {
+        $data = $request->validate([
+            'services' => 'sometimes|array|max:50',
+            'services.*' => 'integer|distinct|exists:services,id',
+            'domains' => 'sometimes|array|max:50',
+            'domains.*' => 'integer|distinct|exists:domains,id',
+            'mode' => ['required', Rule::in(RecordInvoicing::MODES)],
+            'due_date' => 'nullable|date',
+            'notify' => 'sometimes|boolean',
+            'period_start' => 'nullable|date|required_with:period_end',
+            'period_end' => 'nullable|date|required_with:period_start|after_or_equal:period_start',
+        ]);
+
+        $invoice = $invoicing->create(
+            Service::whereIn('id', $data['services'] ?? [])->get(),
+            Domain::whereIn('id', $data['domains'] ?? [])->get(),
+            $data['mode'],
+            ! empty($data['due_date']) ? Carbon::parse($data['due_date']) : null,
+            // An invoice for a renewal already done by hand is not announced unless asked.
+            (bool) ($data['notify'] ?? $data['mode'] === 'renewal'),
+            ! empty($data['period_start']) ? [Carbon::parse($data['period_start']), Carbon::parse($data['period_end'])] : null,
+        );
+
+        return response()->json($invoice->load('items'), 201);
     }
 
     /** Add Payment: any gateway, with its own date and fee. Paying in full sets up what the invoice was for. */
