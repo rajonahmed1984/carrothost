@@ -158,7 +158,7 @@ export const Route = createFileRoute("/wordpress-plugin")({
     const seo = createSeoMeta({
       title: "Server-Side Tracking (GTM & Facebook CAPI) Setup Guide — CarrotHost",
       description:
-        "Download Carrothost Server-Side Tracker v1.5.1 for WordPress: Facebook Conversions API with deduplicated Pixel events, GA4 ecommerce via first-party GTM, live match-quality dashboard, catalog feed, and Cloudflare WAF setup — in Bangla and English.",
+        "Download Carrothost Server-Side Tracker v1.5.4 for WordPress: Facebook Conversions API with deduplicated Pixel events, GA4 ecommerce via first-party GTM, live match-quality dashboard, catalog feed, and Cloudflare WAF setup — in Bangla and English.",
       path: "/wordpress-plugin",
     });
 
@@ -604,7 +604,7 @@ function WordPressPluginDocPage() {
 
                 <div className="space-y-3 text-xs text-muted-foreground">
                   <div>
-                    <span className="font-mono font-bold text-brand-orange">v1.5.1</span>
+                    <span className="font-mono font-bold text-brand-orange">v1.5.4</span>
                     <ul className="list-disc pl-5 mt-1 space-y-1">
                       <li>{lang === "bn" ? "অন্য Meta Pixel প্লাগইন (Meta for WooCommerce, PixelYourSite ইত্যাদি) চালু থাকলে লাল সতর্কতা — দুটো একসাথে চললে প্রতিটা Purchase Meta-তে ২ বার গোনা হয়।" : "Red warning when another Meta Pixel plugin (Meta for WooCommerce, PixelYourSite, etc.) is active — running two makes Meta count every purchase twice."}</li>
                       <li>{lang === "bn" ? "নতুন অপশন: অন্য প্লাগইন থাকলে Carrothost-এর Meta ট্র্যাকিং (Pixel + CAPI) পজ করুন, GTM / GA4 চালু থাকবে।" : "New option: pause Carrothost Meta tracking (Pixel + CAPI) while another Meta plugin is active; GTM / GA4 keeps running."}</li>

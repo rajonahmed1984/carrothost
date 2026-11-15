@@ -59,8 +59,8 @@ const HOSTING_FAQS = [
     a: "Standard server-side GTM containers run heavy Node.js or Docker processes that consume 1 GB to 2 GB of RAM and frequently cause memory leaks or server crashes during traffic spikes. Our 100% Node-Free tracking handles tracking proxies directly inside the Nginx C-level core, requiring 0 MB of Node.js memory overhead with ultra-low latency (<10ms) and zero server crashes.",
   },
   {
-    q: "How do I install and configure the carrothost-server-side-tracker-1.5.1.zip plugin on WordPress?",
-    a: "It takes under 2 minutes: 1) Download 'carrothost-server-side-tracker-1.5.1.zip' from this page, 2) Upload and activate it in your WordPress dashboard under Plugins > Add New, 3) Open 'Carrothost SST' settings, enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. The plugin automatically tracks WooCommerce purchases, add-to-carts, and checkouts with 9+ Event Match Quality (EMQ).",
+    q: "How do I install and configure the carrothost-server-side-tracker-1.5.4.zip plugin on WordPress?",
+    a: "It takes under 2 minutes: 1) Download 'carrothost-server-side-tracker-1.5.4.zip' from this page, 2) Upload and activate it in your WordPress dashboard under Plugins > Add New, 3) Open 'Carrothost SST' settings, enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. The plugin automatically tracks WooCommerce purchases, add-to-carts, and checkouts with 9+ Event Match Quality (EMQ).",
   },
   {
     q: "Will this bypass Ad Blockers and iOS 14.5+ tracking restrictions?",
@@ -103,8 +103,8 @@ export const Route = createFileRoute("/hosting")({
       },
       description:
         "High-speed, 100% Node-Free Server-Side Tracking plugin for WordPress, Google Tag Manager & Meta Conversions API (CAPI) powered by CarrotHost Nginx Core.",
-      downloadUrl: `${SITE_URL}/carrothost-server-side-tracker-1.5.1.zip`,
-      softwareVersion: "1.5.1",
+      downloadUrl: `${SITE_URL}/carrothost-server-side-tracker-1.5.4.zip`,
+      softwareVersion: "1.5.4",
       publisher: {
         "@type": "Organization",
         name: "CarrotHost",
@@ -546,7 +546,7 @@ function WordPressPluginShowcase() {
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Upload the Plugin</h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Download <code>carrothost-server-side-tracker-1.5.1.zip</code> and upload it via{" "}
+                    Download <code>carrothost-server-side-tracker-1.5.4.zip</code> and upload it via{" "}
                     <strong>Plugins &gt; Add New &gt; Upload</strong>.
                   </p>
                 </div>
@@ -572,8 +572,8 @@ function WordPressPluginShowcase() {
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Verify Connection (200 OK)</h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Click <strong>"Run Test Ping"</strong> to verify your live 200 OK Nginx
-                    proxy and Meta CAPI connection.
+                    Click <strong>"Run Test Ping"</strong> to verify your live 200 OK Nginx proxy
+                    and Meta CAPI connection.
                   </p>
                 </div>
               </div>
@@ -596,17 +596,17 @@ function WordPressPluginShowcase() {
               </span>
             </div>
             <h4 className="text-xl font-extrabold text-foreground">
-              carrothost-server-side-tracker-1.5.1.zip
+              carrothost-server-side-tracker-1.5.4.zip
             </h4>
             <p className="text-xs text-muted-foreground">
-              Version 1.5.1 • WordPress 5.8 to 6.5+ • WooCommerce Compatible • Included 100% Free
+              Version 1.5.4 • WordPress 5.8 to 6.5+ • WooCommerce Compatible • Included 100% Free
               with all Hosting Plans
             </p>
           </div>
 
           <a
-            href="/carrothost-server-side-tracker-1.5.1.zip"
-            download="carrothost-server-side-tracker-1.5.1.zip"
+            href="/carrothost-server-side-tracker-1.5.4.zip"
+            download="carrothost-server-side-tracker-1.5.4.zip"
             className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-brand px-7 py-4 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:scale-105 shrink-0 text-sm"
           >
             <Download className="h-5 w-5 animate-bounce" />
@@ -718,7 +718,7 @@ function ExclusiveFeatures() {
       icon: FileCode2,
       badge: "Included Free",
       title: "Dedicated WordPress & WooCommerce SST Plugin",
-      desc: "No need to pay monthly subscription fees to third-party tools or hire expensive tracking developers. Our official WordPress plugin (carrothost-server-side-tracker-1.5.1.zip) configures Meta CAPI, first-party GTM proxy, and WooCommerce e-commerce events with 1 click.",
+      desc: "No need to pay monthly subscription fees to third-party tools or hire expensive tracking developers. Our official WordPress plugin (carrothost-server-side-tracker-1.5.4.zip) configures Meta CAPI, first-party GTM proxy, and WooCommerce e-commerce events with 1 click.",
       benefit:
         "Boost your Meta Event Match Quality (EMQ) to 9.5+ out of 10, reduce ad acquisition cost (CPA), and maximize return on ad spend (ROAS).",
     },
@@ -767,8 +767,8 @@ function ExclusiveFeatures() {
             Features you only get with CarrotHost
           </h2>
           <p className="mt-3 text-muted-foreground">
-            We custom-tuned our hosting platform to provide e-commerce speed and server-side tracking
-            capabilities that standard shared hosting cannot match.
+            We custom-tuned our hosting platform to provide e-commerce speed and server-side
+            tracking capabilities that standard shared hosting cannot match.
           </p>
         </div>
         <div className="mt-16 grid gap-6 md:grid-cols-2">
@@ -1025,6 +1025,31 @@ function TargetAudience() {
   );
 }
 
+/**
+ * Guaranteed resources per plan, as the server enforces them (cgroup limits and PHP-FPM workers).
+ * Keep in step with /var/webuzo/cgroups and /etc/webuzo-plan-limits.json on the hosting server.
+ */
+const PLAN_RESOURCES: Record<
+  string,
+  { cpu: string; ram: string; workers: number; processes: number; io: string }
+> = {
+  Starter: { cpu: "1 CPU Core", ram: "1.5 GB RAM", workers: 10, processes: 75, io: "10 / 5 MB/s" },
+  Standard: {
+    cpu: "2 CPU Cores",
+    ram: "3 GB RAM",
+    workers: 20,
+    processes: 150,
+    io: "25 / 12 MB/s",
+  },
+  Advanced: {
+    cpu: "3 CPU Cores",
+    ram: "6 GB RAM",
+    workers: 30,
+    processes: 250,
+    io: "50 / 25 MB/s",
+  },
+};
+
 function Pricing() {
   const plans = [
     {
@@ -1117,6 +1142,23 @@ function Pricing() {
                 <span className="text-muted-foreground text-sm font-semibold">{p.period}</span>
               </div>
               {!p.highlight && <p className="mt-1 text-sm text-muted-foreground">{p.tag}</p>}
+              <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl border border-border bg-secondary/30 p-3 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <Cpu className="h-3.5 w-3.5 text-brand-orange" /> {PLAN_RESOURCES[p.name].cpu}
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <Server className="h-3.5 w-3.5 text-brand-orange" /> {PLAN_RESOURCES[p.name].ram}
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground/80">
+                  <Layers className="h-3.5 w-3.5 text-brand-green" />{" "}
+                  {PLAN_RESOURCES[p.name].workers} PHP workers
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground/80">
+                  <Users className="h-3.5 w-3.5 text-brand-green" />{" "}
+                  {PLAN_CAPACITY.store[p.name as keyof typeof PLAN_CAPACITY.store].cached} store
+                  visitors*
+                </div>
+              </div>
               <ul className="mt-6 space-y-3 text-sm flex-1">
                 {p.features.map((f, i) => (
                   <li key={f} className="flex items-start gap-2">
@@ -1150,6 +1192,172 @@ function Pricing() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Estimated visitors browsing at the same time, worked out from each plan's CPU, RAM and PHP workers.
+ * Assumes ~0.3-0.5 s of CPU per uncached PHP request, ~80-100 MB per worker and one page view per
+ * visitor every 10-15 s. These are estimates, not load-test results: themes and plugins change them a lot.
+ */
+const PLAN_CAPACITY = {
+  store: {
+    Starter: { cached: "60–100", uncached: "20–30", checkout: "3–5" },
+    Standard: { cached: "120–200", uncached: "40–60", checkout: "6–10" },
+    Advanced: { cached: "200–300", uncached: "60–100", checkout: "10–15" },
+  },
+  news: {
+    Starter: { cached: "300–500", uncached: "30–50" },
+    Standard: { cached: "600–1,000", uncached: "70–100" },
+    Advanced: { cached: "1,000–1,500", uncached: "120–180" },
+  },
+} as const;
+
+function PlanCapacity() {
+  const [site, setSite] = useState<"store" | "news">("store");
+  const names = ["Starter", "Standard", "Advanced"] as const;
+  const sites = [
+    { key: "store" as const, icon: ShoppingBag, label: "WooCommerce / Online Store" },
+    { key: "news" as const, icon: FileCode2, label: "News, Blog & Business Site" },
+  ];
+
+  return (
+    <section id="plan-capacity" className="py-20 md:py-28 bg-card border-b border-border">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="text-sm font-semibold text-brand-green">Which Plan Fits You?</span>
+          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Resources & Visitor Capacity per Plan
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Every plan has its own guaranteed CPU, RAM and PHP workers, isolated from other
+            accounts, so a busy neighbour never slows your site. Pick your site type to see how many
+            visitors each plan handles at the same time.
+          </p>
+        </div>
+
+        {/* Guaranteed resources */}
+        <div className="mt-12 overflow-x-auto rounded-2xl border border-border bg-background shadow-soft">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/40 text-left">
+                <th className="px-5 py-3 font-semibold">Guaranteed resources</th>
+                {names.map((n) => (
+                  <th key={n} className="px-5 py-3 font-bold text-center">
+                    {n}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {[
+                { label: "CPU", value: (n: string) => PLAN_RESOURCES[n].cpu },
+                { label: "RAM (max)", value: (n: string) => PLAN_RESOURCES[n].ram },
+                {
+                  label: "PHP workers (requests at once)",
+                  value: (n: string) => String(PLAN_RESOURCES[n].workers),
+                },
+                {
+                  label: "Process limit",
+                  value: (n: string) => String(PLAN_RESOURCES[n].processes),
+                },
+                { label: "Disk read / write speed", value: (n: string) => PLAN_RESOURCES[n].io },
+              ].map((row) => (
+                <tr key={row.label}>
+                  <td className="px-5 py-3 text-muted-foreground">{row.label}</td>
+                  {names.map((n) => (
+                    <td key={n} className="px-5 py-3 text-center font-semibold">
+                      {row.value(n)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Site type switch */}
+        <div
+          className="mt-12 flex flex-col sm:flex-row justify-center gap-3"
+          role="tablist"
+          aria-label="Site type"
+        >
+          {sites.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              aria-selected={site === s.key}
+              onClick={() => setSite(s.key)}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                site === s.key
+                  ? "bg-gradient-brand text-primary-foreground shadow-elegant"
+                  : "border border-border bg-background hover:border-brand-orange"
+              }`}
+            >
+              <s.icon className="h-4 w-4" /> {s.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-8 grid md:grid-cols-3 gap-6">
+          {names.map((n) => {
+            const c = PLAN_CAPACITY[site][n];
+
+            return (
+              <div
+                key={n}
+                className={`rounded-2xl border p-6 bg-background ${n === "Standard" ? "border-brand-orange shadow-elegant" : "border-border shadow-soft"}`}
+              >
+                <div className="text-sm font-semibold text-brand-green">{n}</div>
+                <div className="mt-4">
+                  <div className="text-xs text-muted-foreground">
+                    Visitors at the same time, with page cache + CDN
+                  </div>
+                  <div className="mt-1 text-3xl font-extrabold">{c.cached}</div>
+                </div>
+                <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Without cache</span>
+                    <span className="font-semibold">{c.uncached}</span>
+                  </div>
+                  {"checkout" in c && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Checkouts / carts at once</span>
+                      <span className="font-semibold">{c.checkout}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 grid md:grid-cols-2 gap-4 text-sm">
+          <div className="flex gap-3 rounded-xl border border-border bg-secondary/30 p-4">
+            <Zap className="h-5 w-5 shrink-0 text-brand-orange" />
+            <p className="text-foreground/90">
+              {site === "store"
+                ? "Cart, checkout and logged-in customers are never cached, so they use the most CPU. Plan by how many people buy at the same time, not only by visitors."
+                : "Readers mostly hit cached pages, so a breaking-news spike is easy to absorb. Turn on Speedy Cache and a free CDN like Cloudflare to reach the higher numbers."}
+            </p>
+          </div>
+          <div className="flex gap-3 rounded-xl border border-border bg-secondary/30 p-4">
+            <TrendingUp className="h-5 w-5 shrink-0 text-brand-green" />
+            <p className="text-foreground/90">
+              Outgrowing your plan? Upgrade any time from your client area. Your files, emails and
+              databases stay where they are.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          * Estimates, not guarantees. Worked out from each plan's CPU, RAM and PHP workers,
+          assuming about 0.3–0.5 s of CPU per uncached page and one page view per visitor every
+          10–15 seconds. Heavy themes, page builders and many plugins can lower them by 30–50%.
+        </p>
       </div>
     </section>
   );
@@ -1311,6 +1519,7 @@ function HostingPage() {
       <WebuzoFacilities />
       <TargetAudience />
       <Pricing />
+      <PlanCapacity />
       <Included />
       <FAQ />
       <MigrationCTA />
