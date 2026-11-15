@@ -53,6 +53,7 @@ Route::prefix('api')->group(function () {
                 // Everyone signed in to the account: the owner, and its users within their permissions.
                 Route::post('logout', [AccountController::class, 'logout']);
                 Route::get('me', [AccountController::class, 'me']);
+                Route::post('switch-account', [AccountController::class, 'switchAccount'])->middleware('throttle:20,1');
                 Route::post('password', [Auth\PasswordController::class, 'change'])->defaults('portal', Portal::CLIENT)->middleware('throttle:5,1');
                 Route::get('overview', [AccountController::class, 'overview']);
                 Route::get('badges', [ClientChatController::class, 'badges']);

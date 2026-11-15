@@ -69,6 +69,30 @@ class SubUserTest extends TestCase
         $this->assertNotNull($this->user->refresh()->last_login_at);
     }
 
+    public function test_a_user_of_two_accounts_switches_between_them_with_each_accounts_permissions(): void
+    {
+        $other = Client::create(['name' => 'Second Co', 'email' => 'second@example.com', 'password' => 'second-password-123']);
+        $second = $other->users()->create(['first_name' => 'Maidul', 'email' => 'maidul@example.com', 'status' => 'active', 'permissions' => 'products,domains']);
+        $stranger = Client::create(['name' => 'Stranger', 'email' => 'stranger@example.com', 'password' => 'stranger-password-123']);
+
+        $this->signIn();
+
+        $this->getJson('/api/client/me')->assertJsonCount(2, 'accounts')->assertJsonPath('accounts.1.client_id', $other->id);
+        $this->postJson('/api/client/switch-account', ['client_id' => $stranger->id])->assertForbidden();
+
+        $this->postJson('/api/client/switch-account', ['client_id' => $other->id])->assertOk();
+        $this->assertAuthenticatedAs($other, 'client');
+        $this->getJson('/api/client/me')->assertJsonPath('id', $other->id)->assertJsonPath('user.permissions', ['products', 'domains']);
+        $this->getJson('/api/client/services')->assertOk();
+        $this->getJson('/api/client/tickets')->assertForbidden();
+
+        $this->postJson('/api/client/switch-account', ['client_id' => $this->client->id])->assertOk();
+        $this->assertAuthenticatedAs($this->client, 'client');
+        $second->update(['status' => 'inactive']);
+        $this->getJson('/api/client/me')->assertJsonCount(1, 'accounts')->assertJsonPath('user.permissions', ['invoices', 'tickets']);
+        $this->postJson('/api/client/switch-account', ['client_id' => $other->id])->assertForbidden();
+    }
+
     public function test_a_user_changes_their_own_password_never_the_owners(): void
     {
         $this->signIn();

@@ -11,6 +11,8 @@ export type ClientProfile = {
     currency: string;
     /** Set when a user of the account, not its owner, is signed in. */
     user: { name: string; email: string; permissions: string[] } | null;
+    /** Every account this person can use, this one included; more than one shows a switcher. */
+    accounts: { client_id: number; name: string; role: 'owner' | 'user' }[];
 };
 
 /** What the person signed in may use. "owner" is for the account owner alone. */

@@ -784,6 +784,11 @@ function AccountMenu({ profile, onLogout, busy }: { profile: ClientProfile; onLo
     const who = profile.user ?? profile;
     const initials = who.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
     const can = (permission: string) => clientCan(profile, permission);
+    const others = (profile.accounts ?? []).filter((a) => a.client_id !== profile.id);
+    const switchAccount = useMutation({
+        mutationFn: (clientId: number) => api.post('/client/switch-account', { client_id: clientId }),
+        onSuccess: () => window.location.assign(`${basePath}/`),
+    });
     // Security and password belong to the customer, so an admin viewing the account does not get them.
     const groups: [string, ReactNode, string, boolean][][] = [
         [['/account/details', <User key="i" size={17} />, 'My Details', true], ['/account/contacts', <Contact key="i" size={17} />, 'Contacts', can('contacts')], ['/account/emails', <Mail key="i" size={17} />, 'My Emails', can('emails')]],
@@ -817,6 +822,17 @@ function AccountMenu({ profile, onLogout, busy }: { profile: ClientProfile; onLo
                     ))}
                 </div>
             ))}
+            {others.length > 0 && (
+                <div className="border-b border-slate-100 py-1.5">
+                    <div className="px-4 pt-1 pb-1.5 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">Switch Account</div>
+                    {others.map((a) => (
+                        <button key={a.client_id} type="button" role="menuitem" disabled={switchAccount.isPending} onClick={() => switchAccount.mutate(a.client_id)} className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                            <span className="text-slate-500"><ArrowRightLeft size={17} /></span>
+                            <span className="min-w-0"><span className="block truncate">{a.name}</span><span className="block text-[11px] text-slate-500">{a.role === 'owner' ? 'Account Owner' : 'User'}</span></span>
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className="py-1.5">
                 <button type="button" role="menuitem" disabled={busy} onClick={onLogout} className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"><Power size={17} /> Logout</button>
             </div>

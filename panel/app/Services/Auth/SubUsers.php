@@ -42,7 +42,31 @@ class SubUsers
     /** Whether the user may still use the account: removed, suspended or moved users lose access at once. */
     public function stillAllowed(ClientUser $user, int $clientId): bool
     {
-        return (int) $user->client_id === $clientId &&$this->eligible()->whereKey($user->id)->exists();
+        return (int) $user->client_id === $clientId && $this->eligible(requirePassword: false)->whereKey($user->id)->exists();
+    }
+
+    /**
+     * Every account this person may use: the one they own (if any) and those they are a user of.
+     * Each sign-in proves the email with an emailed code, so one sign-in opens all of them.
+     *
+     * @return array<int, array{client_id: int, name: string, role: string, user: ?ClientUser}>
+     */
+    public function accountsFor(string $email): array
+    {
+        $email = strtolower(trim($email));
+        $accounts = [];
+
+        Client::query()->whereRaw('lower(email) = ?', [$email])->whereIn('status', Client::CAN_SIGN_IN)->orderBy('id')->get()
+            ->each(function (Client $client) use (&$accounts) {
+                $accounts[$client->id] = ['client_id' => $client->id, 'name' => $client->name, 'role' => 'owner', 'user' => null];
+            });
+
+        $this->eligible(requirePassword: false)->with('client:id,name')->whereRaw('lower(email) = ?', [$email])->orderBy('client_id')->get()
+            ->each(function (ClientUser $user) use (&$accounts) {
+                $accounts[$user->client_id] ??= ['client_id' => $user->client_id, 'name' => $user->client->name, 'role' => 'user', 'user' => $user];
+            });
+
+        return array_values($accounts);
     }
 
     /** A user's own reset link. Kept out of My Emails, where the account owner could use it. */

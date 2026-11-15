@@ -32,6 +32,22 @@ class AccountController extends Controller
         return $this->profile($request);
     }
 
+    /** Moves this sign-in to another account the same person owns or is a user of. */
+    public function switchAccount(Request $request, SubUsers $subUsers, LoginService $login)
+    {
+        abort_if($request->session()->has(LoginService::IMPERSONATOR), 403, 'Stop logging in as this client first.');
+        $data = $request->validate(['client_id' => 'required|integer']);
+
+        $email = $subUsers->current($request)?->email ?? $request->user('client')->email;
+        $target = collect($subUsers->accountsFor($email))->firstWhere('client_id', (int) $data['client_id']);
+        abort_unless($target, 403, 'You do not have access to that account.');
+
+        $login->complete($request, Portal::CLIENT, Client::findOrFail($target['client_id']), user: $target['user']);
+        ActivityLog::record('client.account_switched', Client::find($target['client_id']), ['email' => $email]);
+
+        return ['ok' => true];
+    }
+
     /** The dashboard. A user of the account only gets the parts their permissions cover. */
     public function overview(Request $request, SubUsers $subUsers)
     {
@@ -156,6 +172,11 @@ class AccountController extends Controller
             'impersonating' => $request->session()->has(LoginService::IMPERSONATOR),
             // Set when a user of the account (not its owner) is signed in. Null permissions = everything.
             'user' => $user ? ['name' => $user->name, 'email' => $user->email, 'permissions' => $user->permissions_list] : null,
+            // Other accounts this person can switch to (an admin viewing the account gets none).
+            'accounts' => $request->session()->has(LoginService::IMPERSONATOR) ? [] : array_map(
+                fn (array $a) => ['client_id' => $a['client_id'], 'name' => $a['name'], 'role' => $a['role']],
+                app(SubUsers::class)->accountsFor($user->email ?? $client->email),
+            ),
         ];
     }
 }
