@@ -499,6 +499,20 @@ class AuthTest extends TestCase
         $this->assertAuthenticatedAs($client, 'client');
     }
 
+    public function test_google_opens_the_account_a_user_belongs_to_instead_of_a_new_one(): void
+    {
+        $client = $this->client();
+        $user = $client->users()->create(['first_name' => 'Sub', 'email' => 'Sub@Example.com', 'status' => 'active', 'permissions' => 'invoices']);
+        $this->googleReturns(['email' => 'sub@example.com', 'name' => 'Sub', 'email_verified' => true]);
+
+        $this->googleCallback()->assertRedirect('/');
+
+        $this->assertSame(1, Client::count());
+        $this->assertAuthenticatedAs($client, 'client');
+        $this->getJson('/api/client/me')->assertJsonPath('user.email', 'Sub@Example.com')->assertJsonPath('user.permissions', ['invoices']);
+        $this->getJson('/api/client/services')->assertForbidden();
+    }
+
     public function test_google_never_signs_in_an_admin(): void
     {
         $admin = $this->admin();

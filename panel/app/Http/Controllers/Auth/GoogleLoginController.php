@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Services\Auth\LoginOtpService;
 use App\Services\Auth\LoginService;
+use App\Services\Auth\SubUsers;
 use App\Support\Auth\Portal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,6 +104,18 @@ class GoogleLoginController extends Controller
     {
         $email = Str::lower(trim($email));
         $client = Client::whereRaw('LOWER(TRIM(email)) = ?', [$email])->orderBy('id')->first();
+
+        // No account of their own, but a user of someone else's: open that one, with the user's
+        // permissions, instead of making an empty account. The switcher reaches any others.
+        if (! $client || ! Portal::allows(Portal::CLIENT, $client)) {
+            $account = collect(app(SubUsers::class)->accountsFor($email))->firstWhere('role', 'user');
+
+            if ($account) {
+                $login->complete($request, Portal::CLIENT, Client::findOrFail($account['client_id']), user: $account['user']);
+
+                return true;
+            }
+        }
 
         if (! $client) {
             $client = Client::create(['name' => $name ?: explode('@', $email)[0], 'email' => $email])->refresh();
