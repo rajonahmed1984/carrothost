@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage, money } from '../api';
 import { Button, ErrorNote, Field, Input, Modal, Status } from '../ui';
-import type { Detail, EmailRow, InvoiceRow, TicketRow, TransactionRow } from './client';
+import type { Detail, EmailRow, InvoiceRow, SmsRow, TicketRow, TransactionRow } from './client';
 import { DomainView } from './domain-view';
 import { ServiceView } from './service-view';
 import { TicketView } from './support';
@@ -605,6 +605,39 @@ export function TicketsTab({ client, open, onOpen }: { client: Detail } & Viewer
                 ]}
             />
         </div>
+    );
+}
+
+/* ---------- SMS ---------- */
+
+const SMS_EVENTS: Record<string, string> = { invoice_created: 'Invoice created', invoice_paid: 'Invoice paid', invoice_reminder: 'Invoice reminder', test: 'Test' };
+
+export function SmsTab({ client }: { client: Detail }) {
+    return (
+        <RecordsTable<SmsRow>
+            rows={client.sms ?? []}
+            noun="SMS"
+            empty="No SMS sent to this client yet."
+            search={{ placeholder: 'Number, message or status', text: (s) => `${s.mobile ?? ''} ${s.message ?? ''} ${s.status} ${SMS_EVENTS[s.event] ?? s.event}` }}
+            initialSort={{ index: 0, desc: true }}
+            columns={[
+                { header: 'Date', cell: (s) => dayTime(s.created_at), sort: (s) => s.created_at },
+                { header: 'Type', cell: (s) => SMS_EVENTS[s.event] ?? s.event, sort: (s) => s.event },
+                { header: 'To', cell: (s) => <span className="text-xs tabular-nums text-slate-500">{s.mobile ?? '-'}</span> },
+                {
+                    header: 'Message',
+                    wrap: true,
+                    cell: (s) => (
+                        <div className="space-y-0.5">
+                            {s.message && <p className="break-words">{s.message}</p>}
+                            {s.invoice && <Link className="table-action-link text-xs" to={`/admin/invoices/${s.invoice.id}`}>Invoice #{s.invoice.number}</Link>}
+                            {s.response && s.status !== 'sent' && <p className="break-words text-xs text-slate-500">{s.response}</p>}
+                        </div>
+                    ),
+                },
+                { header: 'Status', cell: (s) => <Status value={s.status} />, sort: (s) => s.status },
+            ]}
+        />
     );
 }
 

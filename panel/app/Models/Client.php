@@ -102,6 +102,11 @@ class Client extends Authenticatable
         return $this->hasOne(ClientUser::class)->where('is_owner', true);
     }
 
+    public function smsLogs(): HasMany
+    {
+        return $this->hasMany(SmsLog::class);
+    }
+
     public function emailLogs(): HasMany
     {
         return $this->hasMany(EmailLog::class);

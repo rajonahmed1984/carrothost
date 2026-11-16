@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, basePath, errorMessage, money } from '../api';
 import { Button, Card, Dropdown, ErrorNote, Field, FilterTabs, Input, Modal, PagedTable, QueryState, Select, Status } from '../ui';
 import { ClientForm, type Client } from './sales';
-import { DomainsTab, EmailsTab, InvoicesTab, Notice, RecordsTable, ServicesTab, TicketsTab, TransactionsTab } from './client-tabs';
+import { DomainsTab, EmailsTab, InvoicesTab, Notice, RecordsTable, ServicesTab, SmsTab, TicketsTab, TransactionsTab } from './client-tabs';
 import { alertDialog, ask } from '../dialog';
 
 export type InvoiceRow = { id: number; number: string; status: string; currency: string; total: string; due_date: string; paid_at: string | null; created_at: string; payment_method: string | null };
@@ -63,7 +63,9 @@ export type Detail = Client & {
     users?: UserRow[];
     tickets?: TicketRow[];
     emails?: EmailRow[];
+    sms?: SmsRow[];
 };
+export type SmsRow = { id: number; event: string; status: string; mobile: string | null; message: string | null; response: string | null; invoice: { id: number; number: string } | null; created_at: string };
 export type TransactionRow = { id: number; gateway: string; gateway_name: string; transaction_id: string; amount: string; fee: string; currency: string; created_at: string; invoice: { id: number; number: string } };
 export type TicketRow = { id: number; number: string; department_name: string; subject: string; status: string; priority: string; created_at: string; last_reply_at: string | null };
 export type EmailRow = { id: number; to: string; subject: string; body: string | null; created_at: string };
@@ -107,6 +109,7 @@ const tabs = [
     { key: 'transactions', label: 'Transactions' },
     { key: 'tickets', label: 'Tickets' },
     { key: 'emails', label: 'Emails' },
+    { key: 'sms', label: 'SMS' },
     { key: 'log', label: 'Log' },
 ];
 
@@ -935,6 +938,7 @@ export function ClientDetailPage() {
                     {tab === 'tickets' && <TicketsTab client={c} open={viewing} onOpen={openRecord} />}
 
                     {tab === 'emails' && <EmailsTab client={c} />}
+                    {tab === 'sms' && <SmsTab client={c} />}
 
                     {editing && <ClientForm client={c} onClose={() => setEditing(false)} />}
                     {invoicing && <NewInvoice clientId={c.id} onClose={() => setInvoicing(false)} />}

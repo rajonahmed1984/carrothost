@@ -135,6 +135,16 @@ class ClientController extends Controller
             'tickets' => $client->tickets()->latest()->limit(500)->get()
                 ->map(fn ($t) => [...$t->toArray(), 'department_name' => config("billing.ticket_departments.{$t->department}", $t->department)]),
             'emails' => $client->emailLogs()->latest('id')->limit(500)->get(),
+            'sms' => $client->smsLogs()->with('invoice:id,number')->latest('id')->limit(500)->get()->map(fn ($l) => [
+                'id' => $l->id,
+                'event' => $l->event,
+                'status' => $l->status,
+                'mobile' => $l->mobile,
+                'message' => $l->message,
+                'response' => $l->response,
+                'invoice' => $l->invoice ? ['id' => $l->invoice->id, 'number' => $l->invoice->number] : null,
+                'created_at' => $l->created_at?->toIso8601String(),
+            ]),
         ];
     }
 
