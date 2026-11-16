@@ -88,14 +88,12 @@ function Hero() {
               >
                 Explore Webuzo Hosting <ArrowRight className="h-4.5 w-4.5" />
               </Link>
-              <a
-                href="https://portal.carrothost.com/cart.php?a=add&domain=register"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/domains"
                 className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3.5 font-bold text-foreground hover:border-brand-orange hover:bg-secondary/40 transition-all duration-200 hover:-translate-y-0.5"
               >
                 Register Domain
-              </a>
+              </Link>
             </div>
             <div className="pt-4 flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-t border-border/50">
               <div className="flex items-center gap-2">

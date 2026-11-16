@@ -99,8 +99,8 @@ function Hero() {
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="min-w-0 space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-green/10 border border-brand-green/20 px-4 py-1.5 text-xs font-semibold text-brand-green">
               <MapPinIcon className="h-4.5 w-4.5" />
               Dhaka Data Center · BDIX Connected
@@ -831,15 +831,17 @@ function MapPinIcon(props: React.ComponentProps<"svg">) {
 function TrustBar() {
   return (
     <section className="border-b border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-10 grid grid-cols-3 gap-8 text-center">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-3 gap-3 sm:gap-8 text-center">
         {[
           { k: "10 Gbps", v: "BDIX Uplink" },
           { k: "<10 ms", v: "Avg Latency" },
           { k: "99.99%", v: "Core Uptime" },
         ].map((s) => (
-          <div key={s.v}>
-            <div className="text-3xl md:text-4xl font-extrabold text-gradient-brand">{s.k}</div>
-            <div className="mt-1 text-sm text-muted-foreground font-medium">{s.v}</div>
+          <div key={s.v} className="min-w-0">
+            <div className="text-xl min-[400px]:text-2xl sm:text-3xl md:text-4xl font-extrabold text-gradient-brand whitespace-nowrap">
+              {s.k}
+            </div>
+            <div className="mt-1 text-xs sm:text-sm text-muted-foreground font-medium">{s.v}</div>
           </div>
         ))}
       </div>

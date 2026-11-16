@@ -8,6 +8,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-sm mb-4">Services</h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <li><Link to="/domains" className="hover:text-brand-orange transition">Domains</Link></li>
               <li><Link to="/hosting" className="hover:text-brand-orange transition">Shared Hosting</Link></li>
               <li><Link to="/bdix-cloud-vps" className="hover:text-brand-orange transition">BDIX VPS</Link></li>
               <li><Link to="/cloud-vps" className="hover:text-brand-orange transition">Cloud VPS</Link></li>

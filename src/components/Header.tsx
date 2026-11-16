@@ -3,6 +3,7 @@ import { ArrowRight, Menu, X, Home, Globe, Server, Cpu, Database, User } from "l
 import { useState } from "react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { PORTAL_LOGIN_URL } from "@/lib/portal";
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,14 +20,13 @@ export function Header() {
           >
             Home
           </Link>
-          <a
-            href="https://portal.carrothost.com/cart.php?a=add&domain=register"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground transition"
+          <Link
+            to="/domains"
+            activeProps={{ className: "text-foreground font-semibold" }}
+            inactiveProps={{ className: "text-muted-foreground hover:text-foreground transition" }}
           >
             Domains
-          </a>
+          </Link>
           <Link
             to="/hosting"
             activeProps={{ className: "text-foreground font-semibold" }}
@@ -52,7 +52,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <a
-            href="https://portal.carrothost.com/login"
+            href={PORTAL_LOGIN_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95 transition hover:scale-105 active:scale-95"
@@ -86,16 +86,14 @@ export function Header() {
               <Home className="h-4.5 w-4.5 text-muted-foreground" />
               <span>Home</span>
             </Link>
-            <a
-              href="https://portal.carrothost.com/cart.php?a=add&domain=register"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/domains"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-accent/50 active:bg-accent/70 hover:text-brand-orange transition-all duration-200"
             >
               <Globe className="h-4.5 w-4.5 text-muted-foreground" />
               <span>Domains</span>
-            </a>
+            </Link>
             <Link
               to="/hosting"
               onClick={() => setIsOpen(false)}
@@ -123,7 +121,7 @@ export function Header() {
           </div>
           <div className="pt-3 border-t border-border/40">
             <a
-              href="https://portal.carrothost.com/login"
+              href={PORTAL_LOGIN_URL}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsOpen(false)}

@@ -16,6 +16,7 @@ import { Route as SystemStatusRouteImport } from './routes/system-status'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as MigrateToUsRouteImport } from './routes/migrate-to-us'
 import { Route as HostingRouteImport } from './routes/hosting'
+import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as CloudVpsRouteImport } from './routes/cloud-vps'
 import { Route as BdixCloudVpsRouteImport } from './routes/bdix-cloud-vps'
 import { Route as AboutUsRouteImport } from './routes/about-us'
@@ -57,6 +58,11 @@ const HostingRoute = HostingRouteImport.update({
   path: '/hosting',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DomainsRoute = DomainsRouteImport.update({
+  id: '/domains',
+  path: '/domains',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CloudVpsRoute = CloudVpsRouteImport.update({
   id: '/cloud-vps',
   path: '/cloud-vps',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/cloud-vps': typeof CloudVpsRoute
+  '/domains': typeof DomainsRoute
   '/hosting': typeof HostingRoute
   '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/cloud-vps': typeof CloudVpsRoute
+  '/domains': typeof DomainsRoute
   '/hosting': typeof HostingRoute
   '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/about-us': typeof AboutUsRoute
   '/bdix-cloud-vps': typeof BdixCloudVpsRoute
   '/cloud-vps': typeof CloudVpsRoute
+  '/domains': typeof DomainsRoute
   '/hosting': typeof HostingRoute
   '/migrate-to-us': typeof MigrateToUsRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/cloud-vps'
+    | '/domains'
     | '/hosting'
     | '/migrate-to-us'
     | '/privacy-policy'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/cloud-vps'
+    | '/domains'
     | '/hosting'
     | '/migrate-to-us'
     | '/privacy-policy'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/about-us'
     | '/bdix-cloud-vps'
     | '/cloud-vps'
+    | '/domains'
     | '/hosting'
     | '/migrate-to-us'
     | '/privacy-policy'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   AboutUsRoute: typeof AboutUsRoute
   BdixCloudVpsRoute: typeof BdixCloudVpsRoute
   CloudVpsRoute: typeof CloudVpsRoute
+  DomainsRoute: typeof DomainsRoute
   HostingRoute: typeof HostingRoute
   MigrateToUsRoute: typeof MigrateToUsRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HostingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/domains': {
+      id: '/domains'
+      path: '/domains'
+      fullPath: '/domains'
+      preLoaderRoute: typeof DomainsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cloud-vps': {
       id: '/cloud-vps'
       path: '/cloud-vps'
@@ -281,6 +301,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutUsRoute: AboutUsRoute,
   BdixCloudVpsRoute: BdixCloudVpsRoute,
   CloudVpsRoute: CloudVpsRoute,
+  DomainsRoute: DomainsRoute,
   HostingRoute: HostingRoute,
   MigrateToUsRoute: MigrateToUsRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,

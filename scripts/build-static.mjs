@@ -27,6 +27,7 @@ const ROUTES = [
   { path: "/privacy-policy", file: "privacy-policy/index.html" },
   { path: "/terms-of-service", file: "terms-of-service/index.html" },
   { path: "/whois", file: "whois/index.html" },
+  { path: "/domains", file: "domains/index.html" },
   { path: "/cloud-vps", file: "cloud-vps/index.html" },
   { path: "/system-status", file: "system-status/index.html" },
   { path: "/migrate-to-us", file: "migrate-to-us/index.html" },

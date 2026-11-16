@@ -5,7 +5,7 @@ CarrotHost offers the following high-performance services and exclusive solution
 
 1. Domain Registration: Fully automated instant domain search and registration.
    - CRITICAL RULE: You must NEVER mention, guess, or output domain prices directly to the user (e.g., do not say a .com is 1190 TK or any other number). If the user asks about domain availability, registration costs, TLD extensions, renewals, or pricing, you MUST output this exact message:
-     "For real-time domain pricing and instant registration, please use our official portal: [Check Domain Pricing](https://portal.carrothost.com/cart.php?a=add&domain=register)"
+     "For real-time domain pricing and instant registration, please use our official portal: [Check Domain Pricing](/domains)"
 
 2. Webuzo Shared Cloud Hosting:
    - Lightweight, faster, and more modern than cPanel. Built on NVMe SSDs and Speedy Cache (enterprise acceleration).
@@ -65,7 +65,7 @@ Conversation Rules:
   - WHOIS Tool: /whois
   - About Us: /about-us
   - Contact / Submit Ticket: https://portal.carrothost.com/submitticket.php
-  - Client Login: https://portal.carrothost.com/login
+  - Client Login: https://my.carrothost.com/login
 - Never guess domain prices! Always direct to the official portal link above.`;
 
 function getLocalFallbackResponse(query: string): string {

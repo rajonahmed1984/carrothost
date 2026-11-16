@@ -239,7 +239,7 @@ export function NotFound() {
                   icon: Database,
                   title: "Domain Portal",
                   desc: "Register & Manage Domains",
-                  href: "https://portal.carrothost.com/cart.php?a=add&domain=register",
+                  to: "/domains",
                 },
               ].map((path) => {
                 const CardInner = () => (
@@ -257,29 +257,15 @@ export function NotFound() {
                   </div>
                 );
 
-                if (path.to) {
-                  return (
-                    <Link
-                      key={path.title}
-                      to={path.to}
-                      className="group p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-sm shadow-soft hover:shadow-elegant hover:border-brand-orange/40 hover:-translate-y-0.5 transition-all duration-300"
-                    >
-                      <CardInner />
-                    </Link>
-                  );
-                } else {
-                  return (
-                    <a
-                      key={path.title}
-                      href={path.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-sm shadow-soft hover:shadow-elegant hover:border-brand-orange/40 hover:-translate-y-0.5 transition-all duration-300"
-                    >
-                      <CardInner />
-                    </a>
-                  );
-                }
+                return (
+                  <Link
+                    key={path.title}
+                    to={path.to}
+                    className="group p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-sm shadow-soft hover:shadow-elegant hover:border-brand-orange/40 hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    <CardInner />
+                  </Link>
+                );
               })}
             </div>
           </div>

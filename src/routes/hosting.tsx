@@ -154,8 +154,8 @@ function Hero() {
       <div className="absolute bottom-1/4 right-10 h-72 w-72 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-          <div className="lg:col-span-7 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          <div className="min-w-0 lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand-green/10 border border-brand-green/25 px-4 py-1.5 text-xs font-semibold text-brand-green">
               <Sparkles className="h-4 w-4 animate-pulse text-brand-green" />
               <span>100% Node-Free Server-Side Tracking Built-In</span>
@@ -181,7 +181,7 @@ function Hero() {
             </p>
 
             {/* Quick value props pill list */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs font-medium text-foreground/85">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs font-medium text-foreground/85">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
                 <span>Bypass Ad Blockers</span>
@@ -213,7 +213,7 @@ function Hero() {
               <div className="flex flex-wrap gap-3.5 items-center">
                 <a
                   href="#pricing"
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
+                  className="inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 sm:px-6 py-3.5 text-sm sm:text-base font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
                 >
                   View Hosting Plans (From ৳4,200/yr) <ArrowRight className="h-4.5 w-4.5" />
                 </a>
@@ -226,7 +226,7 @@ function Hero() {
                 </a>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground pt-0.5">
                 <span className="h-2 w-2 rounded-full bg-brand-green animate-pulse shrink-0" />
                 <span>Need migration or tracking help?</span>
                 <a
@@ -243,9 +243,9 @@ function Hero() {
           </div>
 
           {/* Hero Visual: Interactive Mockup Switcher */}
-          <div className="lg:col-span-5 relative space-y-3 lg:pt-1">
+          <div className="min-w-0 lg:col-span-5 relative space-y-3 lg:pt-1">
             {/* View Switcher Bar */}
-            <div className="flex items-center justify-center p-1 rounded-xl bg-secondary/80 border border-border max-w-xs mx-auto text-xs font-semibold">
+            <div className="flex items-center justify-center p-1 rounded-xl bg-secondary/80 border border-border w-full max-w-sm mx-auto text-xs font-semibold">
               <button
                 onClick={() => setHeroView("sst")}
                 className={`flex-1 py-1.5 px-3 rounded-lg transition-all ${

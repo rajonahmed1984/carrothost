@@ -6,7 +6,7 @@
 - [Shared Webuzo Hosting](https://carrothost.com/hosting): High-performance shared hosting optimized for high traffic e-commerce. Features LiteSpeed, NVMe storage, server-side tracking, and Hourly Auto-Unlock Guard.
 - [BDIX Cloud VPS](https://carrothost.com/bdix-cloud-vps): Dhaka-based KVM virtual servers connected directly to BDIX, delivering sub-10ms latency for local audiences.
 - [Cloud VPS](https://carrothost.com/cloud-vps): Enterprise Intel Xeon and AMD EPYC hypervisors with full root access, unmetered port, and scalable resources.
-- [Domain Registration](https://portal.carrothost.com/cart.php?a=add&domain=register): Domain search and registration portal.
+- [Domain Registration](https://carrothost.com/domains): Domain search and registration portal.
 
 ## Tools and Support
 - [WHOIS & DNS Check](https://carrothost.com/whois): Real-time WHOIS search and DNS resolution utility.

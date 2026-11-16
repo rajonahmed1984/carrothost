@@ -11,10 +11,15 @@ use App\Http\Controllers\Client\ServiceController as ClientServiceController;
 use App\Http\Controllers\Client\StoreController;
 use App\Http\Controllers\Client\TicketController as ClientTicketController;
 use App\Http\Controllers\PaymentCallbackController;
+use App\Http\Controllers\PublicDomainController;
 use App\Support\Auth\Portal;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->group(function () {
+    // Read-only, no login: the marketing site's domain search and price list.
+    Route::get('public/domains/tlds', [PublicDomainController::class, 'tlds'])->middleware('throttle:60,1');
+    Route::get('public/domains/lookup', [PublicDomainController::class, 'lookup'])->middleware('throttle:30,1');
+
     Route::get('auth/config', Auth\AuthConfigController::class);
     Route::get('auth/sandbox/google', [Auth\GoogleLoginController::class, 'sandbox']);
     Route::post('auth/sandbox/google', [Auth\GoogleLoginController::class, 'sandboxLogin'])->middleware('throttle:20,1');

@@ -45,21 +45,17 @@ class DomainLookup
             return ['domain' => $domain, 'status' => 'unknown'];
         }
 
-        $status = Cache::remember("domain-lookup:{$provider->code}:{$domain}", now()->addMinutes(5), function () use ($provider, $domain, $sld, $tld) {
-            try {
-                $client = new LogicBoxesClient($provider);
+        $key = "domain-lookup:{$provider->code}:{$domain}";
+        $status = Cache::get($key);
 
-                if (! $client->isAvailable($sld, ltrim($tld, '.'))) {
-                    return 'taken';
-                }
+        if (! $status) {
+            $status = $this->ask($provider, $domain, $sld, $tld);
 
-                return $client->isPremium($domain) ? 'premium' : 'available';
-            } catch (Throwable $e) {
-                Log::warning("Domain lookup for {$domain} failed: {$e->getMessage()}");
-
-                return 'unknown';
+            // An unreachable registrar is not an answer worth remembering.
+            if ($status !== 'unknown') {
+                Cache::put($key, $status, now()->addMinutes(5));
             }
-        });
+        }
 
         return ['domain' => $domain, 'status' => $status];
     }
@@ -80,6 +76,31 @@ class DomainLookup
 
         if ($message) {
             throw ValidationException::withMessages([$field => $message]);
+        }
+    }
+
+    private function ask(Registrar $provider, string $domain, string $sld, string $tld): string
+    {
+        try {
+            $client = new LogicBoxesClient($provider);
+
+            if (! $client->isAvailable($sld, ltrim($tld, '.'))) {
+                return 'taken';
+            }
+        } catch (Throwable $e) {
+            Log::warning("Domain lookup for {$domain} failed: {$e->getMessage()}");
+
+            return 'unknown';
+        }
+
+        // The registrar already said it is free. A failing premium check (many accounts have it
+        // switched off) must not turn that into "unknown"; the name is simply treated as standard.
+        try {
+            return $client->isPremium($domain) ? 'premium' : 'available';
+        } catch (Throwable $e) {
+            Log::info("Premium check for {$domain} failed, treating as standard: {$e->getMessage()}");
+
+            return 'available';
         }
     }
 }

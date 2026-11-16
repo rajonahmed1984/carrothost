@@ -26,6 +26,11 @@
     <priority>0.70</priority>
   </url>
   <url>
+    <loc>https://carrothost.com/domains/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://carrothost.com/whois/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
