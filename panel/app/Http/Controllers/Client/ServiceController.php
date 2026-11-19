@@ -20,6 +20,9 @@ class ServiceController extends Controller
     /** Control panel login pages the customer is sent to, by module. */
     private const PANEL_PORTS = ['cpanel' => 2083, 'webuzo' => 2003];
 
+    /** Webmail login pages (HTTPS), by module. Both cPanel and Webuzo serve webmail on 2096. */
+    private const WEBMAIL_PORTS = ['cpanel' => 2096, 'webuzo' => 2096];
+
     /** Pages inside the control panel a one-click login can open, by module. */
     /** What the customer sees in a service's activity, and how it reads. */
     private const ACTIVITY = [
@@ -292,6 +295,7 @@ class ServiceController extends Controller
             'username' => $live ? ($service->credentials['username'] ?? null) : null,
             // The login page only; signing in still takes the account password.
             'panel_url' => $live && $port && $service->server ? "https://{$service->server->hostname}:{$port}" : null,
+            'webmail_url' => $live && isset(self::WEBMAIL_PORTS[$module]) && $service->server ? "https://{$service->server->hostname}:".self::WEBMAIL_PORTS[$module] : null,
             // One-click login works (the list's Quick Action signs in instead of opening the login page).
             'can_sso' => $live && $port && ServiceTools::hasTools($service),
             'cancellation' => $service->cancellation_requested_at && in_array($service->status, CancellationService::LIVE, true) ? [

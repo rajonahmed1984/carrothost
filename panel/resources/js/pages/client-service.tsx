@@ -18,7 +18,7 @@ type Detail = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; next_due_date: string | null; created_at: string; registered_at: string | null;
     product_id: number; product: { name: string; type: string; module: string | null; group: string | null }; description: string | null;
     ssh?: { hostname: string | null; ip: string | null; port: number; username: string } | null;
-    username: string | null; panel_url: string | null; has_password: boolean; is_vps?: boolean; vps_actions?: string[] | null; has_tools: boolean; panel_apps: string[];
+    username: string | null; panel_url: string | null; webmail_url: string | null; has_password: boolean; is_vps?: boolean; vps_actions?: string[] | null; has_tools: boolean; panel_apps: string[];
     can_upgrade: boolean; pending_upgrade: { invoice_id: number | null; new_product: string | null; new_cycle: string; amount_due: string } | null;
     server: { hostname: string; ip: string | null } | null; nameservers: string[]; server_ip: string | null;
     usage: { disk_used: number | null; disk_limit: number | null; bw_used: number | null; bw_limit: number | null; metrics: Metric[]; updated_at: string | null };
@@ -477,9 +477,10 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                                     <InfoRow icon={<LayoutGrid size={15} />} name={`${panelLabel} URL`} actions={<CopyButton value={s.panel_url} what="login URL" />}>
                                         {s.panel_url ? <a href={s.panel_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-accent hover:underline">{s.panel_url} <ExternalLink size={12} /></a> : '-'}
                                     </InfoRow>
-                                    {s.product.module === 'cpanel' && host && (
-                                        <InfoRow icon={<Mail size={15} />} name="Webmail" actions={<CopyButton value={`https://${host}:2096`} what="webmail URL" />}>
-                                            <a href={`https://${host}:2096`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-accent hover:underline">https://{host}:2096 <ExternalLink size={12} /></a>
+                                    {s.webmail_url && (
+                                        <InfoRow icon={<Mail size={15} />} name="Webmail URL" actions={<CopyButton value={s.webmail_url} what="webmail URL" />}>
+                                            <a href={s.webmail_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-accent hover:underline">{s.webmail_url} <ExternalLink size={12} /></a>
+                                            <span className="block text-xs text-slate-500">Sign in with your full email address and that mailbox's password.</span>
                                         </InfoRow>
                                     )}
                                     <InfoRow icon={<KeyRound size={15} />} name="Username" actions={<CopyButton value={s.username} what="username" />}>
@@ -502,7 +503,7 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                                     )}
                                     <InfoRow icon={<FolderOpen size={15} />} name="FTP Host" actions={<CopyButton value={host} what="FTP host" />}>{host ? <><span>{host}</span> <span className="text-xs text-slate-500">· port 21</span></> : '-'}</InfoRow>
                                 </div>
-                                <p className="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2.5 text-xs text-sky-900"><Info size={14} className="mt-0.5 shrink-0" /> Use the same username and password for {panelLabel}{s.product.module === 'cpanel' ? ', FTP and webmail' : ' and FTP'}. Never share them.</p>
+                                <p className="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2.5 text-xs text-sky-900"><Info size={14} className="mt-0.5 shrink-0" /> Use the same username and password for {panelLabel} and FTP. Webmail uses each mailbox's own address and password. Never share them.</p>
                             </SectionCard>
                         )}
                     </div>
@@ -543,6 +544,7 @@ function ServiceDetail({ s, canManage }: { s: Detail; canManage: boolean }) {
                             <SectionCard icon={<LayoutGrid size={18} />} title="Quick Actions">
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                     {tools && active && <Tile icon={<PanelLogo module={s.product.module} />} tone="" name={`Login to ${panelLabel}`} disabled={panel.pending} onClick={() => panel.open()} />}
+                                    {tools && active && s.panel_apps.includes('dns') && <Tile icon={<Network size={18} />} tone="bg-rose-100 text-rose-700" name="Manage DNS" disabled={panel.pending} onClick={() => panel.open('dns')} />}
                                     {tools && <Tile icon={<KeyRound size={18} />} tone="bg-emerald-100 text-emerald-700" name="Change Password" onClick={() => setDialog('password')} />}
                                     {canManage && s.can_upgrade && <Tile icon={<ArrowUpDown size={18} />} tone="bg-sky-100 text-sky-700" name="Upgrade / Downgrade" onClick={() => setDialog('upgrade')} />}
                                     {canManage && active && <Tile icon={<Globe size={18} />} tone="bg-purple-100 text-purple-700" name="Change Domain" to={subjectFor('Change primary domain')} />}

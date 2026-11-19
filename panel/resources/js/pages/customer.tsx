@@ -46,18 +46,28 @@ function IconBox({ children, small }: { children: ReactNode; small?: boolean }) 
 
 function StatCard({ icon, value, label, badge, to, action }: { icon: ReactNode; value: number; label: string; badge?: ReactNode; to: string; action: string }) {
     return (
-        <section className="card relative flex flex-col transition active:scale-[0.98] sm:active:scale-100">
-            <div className="flex items-start gap-3 p-3 sm:items-center sm:gap-4 sm:p-5">
-                <span className="hidden sm:block"><IconBox>{icon}</IconBox></span>
+        <Link
+            to={to}
+            aria-label={`${value} ${label}: ${action}`}
+            className="card group flex flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] active:translate-y-0 active:scale-[0.98]"
+        >
+            <div className="flex flex-1 items-start gap-3 p-3 sm:items-center sm:gap-4 sm:p-5">
+                <span className="hidden transition duration-200 group-hover:scale-105 sm:block"><IconBox>{icon}</IconBox></span>
                 <span className="sm:hidden"><IconBox small>{icon}</IconBox></span>
-                <div className="min-w-0">
-                    <div className="text-xl font-bold text-slate-900 tabular-nums sm:text-2xl">{value}</div>
-                    <div className="truncate text-xs text-slate-600 sm:text-sm">{label}</div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-xl leading-tight font-bold text-slate-900 tabular-nums sm:text-3xl">{value}</div>
+                    <div className="truncate text-xs font-medium text-slate-600 sm:text-sm">{label}</div>
                     {badge}
                 </div>
+                <span className="hidden h-8 w-8 shrink-0 items-center justify-center self-start rounded-full bg-slate-100 text-slate-400 transition duration-200 group-hover:bg-accent group-hover:text-white sm:flex">
+                    <ArrowRight size={15} className="-rotate-45 transition duration-200 group-hover:rotate-0" />
+                </span>
             </div>
-            <Link to={to} className="mt-auto flex items-center justify-end gap-1.5 border-t border-slate-200 px-5 py-3 text-xs font-semibold text-accent hover:underline max-sm:absolute max-sm:inset-0 max-sm:border-0 max-sm:p-0 max-sm:text-[0px]">{action} <ArrowRight size={14} className="max-sm:hidden" /></Link>
-        </section>
+            <span className="flex items-center justify-between gap-1.5 border-t border-slate-100 bg-slate-50/60 px-3 py-2 text-[11px] font-semibold text-accent transition group-hover:bg-[var(--accent-soft)] sm:px-5 sm:py-3 sm:text-xs">
+                {action}
+                <ArrowRight size={14} className="transition duration-200 group-hover:translate-x-1" />
+            </span>
+        </Link>
     );
 }
 

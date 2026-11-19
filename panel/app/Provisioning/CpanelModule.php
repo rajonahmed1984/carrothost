@@ -165,6 +165,7 @@ class CpanelModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
         'databases' => ['Database_MySQL'],
         'phpmyadmin' => ['Database_phpMyAdmin'],
         'domains' => ['Domains_domains', 'Domains_SubDomains'],
+        'dns' => ['Domains_zone_editor', 'Domains_ZoneEditor', 'Domains_simple_zone_editor', 'Domains_advanced_zone_editor'],
         'ssl' => ['SSL_TLS_Status', 'SSL_TLS_Manager'],
         'cron' => ['Cron_Home', 'Cron_Cron'],
         'backups' => ['Backups_Home'],

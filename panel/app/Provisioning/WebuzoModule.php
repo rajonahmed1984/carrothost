@@ -20,6 +20,7 @@ class WebuzoModule implements ManagesAccounts, ProvisioningModule, ReportsAccoun
         'files' => 'filemanager',
         'databases' => 'dbs',
         'domains' => 'domainmanage',
+        'dns' => 'advancedns',
         'cron' => 'cronjob',
         'backups' => 'backup',
     ];

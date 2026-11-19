@@ -1,4 +1,4 @@
-import { Archive, Clock, Database, FolderOpen, Forward, Globe, LayoutGrid, Lock, Mail, Table2 } from 'lucide-react';
+import { Archive, Clock, Database, FolderOpen, Forward, Globe, LayoutGrid, Lock, Mail, Network, Table2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { PanelLogo, panelName } from './panel-logo';
 
@@ -10,6 +10,7 @@ const SHORTCUTS: Record<string, { name: string; icon: ReactNode; tone: string }>
     databases: { name: 'MySQL Databases', icon: <Database size={18} />, tone: 'bg-amber-100 text-amber-700' },
     phpmyadmin: { name: 'phpMyAdmin', icon: <Table2 size={18} />, tone: 'bg-orange-100 text-orange-700' },
     domains: { name: 'Domains', icon: <Globe size={18} />, tone: 'bg-purple-100 text-purple-700' },
+    dns: { name: 'DNS Zone Editor', icon: <Network size={18} />, tone: 'bg-rose-100 text-rose-700' },
     subdomains: { name: 'Subdomains', icon: <Globe size={18} />, tone: 'bg-purple-100 text-purple-700' },
     ssl: { name: 'SSL/TLS Status', icon: <Lock size={18} />, tone: 'bg-emerald-100 text-emerald-700' },
     cron: { name: 'Cron Jobs', icon: <Clock size={18} />, tone: 'bg-sky-100 text-sky-700' },

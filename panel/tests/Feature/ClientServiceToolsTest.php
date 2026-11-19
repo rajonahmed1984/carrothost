@@ -68,9 +68,10 @@ class ClientServiceToolsTest extends TestCase
 
         $this->getJson("/api/client/services/{$service->id}")->assertOk()
             ->assertJsonPath('has_tools', true)
-            ->assertJsonPath('panel_apps', ['email', 'files', 'databases', 'domains', 'cron', 'backups'])
+            ->assertJsonPath('panel_apps', ['email', 'files', 'databases', 'domains', 'dns', 'cron', 'backups'])
             ->assertJsonPath('server.hostname', 'earth.test')
-            ->assertJsonPath('panel_url', 'https://earth.test:2003');
+            ->assertJsonPath('panel_url', 'https://earth.test:2003')
+            ->assertJsonPath('webmail_url', 'https://earth.test:2096');
 
         // The list's Quick Action signs in the same way instead of opening the login page.
         $this->getJson('/api/client/services')->assertOk()->assertJsonPath('0.can_sso', true);

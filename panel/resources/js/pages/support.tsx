@@ -515,6 +515,33 @@ const PAGE = 50;
 const POLL_MS = 4000;
 
 /** One conversation. New messages arrive by polling with after_id, older ones load on demand. */
+/**
+ * Fills the screen from where the element starts down to the page's bottom padding, so the page
+ * itself never scrolls and only the messages do. Measured, because the header height differs
+ * between admin and customer and the "logged in as" banner adds more on top.
+ */
+function useFitHeight<T extends HTMLElement>() {
+    const ref = useRef<T>(null);
+    const [height, setHeight] = useState<number | null>(null);
+
+    useLayoutEffect(() => {
+        const fit = () => {
+            const el = ref.current;
+            if (!el) return;
+            const main = el.closest('main');
+            const bottom = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 16;
+            const top = el.getBoundingClientRect().top + window.scrollY;
+            setHeight(Math.max(384, Math.floor(window.innerHeight - top - bottom)));
+        };
+        fit();
+        window.addEventListener('resize', fit);
+
+        return () => window.removeEventListener('resize', fit);
+    }, []);
+
+    return { ref, style: height ? { height } : undefined };
+}
+
 function ChatWindow({ url, attachment, staffSide, title, onActivity }: {
     url: string;
     attachment: (id: number) => string;
@@ -522,6 +549,7 @@ function ChatWindow({ url, attachment, staffSide, title, onActivity }: {
     title: (page: ChatPage | null) => ReactNode;
     onActivity?: () => void;
 }) {
+    const fit = useFitHeight<HTMLElement>();
     const [items, setItems] = useState<ChatItem[]>([]);
     const [meta, setMeta] = useState<ChatPage | null>(null);
     const [seen, setSeen] = useState(0);
@@ -602,7 +630,7 @@ function ChatWindow({ url, attachment, staffSide, title, onActivity }: {
     const submit = () => (message.trim() || file) && !send.isPending && send.mutate();
 
     return (
-        <section className="card flex h-[calc(100dvh-11rem)] min-h-[24rem] flex-col overflow-hidden md:h-[calc(100dvh-8rem)]">
+        <section ref={fit.ref} style={fit.style} className="card flex h-[calc(100dvh-11rem)] min-h-[24rem] flex-col overflow-hidden md:h-[calc(100dvh-8rem)]">
             <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">{title(meta)}</header>
             <div
                 ref={box}
