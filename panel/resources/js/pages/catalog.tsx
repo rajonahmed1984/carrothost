@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, Copy, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, ExternalLink, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath, errorMessage, money } from '../api';
-import { Button, Card, ErrorNote, Field, Input, Modal, QueryState, SecretInput, Select, Status, Table, type Column } from '../ui';
+import { Button, Card, ErrorNote, Field, Input, Modal, PagedTable, QueryState, SecretInput, Select, Status, Table, type Column } from '../ui';
+import { Service, ServiceActions } from './fulfilment';
 
 import { Profit, ServerCostsModal, ServerProfitReport, thisMonth, type Cell } from './server-profit';
 import { alertDialog, ask } from '../dialog';
@@ -1140,11 +1141,121 @@ function TestButton({ id, onDone }: { id: number; onDone: () => void }) {
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;
 }
 
+export function ServerAccountsModal({ server, onClose }: { server: ServerRow; onClose: () => void }) {
+    const [search, setSearch] = useState('');
+    const [status, setStatus] = useState('');
+
+    const params: Record<string, string> = {
+        server_id: String(server.id),
+        ...(search ? { q: search } : {}),
+        ...(status ? { status } : {}),
+    };
+
+    return (
+        <Modal wide className="sm:max-w-6xl" title={`Accounts on ${server.name}`} onClose={onClose}>
+            <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <div><span className="font-semibold text-slate-800">Hostname:</span> {server.hostname}</div>
+                        {server.ip_address && <div><span className="font-semibold text-slate-800">IP:</span> <span className="font-mono">{server.ip_address}</span></div>}
+                        <div><span className="font-semibold text-slate-800">Panel:</span> <span className="capitalize">{server.module}</span></div>
+                        <div><span className="font-semibold text-slate-800">Assigned:</span> <span className="font-medium text-slate-900">{server.services_count}{server.max_accounts ? ` / ${server.max_accounts}` : ''}</span></div>
+                    </div>
+                    <Link
+                        to={`/admin/products-services?server=${server.id}`}
+                        className="inline-flex items-center gap-1.5 font-semibold text-accent hover:underline"
+                    >
+                        <ExternalLink size={13} /> View in Products/Services
+                    </Link>
+                </div>
+
+                <PagedTable<Service>
+                    url="/services"
+                    noun="accounts"
+                    search={{ value: search, onChange: setSearch, placeholder: 'Search domain, username or client...' }}
+                    tabs={{
+                        value: status,
+                        onChange: setStatus,
+                        options: [
+                            { key: '', label: 'All' },
+                            { key: 'active', label: 'Active' },
+                            { key: 'suspended', label: 'Suspended' },
+                            { key: 'pending', label: 'Pending' },
+                            { key: 'terminated', label: 'Terminated' },
+                            { key: 'cancelled', label: 'Cancelled' },
+                        ],
+                    }}
+                    params={params}
+                    empty="No accounts assigned to this server."
+                    columns={[
+                        {
+                            header: 'Service / Domain',
+                            cell: (s) => (
+                                <div>
+                                    <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>
+                                        {s.domain || s.product.name}
+                                    </Link>
+                                    <div className="text-xs text-slate-500">
+                                        {s.product.name}
+                                        {s.username ? ` · ${s.username}` : (s.remote_id ? ` · ${s.remote_id}` : '')}
+                                    </div>
+                                </div>
+                            ),
+                        },
+                        {
+                            header: 'Client',
+                            cell: (s) => (
+                                <Link className="table-action-link font-medium" to={`/admin/clients/${s.client.id}`}>
+                                    {s.client.name}
+                                </Link>
+                            ),
+                        },
+                        {
+                            header: 'Billing',
+                            cell: (s) => (
+                                <div className="text-right">
+                                    <div className="font-medium tabular-nums">{money(s.recurring_amount)}</div>
+                                    <div className="text-xs text-slate-500 capitalize">{s.cycle} · Due: {s.next_due_date ?? '-'}</div>
+                                </div>
+                            ),
+                            align: 'right',
+                        },
+                        {
+                            header: 'Status',
+                            cell: (s) => <Status value={s.status} />,
+                        },
+                        {
+                            header: 'Provisioning',
+                            cell: (s) => (
+                                <div>
+                                    <Status value={s.provision_status} />
+                                    {s.provision_error && <div className="max-w-40 truncate text-xs text-rose-600" title={s.provision_error}>{s.provision_error}</div>}
+                                </div>
+                            ),
+                        },
+                        {
+                            header: 'Actions',
+                            cell: (s) => (
+                                <div className="flex items-center justify-end gap-2">
+                                    <ServiceActions service={s} />
+                                    <Link to={`/admin/products-services/${s.id}`} className="table-action-link text-xs font-semibold">Manage</Link>
+                                </div>
+                            ),
+                            align: 'right',
+                        },
+                    ]}
+                />
+            </div>
+        </Modal>
+    );
+}
+
 export function ServersPage() {
     const qc = useQueryClient();
     const query = useQuery({ queryKey: ['servers'], queryFn: async () => (await api.get<ServerRow[]>('/servers')).data });
     const [editing, setEditing] = useState<ServerRow | 'new' | null>(null);
     const [costs, setCosts] = useState<ServerRow | null>(null);
+    const [viewingAccounts, setViewingAccounts] = useState<ServerRow | null>(null);
     const [checking, setChecking] = useState<number[]>([]);
     const checked = useRef(new Set<number>());
     const refresh = () => qc.invalidateQueries({ queryKey: ['servers'] });
@@ -1171,7 +1282,19 @@ export function ServersPage() {
                         rows={query.data ?? []}
                         empty="No servers yet. Add a WHM server so paid orders can provision automatically."
                         columns={[
-                            { header: 'Name', cell: (s) => <span className="font-medium">{s.name}</span> },
+                            {
+                                header: 'Name',
+                                cell: (s) => (
+                                    <button
+                                        type="button"
+                                        className="text-left font-medium text-slate-900 hover:text-accent hover:underline cursor-pointer"
+                                        onClick={() => setViewingAccounts(s)}
+                                        title={`View accounts on ${s.name}`}
+                                    >
+                                        {s.name}
+                                    </button>
+                                ),
+                            },
                             { header: 'Panel', cell: (s) => s.module },
                             {
                                 header: 'Hostname',
@@ -1183,13 +1306,26 @@ export function ServersPage() {
                                     </div>
                                 ),
                             },
-                            { header: 'Accounts', cell: (s) => `${s.services_count}${s.max_accounts ? ` / ${s.max_accounts}` : ''}`, align: 'right' },
+                            {
+                                header: 'Accounts',
+                                cell: (s) => (
+                                    <button
+                                        type="button"
+                                        className="table-action-link font-medium tabular-nums cursor-pointer"
+                                        onClick={() => setViewingAccounts(s)}
+                                        title={`View accounts on ${s.name}`}
+                                    >
+                                        {`${s.services_count}${s.max_accounts ? ` / ${s.max_accounts}` : ''}`}
+                                    </button>
+                                ),
+                                align: 'right',
+                            },
                             { header: 'Monthly Cost', cell: (s) => <button type="button" className="table-action-link tabular-nums" onClick={() => setCosts(s)}>{Number(s.this_month.cost) > 0 ? money(s.this_month.cost) : 'Set cost'}</button>, align: 'right' },
                             { header: 'Sales This Month', cell: (s) => <span className="tabular-nums">{money(s.this_month.sales)}</span>, align: 'right' },
                             { header: 'Profit This Month', cell: (s) => <Profit value={s.this_month.profit} />, align: 'right' },
                             { header: 'Connection', cell: (s) => <ConnectionStatus server={s} checking={checking.includes(s.id)} /> },
                             { header: 'Status', cell: (s) => <Status value={s.is_active ? 'active' : 'cancelled'} /> },
-                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} onDone={refresh} /><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
+                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} onDone={refresh} /><Button variant="link" onClick={() => setViewingAccounts(s)}>Accounts</Button><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
                         ]}
                     />
                 </QueryState>
@@ -1197,6 +1333,15 @@ export function ServersPage() {
             {query.data && query.data.length > 0 && <ServerProfitReport servers={query.data} />}
             {editing && <ServerForm server={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
             {costs && <ServerCostsModal server={costs} onClose={() => setCosts(null)} />}
+            {viewingAccounts && (
+                <ServerAccountsModal
+                    server={viewingAccounts}
+                    onClose={() => {
+                        setViewingAccounts(null);
+                        refresh();
+                    }}
+                />
+            )}
         </div>
     );
 }

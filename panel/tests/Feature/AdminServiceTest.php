@@ -135,4 +135,37 @@ class AdminServiceTest extends TestCase
         $suspendSchedule = collect(app(Schedule::class)->events())->first(fn ($e) => str_ends_with((string) $e->command, 'billing:suspend-overdue'));
         $this->assertSame('* * * * *', $suspendSchedule?->expression);
     }
+
+    public function test_services_can_be_filtered_by_server(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_admin' => true])->save();
+        $this->actingAs($admin);
+
+        $client = Client::create(['name' => 'Acme', 'email' => 'acme@example.com']);
+        $product = Product::create(['name' => 'Starter', 'type' => 'shared_hosting', 'module' => 'webuzo']);
+        $server1 = Server::create(['name' => 'Server One', 'module' => 'webuzo', 'hostname' => 's1.test', 'username' => 'root', 'credentials' => 'k1']);
+        $server2 = Server::create(['name' => 'Server Two', 'module' => 'webuzo', 'hostname' => 's2.test', 'username' => 'root', 'credentials' => 'k2']);
+
+        $service1 = Service::create([
+            'client_id' => $client->id, 'product_id' => $product->id, 'server_id' => $server1->id,
+            'domain' => 'site1.com', 'remote_id' => 'user1', 'cycle' => 'monthly', 'recurring_amount' => 400, 'status' => 'active',
+        ]);
+        $service2 = Service::create([
+            'client_id' => $client->id, 'product_id' => $product->id, 'server_id' => $server2->id,
+            'domain' => 'site2.com', 'remote_id' => 'user2', 'cycle' => 'monthly', 'recurring_amount' => 500, 'status' => 'active',
+        ]);
+
+        $res1 = $this->getJson("/api/services?server_id={$server1->id}")->assertOk();
+        $this->assertCount(1, $res1->json('data'));
+        $this->assertSame($service1->id, $res1->json('data.0.id'));
+
+        $res2 = $this->getJson("/api/services?server={$server2->id}")->assertOk();
+        $this->assertCount(1, $res2->json('data'));
+        $this->assertSame($service2->id, $res2->json('data.0.id'));
+
+        $search = $this->getJson("/api/services?server_id={$server1->id}&q=user1")->assertOk();
+        $this->assertCount(1, $search->json('data'));
+        $this->assertSame($service1->id, $search->json('data.0.id'));
+    }
 }

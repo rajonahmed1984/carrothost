@@ -443,7 +443,7 @@ export function Dropdown({ button, label, buttonClassName, menuClassName = 'w-48
     );
 }
 
-export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Modal({ title, onClose, children, wide = false, className = '' }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; className?: string }) {
     useEffect(() => {
         // Escape inside a rich editor's own dialog or menu closes only that.
         const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !(e.target instanceof Element && e.target.closest('.tox')) && onClose();
@@ -457,7 +457,7 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
     return createPortal(
         // Phones: a sheet that slides up from the bottom, like a native app. Larger screens: a centred dialog.
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/60 sm:items-start sm:overflow-y-auto sm:p-4 sm:pt-16" role="dialog" aria-modal="true" aria-label={title}>
-            <div className={`sheet-up flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:max-h-none sm:rounded-2xl ${wide ? 'sm:max-w-5xl' : 'sm:max-w-lg'}`}>
+            <div className={`sheet-up flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:max-h-none sm:rounded-2xl ${className ? className : wide ? 'sm:max-w-5xl' : 'sm:max-w-lg'}`}>
                 <span aria-hidden className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-slate-300 sm:hidden" />
                 <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
                     <h2 className="font-semibold text-slate-900">{title}</h2>

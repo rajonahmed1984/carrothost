@@ -20,10 +20,10 @@ function useStatusParam(): [string, (value: string) => void] {
 
 export type Service = {
     id: number; domain: string | null; cycle: string; recurring_amount: string; status: string; provision_status: string;
-    provision_error: string | null; remote_id: string | null; next_due_date: string | null;
+    provision_error: string | null; remote_id: string | null; next_due_date: string | null; username?: string | null;
     terminate_end_of_cycle?: boolean; terminate_reason?: string | null; cancellation_type?: string | null; cancellation_reason?: string | null;
     cancellation_requested_at?: string | null; cancellation_accepted_at?: string | null;
-    client: { id: number; name: string }; product: { name: string; module: string | null; group?: { id: number; name: string } | null }; server: { name: string } | null;
+    client: { id: number; name: string }; product: { name: string; module: string | null; group?: { id: number; name: string } | null }; server: { id?: number; name: string } | null;
 };
 
 const confirmText: Record<string, string> = {
@@ -128,13 +128,22 @@ export function ServicesPage() {
     // Opened from the Products list: one plan's services, optionally only the inactive ones.
     const [urlParams, setUrlParams] = useSearchParams();
     const product = urlParams.get('product') ?? '';
+    const server = urlParams.get('server') ?? urlParams.get('server_id') ?? '';
     const state = urlParams.get('state') ?? '';
     const products = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/products')).data, enabled: !!product });
+    const servers = useQuery({ queryKey: ['servers'], queryFn: async () => (await api.get<{ id: number; name: string }[]>('/servers')).data, enabled: !!server });
     const productName = products.data?.find((p) => String(p.id) === product)?.name;
+    const serverName = servers.data?.find((s) => String(s.id) === server)?.name;
     const clearProduct = () => {
         const next = new URLSearchParams(urlParams);
         next.delete('product');
         next.delete('state');
+        setUrlParams(next, { replace: true });
+    };
+    const clearServer = () => {
+        const next = new URLSearchParams(urlParams);
+        next.delete('server');
+        next.delete('server_id');
         setUrlParams(next, { replace: true });
     };
 
@@ -143,6 +152,7 @@ export function ServicesPage() {
         ...(status ? { status } : {}),
         ...(group ? { group } : {}),
         ...(product ? { product } : {}),
+        ...(server ? { server_id: server } : {}),
         ...(state && !status ? { state } : {}),
     };
 
@@ -152,6 +162,12 @@ export function ServicesPage() {
                 <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
                     Showing {state === 'inactive' && !status ? 'inactive ' : ''}services on <strong>{productName ?? `product #${product}`}</strong>.
                     <button type="button" onClick={clearProduct} className="ml-auto cursor-pointer font-semibold text-sky-800 hover:underline">Show all products</button>
+                </div>
+            )}
+            {server && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
+                    Showing services on server <strong>{serverName ?? `server #${server}`}</strong>.
+                    <button type="button" onClick={clearServer} className="ml-auto cursor-pointer font-semibold text-sky-800 hover:underline">Show all servers</button>
                 </div>
             )}
             <PagedTable<Service>

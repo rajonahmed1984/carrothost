@@ -38,6 +38,9 @@ class ServiceController extends Controller
             })
             // From the Products list: one plan's services.
             ->when($request->query('product'), fn ($q, $product) => $q->where('product_id', (int) $product))
+            // From the Servers list: one server's services/accounts.
+            ->when($request->query('server_id'), fn ($q, $server) => $q->where('server_id', (int) $server))
+            ->when($request->query('server'), fn ($q, $server) => $q->where('server_id', (int) $server))
             // "inactive" is everything not running: pending, cancelled, terminated.
             ->when($request->query('state') === 'inactive', fn ($q) => $q->whereIn('status', ['pending', 'cancelled', 'terminated', 'fraud']))
             ->when($request->query('group'), fn ($q, $group) => $q->whereHas('product', fn ($p) => $group === 'none'
@@ -53,7 +56,7 @@ class ServiceController extends Controller
                 });
             })
             ->latest()
-            ->paginate(25);
+            ->paginate($request->integer('per_page', 25));
     }
 
     public const STATUSES = ['pending', 'active', 'suspended', 'terminated', 'cancelled', 'fraud'];
