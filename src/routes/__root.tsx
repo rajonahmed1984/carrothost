@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ScrollToTop } from "../components/ScrollToTop";
 import { ThemeProvider } from "../components/theme-provider";
 import { AIChatbot } from "../components/AIChatbot";
+import { WhatsAppButton } from "../components/WhatsAppButton";
 import { jsonLdScript, organizationSchema, websiteSchema } from "../lib/seo";
 import { NotFound } from "../components/NotFound";
 
@@ -127,6 +128,7 @@ function RootComponent() {
         <Outlet />
         <ScrollToTop />
         <AIChatbot />
+        <WhatsAppButton />
       </ThemeProvider>
     </QueryClientProvider>
   );

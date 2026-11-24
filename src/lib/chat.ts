@@ -15,7 +15,7 @@ CarrotHost offers the following high-performance services and exclusive solution
 3. 100% Node-Free Server-Side Tracking Facility (Exclusive to CarrotHost):
    - Solves the heavy RAM leakage, expensive monthly costs, and crashing issues of Stape.io and Google Cloud Platform (GCP).
    - Stape.io and GCP cost $20–$100+/month and run heavy Node.js/Docker containers that frequently run out of memory.
-   - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
+   - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: no Node.js/Docker container, very low latency, and free with CarrotHost hosting.
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
 4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.4):
@@ -26,7 +26,7 @@ CarrotHost offers the following high-performance services and exclusive solution
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
      Step 5: Open the Dashboard tab and click '⚡ Run Test Ping' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
-     Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) for 9.5+ Event Match Quality (EMQ).
+     Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) to help reach Event Match Quality (EMQ) up to 9+.
    - Full setup guide: [WordPress Plugin Documentation](/wordpress-plugin).
 
 5. 100% Free Website Migration (Zero Downtime Guarantee):
@@ -82,7 +82,7 @@ function getLocalFallbackResponse(query: string): string {
     text.includes("ইন্সটল") ||
     text.includes("সেটআপ")
   ) {
-    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker-1.5.4.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Dashboard' ট্যাবে গিয়ে **⚡ Run Test Ping** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ৯.৫+ EMQ স্কোর সহ ট্র্যাক হবে!\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
+    return "CarrotHost Server-Side Tracker প্লাগইন সেটআপ করার সহজ ধাপ:\n\n1. [WordPress Plugin Guide](/wordpress-plugin) থেকে `carrothost-server-side-tracker-1.5.4.zip` ডাউনলোড করে WP Admin > Plugins > Add New থেকে আপলোড ও অ্যাক্টিভ করুন।\n2. WP Admin-এর 'Carrothost SST' মেনুতে গিয়ে আপনার **Meta Pixel ID** ও **CAPI Access Token** দিন।\n3. ফার্স্ট-পার্টি প্রক্সির জন্য আপনার **GTM Container ID** (যেমন: `GTM-XXXXXXX`) বসিয়ে Save করুন।\n4. 'Dashboard' ট্যাবে গিয়ে **⚡ Run Test Ping** দিয়ে 200 OK স্ট্যাটাস নিশ্চিত করুন।\n5. WooCommerce-এর জন্য ViewContent, AddToCart, Purchase স্বয়ংক্রিয়ভাবে ট্র্যাক হবে (EMQ ৯+ পর্যন্ত)।\n\nবিস্তারিত গাইড ও ডাউনলোড লিংক: [WordPress Plugin Documentation](/wordpress-plugin)";
   }
 
   // Node-Free Tracking vs Stape / GCP / Pixel / CAPI

@@ -26,7 +26,7 @@ CarrotHost offers the following high-performance services and exclusive solution
 3. 100% Node-Free Server-Side Tracking Facility (Exclusive to CarrotHost):
    - Solves the heavy RAM leakage, expensive monthly costs, and crashing issues of Stape.io and Google Cloud Platform (GCP).
    - Stape.io and GCP cost $20–$100+/month and run heavy Node.js/Docker containers that frequently run out of memory.
-   - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: 0 MB memory leak, <10ms execution, and 100% free with CarrotHost hosting!
+   - CarrotHost uses a native C-level Nginx reverse proxy engine embedded directly in the web server: no Node.js/Docker container, very low latency, and free with CarrotHost hosting.
    - Details: [Node-Free Server-Side Tracking](/hosting).
 
 4. Official WordPress Tracking Plugin (Carrothost Server-Side Tracker v1.5.4):
@@ -37,7 +37,7 @@ CarrotHost offers the following high-performance services and exclusive solution
      Step 3: Enter your Meta Pixel ID and Meta Conversions API (CAPI) Access Token (generated from Facebook Events Manager > Settings > Conversions API > Generate Access Token).
      Step 4: Enter your GTM Container ID (e.g. GTM-XXXXXXX) to activate first-party proxy delivery via '/metrics/gtm.js?id=GTM-XXXXXXX'.
      Step 5: Open the Dashboard tab and click '⚡ Run Test Ping' to verify '200 OK' for both Nginx GTM proxy and Meta CAPI.
-     Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) for 9.5+ Event Match Quality (EMQ).
+     Step 6: WooCommerce Auto-Tracking: Automatically tracks ViewContent, AddToCart, InitiateCheckout, and Purchase events with SHA-256 customer data hashing (email, phone, IP) to help reach Event Match Quality (EMQ) up to 9+.
    - Full setup guide: [WordPress Plugin Documentation](/wordpress-plugin).
 
 5. 100% Free Website Migration (Zero Downtime Guarantee):
@@ -301,7 +301,7 @@ export function AIChatbot() {
       text.includes("সেটআপ")
     ) {
       return {
-        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker-1.5.4.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with 9.5+ EMQ score.",
+        text: "Here is how to set up the **Carrothost Server-Side Tracker** WordPress plugin:\n\n1. **Download & Install**: Download `carrothost-server-side-tracker-1.5.4.zip` from our guide and upload via WP Admin > Plugins > Add New > Activate.\n2. **Meta CAPI**: Enter your Meta Pixel ID and Conversions API Access Token in the 'Carrothost SST' menu.\n3. **GTM Proxy**: Enter your GTM Container ID (e.g. `GTM-XXXXXXX`) to activate first-party proxy delivery via `/metrics/gtm.js?id=GTM-XXXXXXX`.\n4. **Run Diagnostics**: Click '⚡ Run Test Ping' to verify 200 OK connection.\n5. **WooCommerce Auto-Tracking**: ViewContent, AddToCart, and Purchase events are tracked automatically with hashed customer data (EMQ up to 9+).",
         actionLink: { label: "WordPress Plugin Guide", url: "/wordpress-plugin" }
       };
     }
@@ -318,7 +318,7 @@ export function AIChatbot() {
       text.includes("ট্র্যাকিং")
     ) {
       return {
-        text: "CarrotHost features **100% Node-Free Server-Side Tracking**!\n\n• **Zero Extra Monthly Cost**: Stape.io or Google Cloud Platform costs $20–$100+/mo, whereas CarrotHost includes it 100% free with Webuzo hosting.\n• **0 MB RAM Leaks**: Runs natively in Nginx C-sockets rather than crashing Node.js/Docker containers.\n• **Bypasses Ad-Blockers**: Delivers first-party GTM and Meta CAPI events with sub-10ms response times.",
+        text: "CarrotHost features **100% Node-Free Server-Side Tracking**!\n\n• **Zero Extra Monthly Cost**: Stape.io or Google Cloud Platform costs $20–$100+/mo, whereas CarrotHost includes it free with Webuzo hosting.\n• **No Extra Containers**: Runs natively inside Nginx instead of a separate Node.js/Docker container.\n• **Bypasses Ad-Blockers**: Delivers first-party GTM and Meta CAPI events with sub-10ms response times.",
         actionLink: { label: "Server-Side Hosting Plans", url: "/hosting" }
       };
     }

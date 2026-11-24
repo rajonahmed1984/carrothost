@@ -505,7 +505,7 @@ function WordPressPluginDocPage() {
                 ) : (
                   <>
                     Standard client-side browser tracking loses 30% to 40% of conversion data due to iOS 14.5+, Safari ITP restrictions,
-                    and browser ad-blockers. CarrotHost's Node-Free technology delivers 100% accurate, reliable tracking data:
+                    and browser ad-blockers. CarrotHost's Node-Free technology delivers more complete, reliable tracking data:
                   </>
                 )}
               </p>
@@ -548,8 +548,8 @@ function WordPressPluginDocPage() {
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {lang === "bn"
-                      ? "ব্যাকগ্রাউন্ডে কোনো ভারী Node.js বা অতিরিক্ত ডকার কনটেইনার চলে না (0 MB RAM Leak), তাই সাইট থাকে সুপার-ফাস্ট।"
-                      : "Zero heavy Node.js or Docker containers (0 MB RAM leak). Runs natively in C-level Nginx sockets for maximum speed."}
+                      ? "ব্যাকগ্রাউন্ডে কোনো ভারী Node.js বা অতিরিক্ত ডকার কনটেইনার চলে না, তাই সাইট থাকে দ্রুত।"
+                      : "No heavy Node.js or Docker containers. Runs natively inside Nginx for speed."}
                   </p>
                 </div>
               </div>
@@ -1593,7 +1593,7 @@ function WordPressPluginDocPage() {
                   : [
                       {
                         q: "Why do we append /metrics/ to the Transport URL?",
-                        a: "Our Nginx web server core configures a native reverse proxy on the /metrics/ path. This forwards requests through your own first-party domain, bypassing ad-blockers and preserving tracking cookies with zero Node.js memory leaks.",
+                        a: "Our Nginx web server core configures a native reverse proxy on the /metrics/ path. This forwards requests through your own first-party domain, bypassing ad-blockers and preserving tracking cookies without any Node.js process.",
                       },
                       {
                         q: "Will Cloudflare Bot Fight Mode or WAF block tracking or test pings?",

@@ -40,6 +40,8 @@ import { WebuzoMockup } from "@/components/WebuzoMockup";
 import { ServerSideTrackerMockup } from "@/components/ServerSideTrackerMockup";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { WhatsAppIcon } from "@/components/WhatsAppButton";
+import { waLink, PHONE_DISPLAY, PHONE_TEL } from "@/lib/contact";
 import {
   breadcrumbSchema,
   createSeoMeta,
@@ -51,32 +53,36 @@ import {
 
 const HOSTING_FAQS = [
   {
+    q: "Which plan should I choose?",
+    a: "Most single WooCommerce stores do well on Starter. Pick Standard if you run regular Facebook ad campaigns or sales, and Advanced for large catalogues or high traffic. See the visitor capacity table on this page, or message us on WhatsApp and we'll recommend a plan for free.",
+  },
+  {
     q: "How does CarrotHost serve as a Stape.io alternative in Bangladesh?",
-    a: "Platforms like Stape.io or Google Cloud Platform (GCP) require recurring monthly dollar subscriptions ($20–$100/mo) and international dual-currency credit cards. In contrast, CarrotHost provides 100% Node-Free Server-Side Tracking built right into our high-speed cloud hosting at no additional monthly subscription, with easy local payments via bKash, Nagad, and Bangladeshi bank cards.",
+    a: "Stape.io and Google Cloud charge a separate monthly fee in US dollars (roughly $20–$100/mo) and need an international card. CarrotHost includes Node-free server-side tracking in your hosting at no extra monthly cost, and you pay in BDT with bKash, Nagad or a local card.",
   },
   {
-    q: "What is '100% Node-Free' Server-Side Tracking and why is it better?",
-    a: "Standard server-side GTM containers run heavy Node.js or Docker processes that consume 1 GB to 2 GB of RAM and frequently cause memory leaks or server crashes during traffic spikes. Our 100% Node-Free tracking handles tracking proxies directly inside the Nginx C-level core, requiring 0 MB of Node.js memory overhead with ultra-low latency (<10ms) and zero server crashes.",
+    q: "What is 'Node-Free' server-side tracking and why is it better?",
+    a: "Standard server-side GTM containers run Node.js or Docker processes that use 1–2 GB of RAM and can slow down during traffic spikes. Our tracking runs as a proxy inside Nginx itself, so there is no extra container eating your RAM and latency stays very low.",
   },
   {
-    q: "How do I install and configure the carrothost-server-side-tracker-1.5.4.zip plugin on WordPress?",
-    a: "It takes under 2 minutes: 1) Download 'carrothost-server-side-tracker-1.5.4.zip' from this page, 2) Upload and activate it in your WordPress dashboard under Plugins > Add New, 3) Open 'Carrothost SST' settings, enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. The plugin automatically tracks WooCommerce purchases, add-to-carts, and checkouts with 9+ Event Match Quality (EMQ).",
+    q: "How do I install the tracking plugin on WordPress?",
+    a: "It takes about 2 minutes: 1) Download the plugin .zip from this page, 2) Upload and activate it under Plugins > Add New, 3) Open 'Carrothost SST', enter your Meta Pixel ID and CAPI Access Token, and click 'Run Test Ping'. WooCommerce purchases, add-to-carts and checkouts are then tracked automatically with hashed customer data. Prefer not to do it yourself? Our team will set it up free.",
   },
   {
     q: "Will this bypass Ad Blockers and iOS 14.5+ tracking restrictions?",
-    a: "Yes. By routing tracking requests through your own custom first-party domain (e.g. yourdomain.com/metrics/gtm.js), ad blockers, Brave browser shields, and Safari Intelligent Tracking Prevention (ITP) recognize the data as legitimate first-party traffic rather than third-party tracking scripts.",
+    a: "It recovers much of the lost data. Tracking requests go through your own domain (e.g. yourdomain.com/metrics/gtm.js), so most ad blockers, Brave shields and Safari ITP treat them as first-party traffic instead of blocking them as third-party scripts.",
   },
   {
     q: "Can I migrate my existing WordPress site for free?",
-    a: "Yes! Our engineering team handles 100% free website migration from any cPanel, Webuzo, or VPS host. Most migrations are completed within a few hours with zero downtime guarantee.",
+    a: "Yes. Our team moves your site free from any cPanel, Webuzo or VPS host. Most migrations are done within 24 hours and planned to avoid downtime. Just send your website address on WhatsApp.",
   },
   {
     q: "What is Webuzo and how does it compare to cPanel?",
-    a: "Webuzo is a modern, lightweight control panel engineered for maximum performance. It consumes less than half the server resources of legacy cPanel, provides an intuitive interface for databases, emails, and file management, and includes a 1-click installer for WordPress and 450+ applications.",
+    a: "Webuzo is a lightweight control panel, similar to cPanel but using fewer server resources. It lets you manage files, databases, email and SSL, and includes a 1-click installer for WordPress and 450+ apps.",
   },
   {
     q: "Can I pay in BDT using bKash or Nagad?",
-    a: "Yes! We accept bKash, Nagad, Rocket, Upay, and all major Bangladeshi debit and credit cards through secure local payment gateways. No international passport endorsement or USD cards required.",
+    a: "Yes. We accept bKash, Nagad, Rocket, Upay and Bangladeshi debit and credit cards. No USD card or passport endorsement needed.",
   },
 ];
 
@@ -85,7 +91,7 @@ export const Route = createFileRoute("/hosting")({
     const seo = createSeoMeta({
       title: "High-Performance Cloud Hosting with Node-Free Server-Side Tracking | CarrotHost",
       description:
-        "Fast, reliable Webuzo cloud hosting in Bangladesh with 100% Node-Free Server-Side Tracking (Meta CAPI & GTM). Affordable Stape.io alternative with free WordPress plugin, NVMe SSD, and 24/7 local support.",
+        "WordPress & WooCommerce hosting in Bangladesh with free server-side tracking (Meta CAPI & GTM). Stape.io alternative from ৳350/month: free plugin, NVMe SSD, free migration, bKash/Nagad and Bangla support.",
       path: "/hosting",
     });
 
@@ -158,37 +164,31 @@ function Hero() {
           <div className="min-w-0 lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand-green/10 border border-brand-green/25 px-4 py-1.5 text-xs font-semibold text-brand-green">
               <Sparkles className="h-4 w-4 animate-pulse text-brand-green" />
-              <span>100% Node-Free Server-Side Tracking Built-In</span>
+              <span>Server-side tracking included free</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-foreground">
-              High-Performance Cloud Hosting with{" "}
-              <span className="text-gradient-brand">Server-Side Tracking</span>
+              WordPress & WooCommerce Hosting with{" "}
+              <span className="text-gradient-brand">Free Server-Side Tracking</span>
             </h1>
 
-            <p className="text-lg md:text-xl font-bold text-foreground/90 leading-snug">
-              The Smart Stape.io Alternative in Bangladesh — 100% Accurate Meta CAPI & GTM Data with
-              0 MB Node.js Overhead!
-            </p>
-
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              Are you tired of losing 30%+ of your Facebook and Google ad conversions to iOS 14+
-              restrictions and ad blockers? Stop paying expensive monthly dollar fees for Stape.io
-              or complex GCP servers. We engineered an enterprise-grade cloud hosting platform with{" "}
-              <strong className="text-foreground">native Nginx-level server tracking</strong> and an
-              official <strong className="text-foreground">WordPress SST plugin</strong> included
-              free!
+              Ad-blockers and iPhone privacy rules hide many of your sales from Facebook and Google.
+              Our hosting sends those events to{" "}
+              <strong className="text-foreground">Meta CAPI and GTM from your own domain</strong>,
+              with a free WordPress plugin. A Stape.io alternative with no extra monthly fee, paid in
+              BDT.
             </p>
 
             {/* Quick value props pill list */}
             <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs font-medium text-foreground/85">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
-                <span>Bypass Ad Blockers</span>
+                <span>Recover ad-blocked events</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
-                <span>Zero RAM Memory Leaks</span>
+                <span>No Node.js server to run</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
@@ -200,7 +200,7 @@ function Hero() {
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
-                <span>Meta CAPI EMQ 9.5+</span>
+                <span>Meta CAPI EMQ up to 9+</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-brand-green shrink-0" />
@@ -210,34 +210,30 @@ function Hero() {
 
             {/* Hero CTAs */}
             <div className="pt-3 space-y-3">
-              <div className="flex flex-wrap gap-3.5 items-center">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center">
                 <a
                   href="#pricing"
                   className="inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 sm:px-6 py-3.5 text-sm sm:text-base font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
                 >
-                  View Hosting Plans (From ৳4,200/yr) <ArrowRight className="h-4.5 w-4.5" />
+                  See Plans · from ৳350/mo <ArrowRight className="h-4.5 w-4.5" />
                 </a>
 
                 <a
-                  href="#wordpress-plugin"
-                  className="inline-flex items-center gap-2 rounded-xl border border-brand-green/30 bg-brand-green/10 px-5 py-3.5 font-bold text-brand-green hover:bg-brand-green/20 transition-all duration-200 hover:-translate-y-0.5"
+                  href={waLink("Hello CarrotHost, I want hosting with server-side tracking. Which plan is right for my site?")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 font-bold text-white hover:opacity-95 transition-all duration-200 hover:-translate-y-0.5"
                 >
-                  <Download className="h-4.5 w-4.5" /> Free WP Plugin .zip
+                  <WhatsAppIcon className="h-4.5 w-4.5" /> Ask on WhatsApp
                 </a>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground pt-0.5">
-                <span className="h-2 w-2 rounded-full bg-brand-green animate-pulse shrink-0" />
-                <span>Need migration or tracking help?</span>
-                <a
-                  href="https://wa.me/8801787882277"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-bold text-brand-green hover:underline"
-                >
-                  <Phone className="h-3.5 w-3.5" /> WhatsApp 01787-882277
+                <Download className="h-3.5 w-3.5 text-brand-green shrink-0" />
+                <span>Already hosted elsewhere?</span>
+                <a href="#wordpress-plugin" className="font-bold text-brand-green hover:underline">
+                  See the free WordPress plugin
                 </a>
-                <span className="hidden sm:inline opacity-70">— 24/7 Bangla Support</span>
               </div>
             </div>
           </div>
@@ -283,10 +279,10 @@ function TrustBar() {
     <section className="border-b border-border bg-card">
       <div className="mx-auto max-w-7xl px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
         {[
-          { k: "0 MB", v: "Node.js RAM Overhead", sub: "Nginx C-Core tracking" },
-          { k: "100%", v: "Data Accuracy", sub: "Bypasses iOS 14 & AdBlock" },
-          { k: "৳0", v: "Extra Monthly Fee", sub: "Free with Cloud Hosting" },
-          { k: "10x", v: "Traffic Spike Capacity", sub: "Zero 503 errors on viral ads" },
+          { k: "৳0", v: "Extra Tracking Fee", sub: "Included in every plan" },
+          { k: "9+", v: "Meta EMQ Possible", sub: "With hashed customer data" },
+          { k: "24h", v: "Free Migration", sub: "Most sites moved within a day" },
+          { k: "BDT", v: "Local Payment", sub: "bKash, Nagad, local cards" },
         ].map((s) => (
           <div key={s.v} className="p-2">
             <div className="text-3xl md:text-4xl font-extrabold text-gradient-brand">{s.k}</div>
@@ -324,7 +320,7 @@ function StapeComparison() {
     },
     {
       feature: "Server Memory & RAM Overhead",
-      carrothost: "0 MB RAM (Zero memory leaks, never crashes)",
+      carrothost: "No extra container (runs inside Nginx)",
       stape: "High Memory Footprint (1-2 GB+ RAM)",
       gcp: "High Resource Usage & Scaling Costs",
       isWin: true,
@@ -338,22 +334,22 @@ function StapeComparison() {
     },
     {
       feature: "Meta CAPI Event Match Quality (EMQ)",
-      carrothost: "9.0+ / 10 (Deep hashed WooCommerce data)",
+      carrothost: "Up to 9+ / 10 (Deep hashed WooCommerce data)",
       stape: "Varies by setup complexity",
       gcp: "Varies by custom coding",
       isWin: true,
     },
     {
       feature: "Ad Blocker & Safari ITP Bypass",
-      carrothost: "100% First-Party Custom Domain Proxy",
-      stape: "Paid custom domain upgrade required",
+      carrothost: "Built-in first-party proxy on your own domain",
+      stape: "Custom domain must be configured",
       gcp: "Requires manual load balancer & DNS",
       isWin: true,
     },
     {
       feature: "Customer Support & Migration",
       carrothost: "24/7 Bangla & English Phone/WhatsApp Support",
-      stape: "Email ticket queue (English only)",
+      stape: "Email / ticket support in English",
       gcp: "Paid enterprise support tiers only",
       isWin: true,
     },
@@ -367,14 +363,15 @@ function StapeComparison() {
             Stape.io & GCP Alternative in Bangladesh
           </span>
           <h2 className="mt-3 text-3xl md:text-5xl font-extrabold tracking-tight">
-            Why Pay Extra Dollars for Tracking When CarrotHost Includes It for Free?
+            Why Pay Extra Dollars for Tracking?
           </h2>
           <p className="mt-4 text-base md:text-lg text-muted-foreground">
-            Most Bangladeshi e-commerce merchants waste thousands of dollars every year on Stape.io
-            or Google Cloud Platform just to run Facebook CAPI. Here is how CarrotHost completely
-            replaces them.
+            Many Bangladeshi stores pay a monthly USD fee to Stape.io or Google Cloud just to run
+            Facebook CAPI. With CarrotHost the same job is part of your hosting.
           </p>
         </div>
+
+        <p className="mb-3 text-xs text-muted-foreground text-right md:hidden">Swipe to compare →</p>
 
         {/* Comparison Table */}
         <div className="rounded-2xl border border-border bg-background shadow-elegant overflow-hidden">
@@ -447,15 +444,15 @@ function StapeComparison() {
               Ready to save $240 to $1,200/year on tracking subscriptions?
             </h3>
             <p className="text-sm text-muted-foreground">
-              Every CarrotHost Webuzo Cloud plan includes our 100% Node-Free tracking setup and
-              WordPress plugin at no extra charge.
+              Every CarrotHost Webuzo plan includes Node-free tracking and the WordPress plugin at
+              no extra charge.
             </p>
           </div>
           <a
             href="#pricing"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-soft hover:opacity-95 transition shrink-0"
           >
-            Get Started Now <ArrowRight className="h-4 w-4" />
+            Compare Plans <ArrowRight className="h-4 w-4" />
           </a>
         </div>
       </div>
@@ -489,10 +486,9 @@ function WordPressPluginShowcase() {
           <p className="mt-3 text-base text-muted-foreground leading-relaxed">
             We developed the dedicated{" "}
             <strong className="text-foreground">Carrothost Server-Side Tracker</strong> WordPress
-            plugin specifically for WooCommerce and WordPress store owners in Bangladesh. It links
-            your site directly to our kernel-level Nginx tracking proxy to bypass ad blockers,
-            retain user cookies for months, and send purchase events with high Event Match Quality
-            (EMQ 9+).
+            plugin for WooCommerce and WordPress store owners in Bangladesh. It connects your site
+            to our Nginx tracking proxy, keeps first-party cookies longer, and sends purchase events
+            with hashed customer data for high Event Match Quality (EMQ up to 9+).
           </p>
         </div>
 
@@ -581,7 +577,7 @@ function WordPressPluginShowcase() {
 
             <div className="rounded-xl bg-secondary/60 border border-border p-3 text-[11px] text-muted-foreground flex items-center gap-2 mt-2">
               <ShieldCheck className="h-4 w-4 text-brand-green shrink-0" />
-              <span>Our support team will configure this for you 100% free if requested.</span>
+              <span>Prefer not to do it yourself? Our team will set it up for you free.</span>
             </div>
           </div>
         </div>
@@ -609,7 +605,7 @@ function WordPressPluginShowcase() {
             download="carrothost-server-side-tracker-1.5.4.zip"
             className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-brand px-7 py-4 font-bold text-primary-foreground shadow-elegant hover:opacity-95 transition-all duration-200 hover:scale-105 shrink-0 text-sm"
           >
-            <Download className="h-5 w-5 animate-bounce" />
+            <Download className="h-5 w-5" />
             <span>Download Plugin (.zip)</span>
           </a>
         </div>
@@ -618,141 +614,47 @@ function WordPressPluginShowcase() {
   );
 }
 
-function CoreOptimization() {
-  return (
-    <section className="py-16 md:py-24 border-b border-border bg-card/30">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="bg-card rounded-3xl border border-border p-8 md:p-12 shadow-soft hover:shadow-elegant transition duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-brand-orange/5 blur-3xl pointer-events-none" />
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-orange bg-brand-orange/10 px-3 py-1 rounded-full">
-                Tuned for Maximum Uptime & Zero Dropped Packets
-              </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-                Optimized from the Linux Kernel Up
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Unlike traditional hosting companies that rely on default, restricted
-                configurations, we optimize our servers from the Linux kernel level up. This ensures
-                your business gets blistering speeds, server-side stability, and unmatched
-                reliability under heavy traffic loads.
-              </p>
-              <div className="space-y-4">
-                {[
-                  "Optimized network socket buffers for low-latency transmission (<10ms)",
-                  "Fine-tuned CPU scheduling to prioritize high-traffic web requests",
-                  "I/O scheduler adjustments for blazing NVMe SSD read/write speeds",
-                  "Pre-configured Nginx kernel variables to eliminate packet drops",
-                  "Native reverse proxy for 100% Node-free server-side tracking",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 text-sm">
-                    <div className="h-5 w-5 rounded-full bg-brand-green/10 flex items-center justify-center shrink-0">
-                      <Check className="h-3.5 w-3.5 text-brand-green" />
-                    </div>
-                    <span className="text-foreground/90 font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative p-6 bg-slate-900 rounded-2xl border border-slate-800 text-slate-100 overflow-hidden shadow-elegant">
-              <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-brand-orange/10 blur-3xl" />
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <h3 className="font-bold text-sm flex items-center gap-2 font-mono">
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-green animate-ping" />
-                  carrot-stack-optimization.conf
-                </h3>
-                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">
-                  PRODUCTION STABLE
-                </span>
-              </div>
-              <div className="space-y-3.5 font-mono text-xs text-slate-300">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">OS / Kernel</span>
-                  <span className="text-brand-green font-semibold">Tuned Linux Kernel v6.8</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Web Engine</span>
-                  <span className="text-brand-green font-semibold">Optimized Nginx Core</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">File Descriptors</span>
-                  <span className="text-brand-orange font-semibold">fs.file-max = 65,535</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">GTM & CAPI Proxies</span>
-                  <span className="text-brand-green font-semibold">
-                    100% Node-Free Server Tracking
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">WP Plugin Integration</span>
-                  <span className="text-brand-green font-semibold">
-                    carrothost-server-side-tracker
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Auto Guard</span>
-                  <span className="text-brand-green font-semibold">Hourly Permission Cron</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ExclusiveFeatures() {
-  const features = [
+function EverythingIncluded() {
+  const items = [
     {
       icon: Activity,
-      badge: "Flagship Feature",
-      title: "100% Node-Free Server-Side Tracking",
-      desc: "If you are a digital marketer or e-commerce owner using Google Tag Manager (GTM) Server-Side Tracking or Meta Conversions API, our hosting is the ultimate solution in Bangladesh. We eliminated heavy, crash-prone Node.js processes and integrated tracking proxies directly into the Nginx C core.",
-      benefit:
-        "Capture 100% of your customer journey even if ad blockers and iOS 14.5+ ATT are active, without draining your server's RAM or slowing down your website by even a millisecond.",
+      title: "Server-Side Tracking",
+      desc: "Meta CAPI and first-party GTM run inside Nginx on your domain. No Stape.io bill, no Node.js server.",
     },
     {
       icon: FileCode2,
-      badge: "Included Free",
-      title: "Dedicated WordPress & WooCommerce SST Plugin",
-      desc: "No need to pay monthly subscription fees to third-party tools or hire expensive tracking developers. Our official WordPress plugin (carrothost-server-side-tracker-1.5.4.zip) configures Meta CAPI, first-party GTM proxy, and WooCommerce e-commerce events with 1 click.",
-      benefit:
-        "Boost your Meta Event Match Quality (EMQ) to 9.5+ out of 10, reduce ad acquisition cost (CPA), and maximize return on ad spend (ROAS).",
-    },
-    {
-      icon: Shield,
-      badge: "Auto-Recovery",
-      title: "Auto-Unlock & Permission Guard",
-      desc: "A common frustration with standard hosting is when automated background scripts or updates break file permissions, locking you out with a '403 Forbidden' error.",
-      benefit:
-        "Our servers feature a custom 24/7 background automation script that detects and instantly fixes locked directories every hour. Your site stays accessible, always.",
+      title: "Free WordPress Plugin & Setup",
+      desc: "WooCommerce events tracked automatically. Our team can configure it for you at no cost.",
     },
     {
       icon: Zap,
-      badge: "High Capacity",
-      title: "10x More Traffic Capacity",
-      desc: "Most shared hosting environments crash with '503 Service Unavailable' or 'Resource Limit Reached' during live flash sales or viral ad campaigns.",
-      benefit:
-        "Engineered with high-throughput Nginx architecture and optimized worker processes to seamlessly handle massive simultaneous visitor spikes with zero slowdown or downtime.",
+      title: "Speedy Cache & NVMe SSD",
+      desc: "Built-in page caching on fast NVMe storage keeps WordPress and WooCommerce pages quick.",
+    },
+    {
+      icon: Cpu,
+      title: "Guaranteed CPU & RAM",
+      desc: "Each plan has its own isolated resources, so a busy neighbour doesn't slow your site during a sale.",
     },
     {
       icon: Lock,
-      badge: "SSL Automation",
-      title: "One-Click Custom Subdomains & Auto-SSL",
-      desc: "Need a dedicated tracking subdomain (e.g., ss.yourdomain.com) for first-party tracking or isolated landing pages? You don't have to manually deal with complex SSL certificates.",
-      benefit:
-        "Simply point your DNS to our server, and our background architecture will automatically issue and renew free Let's Encrypt SSL certificates every 90 days.",
+      title: "Free Auto-SSL",
+      desc: "Let's Encrypt SSL for every domain and subdomain, including tracking subdomains. Renews automatically.",
     },
     {
-      icon: LayoutDashboard,
-      badge: "Simple & Lightweight",
-      title: "Lightweight Webuzo Control Panel",
-      desc: "Say goodbye to bloated, slow, and expensive legacy control panels that eat up half of your server memory.",
-      benefit:
-        "Our lightweight Webuzo panel gives you an intuitive, lightning-fast interface to manage your file manager, databases, and professional email accounts with zero technical hassle.",
+      icon: Clock,
+      title: "Daily Backups",
+      desc: "Automatic off-site backups. Restore a file or database in one click.",
+    },
+    {
+      icon: Shield,
+      title: "Auto-Unlock Guard",
+      desc: "An hourly check fixes broken file permissions, so updates don't leave you stuck on a '403 Forbidden' error.",
+    },
+    {
+      icon: HelpCircle,
+      title: "24/7 Bangla Support",
+      desc: "Talk to real hosting and tracking engineers in Bangla or English by phone and WhatsApp.",
     },
   ];
 
@@ -761,42 +663,27 @@ function ExclusiveFeatures() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
           <span className="text-sm font-semibold text-brand-green bg-brand-green/10 px-3.5 py-1 rounded-full">
-            Exclusive Cloud Infrastructure
+            Included in every plan
           </span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
-            Features you only get with CarrotHost
+          <h2 className="mt-3 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Everything your store needs, no add-ons
           </h2>
           <p className="mt-3 text-muted-foreground">
-            We custom-tuned our hosting platform to provide e-commerce speed and server-side
-            tracking capabilities that standard shared hosting cannot match.
+            Starter, Standard and Advanced all come with these. Plans differ only in storage,
+            bandwidth and server resources.
           </p>
         </div>
-        <div className="mt-16 grid gap-6 md:grid-cols-2">
-          {features.map((f, idx) => (
+        <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {items.map((i) => (
             <div
-              key={f.title}
-              className={`rounded-3xl bg-card border border-border p-6 md:p-8 shadow-soft hover:shadow-elegant hover:border-brand-orange transition duration-300 flex flex-col justify-between ${
-                idx < 2 ? "border-brand-green/35 bg-gradient-to-b from-card to-brand-green/5" : ""
-              }`}
+              key={i.title}
+              className="group rounded-2xl border border-border bg-card p-6 shadow-soft hover:border-brand-orange hover:shadow-elegant transition"
             >
-              <div>
-                <span className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand-green mb-4">
-                  {f.badge}
-                </span>
-                <h3 className="text-xl md:text-2xl font-bold flex items-center gap-3 mb-4 text-foreground">
-                  <span className="h-10 w-10 rounded-xl bg-gradient-brand text-primary-foreground flex items-center justify-center shrink-0">
-                    <f.icon className="h-5 w-5" />
-                  </span>
-                  {f.title}
-                </h3>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                  {f.desc}
-                </p>
+              <div className="h-11 w-11 rounded-xl bg-brand-orange/10 text-brand-orange flex items-center justify-center group-hover:bg-gradient-brand group-hover:text-primary-foreground transition">
+                <i.icon className="h-5 w-5" strokeWidth={1.75} />
               </div>
-              <div className="mt-6 p-4 rounded-xl bg-secondary/50 border-l-4 border-brand-green text-sm">
-                <span className="font-bold text-foreground block mb-1">The Benefit:</span>
-                <p className="text-muted-foreground leading-relaxed">{f.benefit}</p>
-              </div>
+              <h3 className="mt-4 font-bold text-foreground">{i.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{i.desc}</p>
             </div>
           ))}
         </div>
@@ -813,7 +700,7 @@ function WebuzoFacilities() {
       icon: Code,
       title: "1-Click App Installer",
       subtitle: "WordPress & 450+ Apps",
-      desc: "Deploy WordPress, WooCommerce, Laravel, or Node.js apps in 5 seconds. No manual database creation, configuration, or file uploads required.",
+      desc: "Install WordPress, WooCommerce, Laravel and 450+ other apps in a few clicks. The database and config are created for you.",
       points: [
         "Instant one-click updates",
         "Backup before update option",
@@ -842,7 +729,7 @@ function WebuzoFacilities() {
         "One-click phpMyAdmin launch",
         "Manage DB users and hosts",
         "Secure remote database access",
-        "Automatic backups & optimizations",
+        "Table optimize & repair tools",
       ],
     },
     {
@@ -861,7 +748,7 @@ function WebuzoFacilities() {
       icon: FolderOpen,
       title: "Advanced File Manager",
       subtitle: "Browser-based File Control",
-      desc: "Manage your website files entirely from your browser. Upload, zip, unzip, and edit files inside a clean file manager with zero technical lag.",
+      desc: "Manage your website files from your browser. Upload, zip, unzip and edit files in a clean file manager.",
       points: [
         "Drag & drop file upload",
         "Built-in code editor",
@@ -891,11 +778,11 @@ function WebuzoFacilities() {
             Webuzo Facilities
           </span>
           <h2 className="mt-3 text-3xl md:text-5xl font-extrabold tracking-tight">
-            Control panel built for ultimate speed
+            An easy control panel for your site
           </h2>
           <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            Say goodbye to bloated, expensive dashboards. Our lightweight Webuzo panel gives you an
-            intuitive, lightning-fast interface with zero technical hassle.
+            Manage WordPress, email, databases, PHP versions and SSL from one lightweight Webuzo
+            dashboard. No server commands needed.
           </p>
         </div>
 
@@ -983,17 +870,17 @@ function TargetAudience() {
     {
       icon: ShoppingBag,
       title: "E-Commerce & WooCommerce Stores",
-      desc: "Businesses running heavy Facebook or TikTok ad campaigns who need maximum uptime, zero dropped checkouts, and 100% accurate conversion data via Meta CAPI.",
+      desc: "Shops running Facebook or TikTok ads that want every purchase reported to Meta, and a site that stays fast during sales.",
     },
     {
       icon: TrendingUp,
       title: "Growth Marketers & Media Buyers",
-      desc: "Agencies and performance marketers who demand 9.5+ Event Match Quality (EMQ), extended first-party cookies, and freedom from third-party tracking fees.",
+      desc: "Agencies and media buyers who want high Event Match Quality, first-party cookies, and no third-party tracking fees for their clients.",
     },
     {
       icon: Users,
-      title: "High-Traffic Blogs & Corporate Portals",
-      desc: "Publishers requiring seamless page speeds, NVMe SSD caching, and server stability for tens of thousands of simultaneous readers.",
+      title: "News Sites, Blogs & Business Websites",
+      desc: "Publishers and companies that need fast cached pages on NVMe storage, local Bangla support and simple BDT billing.",
     },
   ];
 
@@ -1001,9 +888,9 @@ function TargetAudience() {
     <section className="py-16 md:py-24 bg-secondary/40 border-b border-border">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-sm font-semibold text-brand-green">Engineered for Growth</span>
+          <span className="text-sm font-semibold text-brand-green">Who it is for</span>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-            Who is this hosting built for?
+            Built for Bangladeshi online businesses
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
@@ -1054,94 +941,101 @@ function Pricing() {
   const plans = [
     {
       name: "Starter",
-      price: "৳4,200.00",
-      period: "/yr",
-      tag: "Best for single stores",
+      price: "৳4,200",
+      monthly: "৳350",
+      tag: "For a new or single store",
       link: "https://portal.carrothost.com/store/webuzo-hosting/starter",
-      features: [
-        "5 GB NVMe SSD Storage",
-        "250 GB Monthly Bandwidth",
-        "1 Website / Domain",
-        "100% Node-Free Server-Side Tracking",
-        "Free WordPress SST Plugin (.zip)",
-        "Meta CAPI & First-Party GTM Proxy",
-        "Speedy Cache & Webuzo Panel",
-        "Free Auto-SSL & Daily Backups",
-      ],
+      features: ["5 GB NVMe SSD storage", "250 GB monthly bandwidth", "1 website / domain", "24/7 Bangla support"],
     },
     {
       name: "Standard",
-      price: "৳8,400.00",
-      period: "/yr",
-      tag: "Most Popular",
+      price: "৳8,400",
+      monthly: "৳700",
+      tag: "For stores running regular ads",
       highlight: true,
       link: "https://portal.carrothost.com/store/webuzo-hosting/standard",
       features: [
-        "10 GB NVMe SSD Storage",
-        "500 GB Monthly Bandwidth",
-        "1 Website / Domain",
-        "100% Node-Free Server-Side Tracking",
-        "Free WordPress SST Plugin (.zip)",
-        "Meta CAPI & First-Party GTM Proxy",
-        "Speedy Cache & Webuzo Panel",
-        "Free Auto-SSL & Daily Backups",
-        "Priority 24/7 Bangla Support",
+        "10 GB NVMe SSD storage",
+        "500 GB monthly bandwidth",
+        "1 website / domain",
+        "Priority 24/7 Bangla support",
       ],
     },
     {
       name: "Advanced",
-      price: "৳12,000.00",
-      period: "/yr",
-      tag: "Power users & scaling brands",
+      price: "৳12,000",
+      monthly: "৳1,000",
+      tag: "For large catalogues & high traffic",
       link: "https://portal.carrothost.com/store/webuzo-hosting/advanced",
       features: [
-        "20 GB NVMe SSD Storage",
-        "1000 GB Monthly Bandwidth",
-        "1 Website / Domain",
-        "100% Node-Free Server-Side Tracking",
-        "Free WordPress SST Plugin (.zip)",
-        "Meta CAPI & First-Party GTM Proxy",
-        "Speedy Cache & Webuzo Panel",
-        "Free Auto-SSL & Daily Backups",
-        "VIP Support & Dedicated IP option",
+        "20 GB NVMe SSD storage",
+        "1,000 GB monthly bandwidth",
+        "1 website / domain",
+        "VIP support & dedicated IP option",
       ],
     },
   ];
 
+  const allPlans = [
+    "Server-side tracking (Meta CAPI & GTM)",
+    "Free WordPress tracking plugin",
+    "Speedy Cache & Webuzo panel",
+    "Free Auto-SSL",
+    "Daily backups",
+    "Free migration",
+  ];
+
   return (
-    <section id="pricing" className="py-20 md:py-28 bg-gradient-soft border-b border-border">
+    <section id="pricing" className="py-20 md:py-28 bg-gradient-soft border-b border-border scroll-mt-20">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green">Transparent Pricing</span>
+          <span className="text-sm font-semibold text-brand-green">Simple, transparent pricing</span>
           <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
-            High-Performance Hosting with Tracking Included
+            Choose your plan
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Billed annually. All plans include 100% Node-Free Server-Side Tracking, the WordPress
-            SST plugin, 24/7 Bangla support, and free site migration.
+            Billed yearly in BDT. Pay with bKash, Nagad, Rocket or card. 30-day money-back
+            guarantee.
           </p>
         </div>
-        <div className="mt-14 grid md:grid-cols-3 gap-6">
+
+        <div className="mt-8 rounded-2xl border border-brand-green/30 bg-card p-4 md:p-5 shadow-soft">
+          <p className="text-center text-xs font-bold uppercase tracking-wider text-brand-green mb-3">
+            Every plan includes
+          </p>
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
+            {allPlans.map((f) => (
+              <li key={f} className="flex items-center gap-1.5 text-foreground/90">
+                <Check className="h-4 w-4 text-brand-green shrink-0" /> {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-12 grid md:grid-cols-3 gap-6 items-stretch">
           {plans.map((p) => (
             <div
               key={p.name}
-              className={`relative rounded-2xl border p-8 flex flex-col ${
+              className={`relative rounded-2xl border p-7 md:p-8 flex flex-col ${
                 p.highlight
-                  ? "border-brand-orange bg-card shadow-elegant scale-[1.02]"
+                  ? "border-brand-orange bg-card shadow-elegant md:scale-[1.03]"
                   : "border-border bg-card shadow-soft"
               }`}
             >
               {p.highlight && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-brand px-4 py-1 text-xs font-bold text-primary-foreground whitespace-nowrap shadow-soft">
-                  {p.tag}
+                  Most Popular
                 </span>
               )}
-              <div className="text-sm font-semibold text-brand-green">{p.name}</div>
-              <div className="mt-3 flex items-baseline gap-1">
+              <div className="text-lg font-extrabold text-foreground">{p.name}</div>
+              <p className="text-sm text-muted-foreground">{p.tag}</p>
+
+              <div className="mt-5 flex items-baseline gap-1">
                 <span className="text-4xl font-extrabold">{p.price}</span>
-                <span className="text-muted-foreground text-sm font-semibold">{p.period}</span>
+                <span className="text-muted-foreground text-sm font-semibold">/year</span>
               </div>
-              {!p.highlight && <p className="mt-1 text-sm text-muted-foreground">{p.tag}</p>}
+              <p className="mt-1 text-sm font-semibold text-brand-green">≈ {p.monthly} per month</p>
+
               <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl border border-border bg-secondary/30 p-3 text-xs">
                 <div className="flex items-center gap-1.5 font-semibold">
                   <Cpu className="h-3.5 w-3.5 text-brand-orange" /> {PLAN_RESOURCES[p.name].cpu}
@@ -1155,43 +1049,52 @@ function Pricing() {
                 </div>
                 <div className="flex items-center gap-1.5 text-foreground/80">
                   <Users className="h-3.5 w-3.5 text-brand-green" />{" "}
-                  {PLAN_CAPACITY.store[p.name as keyof typeof PLAN_CAPACITY.store].cached} store
-                  visitors*
+                  {PLAN_CAPACITY.store[p.name as keyof typeof PLAN_CAPACITY.store].cached} visitors*
                 </div>
               </div>
+
               <ul className="mt-6 space-y-3 text-sm flex-1">
-                {p.features.map((f, i) => (
+                {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
-                    <Check
-                      className={`h-4 w-4 mt-0.5 shrink-0 ${
-                        i === 3 || i === 4 ? "text-brand-orange font-bold" : "text-brand-green"
-                      }`}
-                    />
-                    <span
-                      className={
-                        i === 3 || i === 4 ? "font-bold text-foreground" : "text-foreground/90"
-                      }
-                    >
-                      {f}
-                    </span>
+                    <Check className="h-4 w-4 mt-0.5 shrink-0 text-brand-green" />
+                    <span className="text-foreground/90">{f}</span>
                   </li>
                 ))}
               </ul>
+
               <a
                 href={p.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`mt-8 inline-flex justify-center items-center gap-2 rounded-xl px-4 py-3 font-semibold transition ${
+                className={`mt-8 inline-flex justify-center items-center gap-2 rounded-xl px-4 py-3 font-bold transition ${
                   p.highlight
                     ? "bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
                     : "border border-border bg-card hover:border-brand-orange text-foreground"
                 }`}
               >
-                Order Now <ArrowRight className="h-4 w-4" />
+                Order {p.name} <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           ))}
         </div>
+
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
+          <span>Not sure which plan fits?</span>
+          <a
+            href={waLink("Hello CarrotHost, can you help me choose a hosting plan? My website is: ")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-2.5 font-bold text-white hover:opacity-95 transition"
+          >
+            <WhatsAppIcon className="h-4 w-4" /> Ask us on WhatsApp
+          </a>
+          <a href="#plan-capacity" className="font-semibold text-brand-orange hover:underline">
+            or compare visitor capacity ↓
+          </a>
+        </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          * Store visitors at the same time with page cache. See the capacity estimates below.
+        </p>
       </div>
     </section>
   );
@@ -1224,16 +1127,16 @@ function PlanCapacity() {
   ];
 
   return (
-    <section id="plan-capacity" className="py-20 md:py-28 bg-card border-b border-border">
+    <section id="plan-capacity" className="py-20 md:py-28 bg-card border-b border-border scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center max-w-2xl mx-auto">
           <span className="text-sm font-semibold text-brand-green">Which Plan Fits You?</span>
           <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
-            Resources & Visitor Capacity per Plan
+            How many visitors can each plan handle?
           </h2>
           <p className="mt-3 text-muted-foreground">
             Every plan has its own guaranteed CPU, RAM and PHP workers, isolated from other
-            accounts, so a busy neighbour never slows your site. Pick your site type to see how many
+            accounts, so a busy neighbour doesn't slow your site down. Pick your site type to see how many
             visitors each plan handles at the same time.
           </p>
         </div>
@@ -1363,58 +1266,6 @@ function PlanCapacity() {
   );
 }
 
-function Included() {
-  const items = [
-    {
-      icon: Zap,
-      title: "Speedy Cache",
-      desc: "Built-in Speedy Cache makes WordPress and static stores load in milliseconds.",
-    },
-    {
-      icon: Shield,
-      title: "Free Auto-SSL",
-      desc: "Automated Let's Encrypt SSL issuance and auto-renewal for every domain and subdomain.",
-    },
-    {
-      icon: Clock,
-      title: "Daily Cloud Backups",
-      desc: "Automated incremental backups stored off-site. Restore any file or database in 1 click.",
-    },
-    {
-      icon: HelpCircle,
-      title: "24/7 Bangla Support",
-      desc: "Talk to real hosting and tracking engineers in Bangla or English via Phone and WhatsApp.",
-    },
-  ];
-
-  return (
-    <section className="py-20 md:py-28 bg-card border-b border-border">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center max-w-2xl mx-auto">
-          <span className="text-sm font-semibold text-brand-green">Everything Included</span>
-          <h2 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">
-            The extras that make a difference
-          </h2>
-        </div>
-        <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {items.map((i) => (
-            <div
-              key={i.title}
-              className="group rounded-2xl border border-border bg-background p-6 hover:border-brand-orange hover:shadow-elegant transition"
-            >
-              <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center text-brand-green group-hover:bg-gradient-brand group-hover:text-primary-foreground transition">
-                <i.icon className="h-6 w-6" strokeWidth={1.75} />
-              </div>
-              <h3 className="mt-5 text-lg font-bold">{i.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{i.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function FAQ() {
   const faqs = HOSTING_FAQS;
 
@@ -1427,19 +1278,39 @@ function FAQ() {
             Everything you need to know
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Clear answers about our 100% Node-Free tracking, WordPress plugin, and Webuzo cloud
-            hosting.
+            Plans, tracking, migration and payment. Can&apos;t find your answer?{" "}
+            <a
+              href={waLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-green hover:underline"
+            >
+              Ask us on WhatsApp
+            </a>
+            .
           </p>
         </div>
-        <div className="mt-14 space-y-4">
-          {faqs.map((faq) => (
-            <div key={faq.q} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <h3 className="font-bold text-base flex items-start gap-3 text-foreground">
-                <HelpCircle className="h-5 w-5 text-brand-green shrink-0 mt-0.5" />
-                {faq.q}
-              </h3>
+        <div className="mt-12 space-y-3">
+          {faqs.map((faq, idx) => (
+            <details
+              key={faq.q}
+              open={idx === 0}
+              className="group rounded-2xl border border-border bg-card p-5 md:p-6 shadow-soft open:shadow-elegant transition"
+            >
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-bold text-sm md:text-base text-foreground">
+                <span className="flex items-start gap-3">
+                  <HelpCircle className="h-5 w-5 text-brand-green shrink-0 mt-0.5" />
+                  {faq.q}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="h-6 w-6 shrink-0 rounded-full bg-secondary text-brand-green flex items-center justify-center transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed pl-8">{faq.a}</p>
-            </div>
+            </details>
           ))}
         </div>
       </div>
@@ -1465,27 +1336,27 @@ function MigrationCTA() {
               100% Free Website Migration
             </span>
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
-              Migrate to CarrotHost Today — 100% Free!
+              Move your website to CarrotHost, free
             </h2>
             <p className="mt-4 max-w-2xl mx-auto opacity-95 text-base md:text-lg">
-              Don't let migration worries hold you back. Our engineering team will handle your
-              entire website transfer completely free of charge, ensuring zero downtime for your
-              business and setting up server-side tracking right out of the box.
+              Send us your website address on WhatsApp. Our team moves your files, database and
+              email, usually within 24 hours and planned to avoid downtime, and sets up
+              server-side tracking for you.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
               <a
-                href="https://wa.me/8801787882277"
+                href={waLink("Hello CarrotHost, I want to move my website to your hosting. Please help with free migration.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-bold text-brand-orange hover:bg-white/95 transition shadow-soft"
               >
-                WhatsApp Us for Free Migration <ArrowRight className="h-4 w-4" />
+                <WhatsAppIcon className="h-4 w-4 text-[#25D366]" /> Start Free Migration
               </a>
               <a
-                href="tel:01787882277"
+                href={PHONE_TEL}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3.5 font-bold text-white hover:bg-white/20 transition"
               >
-                <Phone className="h-4 w-4" /> Call: 01787-882277
+                <Phone className="h-4 w-4" /> {PHONE_DISPLAY}
               </a>
             </div>
             <div className="mt-8 flex flex-wrap justify-center gap-4 text-xs opacity-90">
@@ -1493,7 +1364,7 @@ function MigrationCTA() {
                 <Check className="h-4 w-4" /> Full Website Transfer
               </span>
               <span className="flex items-center gap-1.5">
-                <Check className="h-4 w-4" /> Zero Downtime Guarantee
+                <Check className="h-4 w-4" /> Planned to Avoid Downtime
               </span>
               <span className="flex items-center gap-1.5">
                 <Check className="h-4 w-4" /> SSL & Server-Side Tracking Config
@@ -1512,15 +1383,13 @@ function HostingPage() {
       <Header />
       <Hero />
       <TrustBar />
-      <StapeComparison />
-      <WordPressPluginShowcase />
-      <CoreOptimization />
-      <ExclusiveFeatures />
-      <WebuzoFacilities />
       <TargetAudience />
       <Pricing />
       <PlanCapacity />
-      <Included />
+      <StapeComparison />
+      <WordPressPluginShowcase />
+      <EverythingIncluded />
+      <WebuzoFacilities />
       <FAQ />
       <MigrationCTA />
       <Footer />
