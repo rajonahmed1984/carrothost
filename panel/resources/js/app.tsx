@@ -11,7 +11,7 @@ import { DashboardPage } from './pages/dashboard';
 import { InvoicesPage } from './pages/invoices';
 import { TransactionsPage } from './pages/transactions';
 import { DomainsPage, ServicesPage } from './pages/fulfilment';
-import { ProductEditPage, ProductsPage, ServersPage, TldsPage } from './pages/catalog';
+import { ProductEditPage, ProductsPage, ServerAccountsPage, ServersPage, TldsPage } from './pages/catalog';
 import { VpsProfitPage } from './pages/vps-profit';
 import { RegistrarsPage } from './pages/registrars';
 import { SettingsPage, settings } from './pages/settings';
@@ -164,7 +164,7 @@ function Shell({ me }: { me: Me }) {
     const section = pathname.startsWith('/admin')
         ? (pathname.split('/')[2] ? `/admin/${pathname.split('/')[2]}` : '/admin/dashboard')
         : `/${pathname.split('/')[1] ?? ''}`;
-    const title = pageTitles[pathname] ?? pageTitles[section] ?? 'Overview';
+    const title = pathname.includes('/servers-config/') ? 'Server Accounts' : (pageTitles[pathname] ?? pageTitles[section] ?? 'Overview');
 
     useEffect(() => {
         document.title = `${title} | ${brand} Admin`;
@@ -279,11 +279,17 @@ function Shell({ me }: { me: Me }) {
                         <Route path="/admin/settings" element={<SettingsPage />} />
                         <Route path="/admin/settings/gateways" element={<GatewaysPage />} />
                         <Route path="/admin/settings/servers-config" element={<ServersPage />} />
+                        <Route path="/admin/settings/servers-config/:id/accounts" element={<ServerAccountsPage />} />
+                        <Route path="/admin/settings/servers-config/:id" element={<ServerAccountsPage />} />
+                        <Route path="/admin/settings/servers/:id/accounts" element={<Navigate to="/admin/settings/servers-config/:id/accounts" replace />} />
+                        <Route path="/admin/settings/servers/:id" element={<Navigate to="/admin/settings/servers-config/:id/accounts" replace />} />
                         <Route path="/admin/settings/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />
                         <Route path="/admin/settings/registrars" element={<RegistrarsPage />} />
                         {['gateways', 'registrars'].map((page) => (
                             <Route key={page} path={`/admin/${page}`} element={<Navigate to={`/admin/settings/${page}`} replace />} />
                         ))}
+                        <Route path="/admin/servers/:id/accounts" element={<Navigate to="/admin/settings/servers-config/:id/accounts" replace />} />
+                        <Route path="/admin/servers/:id" element={<Navigate to="/admin/settings/servers-config/:id/accounts" replace />} />
                         <Route path="/admin/servers" element={<Navigate to="/admin/settings/servers-config" replace />} />
                         <Route path="/admin/account" element={<AdminAccountPage />} />
 

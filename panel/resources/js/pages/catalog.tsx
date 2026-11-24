@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckCircle2, Copy, ExternalLink, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Copy, ExternalLink, FolderPlus, Layers, MinusCircle, Plus, PlugZap, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, basePath, errorMessage, money } from '../api';
@@ -1141,112 +1141,167 @@ function TestButton({ id, onDone }: { id: number; onDone: () => void }) {
     return <Button variant="link" disabled={test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testing...' : 'Test'}</Button>;
 }
 
-export function ServerAccountsModal({ server, onClose }: { server: ServerRow; onClose: () => void }) {
+export function ServerAccountsPage() {
+    const { id } = useParams<{ id: string }>();
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState('');
 
+    const serverQuery = useQuery({
+        queryKey: ['server', id],
+        queryFn: async () => (await api.get<ServerRow>(`/servers/${id}`)).data,
+        enabled: !!id,
+    });
+
+    const server = serverQuery.data;
+
     const params: Record<string, string> = {
-        server_id: String(server.id),
+        server_id: id ?? '',
         ...(search ? { q: search } : {}),
         ...(status ? { status } : {}),
     };
 
     return (
-        <Modal wide className="sm:max-w-6xl" title={`Accounts on ${server.name}`} onClose={onClose}>
-            <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                        <div><span className="font-semibold text-slate-800">Hostname:</span> {server.hostname}</div>
-                        {server.ip_address && <div><span className="font-semibold text-slate-800">IP:</span> <span className="font-mono">{server.ip_address}</span></div>}
-                        <div><span className="font-semibold text-slate-800">Panel:</span> <span className="capitalize">{server.module}</span></div>
-                        <div><span className="font-semibold text-slate-800">Assigned:</span> <span className="font-medium text-slate-900">{server.services_count}{server.max_accounts ? ` / ${server.max_accounts}` : ''}</span></div>
-                    </div>
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                    to="/admin/settings/servers-config"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-accent"
+                >
+                    <ArrowLeft size={14} /> Back to Servers Config
+                </Link>
+
+                {server && (
                     <Link
                         to={`/admin/products-services?server=${server.id}`}
-                        className="inline-flex items-center gap-1.5 font-semibold text-accent hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
                     >
                         <ExternalLink size={13} /> View in Products/Services
                     </Link>
-                </div>
-
-                <PagedTable<Service>
-                    url="/services"
-                    noun="accounts"
-                    search={{ value: search, onChange: setSearch, placeholder: 'Search domain, username or client...' }}
-                    tabs={{
-                        value: status,
-                        onChange: setStatus,
-                        options: [
-                            { key: '', label: 'All' },
-                            { key: 'active', label: 'Active' },
-                            { key: 'suspended', label: 'Suspended' },
-                            { key: 'pending', label: 'Pending' },
-                            { key: 'terminated', label: 'Terminated' },
-                            { key: 'cancelled', label: 'Cancelled' },
-                        ],
-                    }}
-                    params={params}
-                    empty="No accounts assigned to this server."
-                    columns={[
-                        {
-                            header: 'Service / Domain',
-                            cell: (s) => (
-                                <div>
-                                    <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>
-                                        {s.domain || s.product.name}
-                                    </Link>
-                                    <div className="text-xs text-slate-500">
-                                        {s.product.name}
-                                        {s.username ? ` · ${s.username}` : (s.remote_id ? ` · ${s.remote_id}` : '')}
-                                    </div>
-                                </div>
-                            ),
-                        },
-                        {
-                            header: 'Client',
-                            cell: (s) => (
-                                <Link className="table-action-link font-medium" to={`/admin/clients/${s.client.id}`}>
-                                    {s.client.name}
-                                </Link>
-                            ),
-                        },
-                        {
-                            header: 'Billing',
-                            cell: (s) => (
-                                <div className="text-right">
-                                    <div className="font-medium tabular-nums">{money(s.recurring_amount)}</div>
-                                    <div className="text-xs text-slate-500 capitalize">{s.cycle} · Due: {s.next_due_date ?? '-'}</div>
-                                </div>
-                            ),
-                            align: 'right',
-                        },
-                        {
-                            header: 'Status',
-                            cell: (s) => <Status value={s.status} />,
-                        },
-                        {
-                            header: 'Provisioning',
-                            cell: (s) => (
-                                <div>
-                                    <Status value={s.provision_status} />
-                                    {s.provision_error && <div className="max-w-40 truncate text-xs text-rose-600" title={s.provision_error}>{s.provision_error}</div>}
-                                </div>
-                            ),
-                        },
-                        {
-                            header: 'Actions',
-                            cell: (s) => (
-                                <div className="flex items-center justify-end gap-2">
-                                    <ServiceActions service={s} />
-                                    <Link to={`/admin/products-services/${s.id}`} className="table-action-link text-xs font-semibold">Manage</Link>
-                                </div>
-                            ),
-                            align: 'right',
-                        },
-                    ]}
-                />
+                )}
             </div>
-        </Modal>
+
+            <Card
+                title={server ? `Accounts on ${server.name}` : 'Server Accounts'}
+                action={
+                    server ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 capitalize">
+                                {server.module}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                {server.services_count}{server.max_accounts ? ` / ${server.max_accounts}` : ''} assigned
+                            </span>
+                        </div>
+                    ) : null
+                }
+            >
+                <QueryState query={serverQuery}>
+                    {server && (
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs text-slate-600">
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
+                                <div>
+                                    <span className="font-semibold text-slate-800">Hostname:</span>{' '}
+                                    <span className="font-mono text-slate-700">{server.hostname}</span>
+                                </div>
+                                {server.ip_address && (
+                                    <div>
+                                        <span className="font-semibold text-slate-800">IP:</span>{' '}
+                                        <span className="font-mono text-slate-700">{server.ip_address}</span>
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="font-semibold text-slate-800">Panel:</span>{' '}
+                                    <span className="font-medium capitalize text-slate-700">{server.module}</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-slate-800">Assigned:</span>{' '}
+                                    <span className="font-medium text-slate-900">
+                                        {server.services_count}{server.max_accounts ? ` / ${server.max_accounts}` : ''}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <PagedTable<Service>
+                        url="/services"
+                        noun="accounts"
+                        search={{ value: search, onChange: setSearch, placeholder: 'Search domain, username or client...' }}
+                        tabs={{
+                            value: status,
+                            onChange: setStatus,
+                            options: [
+                                { key: '', label: 'All' },
+                                { key: 'active', label: 'Active' },
+                                { key: 'suspended', label: 'Suspended' },
+                                { key: 'pending', label: 'Pending' },
+                                { key: 'terminated', label: 'Terminated' },
+                                { key: 'cancelled', label: 'Cancelled' },
+                            ],
+                        }}
+                        params={params}
+                        empty="No accounts assigned to this server."
+                        columns={[
+                            {
+                                header: 'Service / Domain',
+                                cell: (s) => (
+                                    <div>
+                                        <Link className="table-action-link font-semibold" to={`/admin/products-services/${s.id}`}>
+                                            {s.domain || s.product.name}
+                                        </Link>
+                                        <div className="text-xs text-slate-500">
+                                            {s.product.name}
+                                            {s.remote_id ? ` · ${s.remote_id}` : (s.username ? ` · ${s.username}` : '')}
+                                        </div>
+                                    </div>
+                                ),
+                            },
+                            {
+                                header: 'Client',
+                                cell: (s) => (
+                                    <Link className="table-action-link font-medium" to={`/admin/clients/${s.client.id}`}>
+                                        {s.client.name}
+                                    </Link>
+                                ),
+                            },
+                            {
+                                header: 'Billing',
+                                cell: (s) => (
+                                    <div className="text-right">
+                                        <div className="font-medium tabular-nums">{money(s.recurring_amount)}</div>
+                                        <div className="text-xs text-slate-500 capitalize">{s.cycle} · Due: {s.next_due_date ?? '-'}</div>
+                                    </div>
+                                ),
+                                align: 'right',
+                            },
+                            {
+                                header: 'Status',
+                                cell: (s) => <Status value={s.status} />,
+                            },
+                            {
+                                header: 'Provisioning',
+                                cell: (s) => (
+                                    <div>
+                                        <Status value={s.provision_status} />
+                                        {s.provision_error && <div className="max-w-40 truncate text-xs text-rose-600" title={s.provision_error}>{s.provision_error}</div>}
+                                    </div>
+                                ),
+                            },
+                            {
+                                header: 'Actions',
+                                cell: (s) => (
+                                    <div className="flex items-center justify-end gap-2">
+                                        <ServiceActions service={s} />
+                                        <Link to={`/admin/products-services/${s.id}`} className="table-action-link text-xs font-semibold">Manage</Link>
+                                    </div>
+                                ),
+                                align: 'right',
+                            },
+                        ]}
+                    />
+                </QueryState>
+            </Card>
+        </div>
     );
 }
 
@@ -1255,7 +1310,6 @@ export function ServersPage() {
     const query = useQuery({ queryKey: ['servers'], queryFn: async () => (await api.get<ServerRow[]>('/servers')).data });
     const [editing, setEditing] = useState<ServerRow | 'new' | null>(null);
     const [costs, setCosts] = useState<ServerRow | null>(null);
-    const [viewingAccounts, setViewingAccounts] = useState<ServerRow | null>(null);
     const [checking, setChecking] = useState<number[]>([]);
     const checked = useRef(new Set<number>());
     const refresh = () => qc.invalidateQueries({ queryKey: ['servers'] });
@@ -1285,14 +1339,13 @@ export function ServersPage() {
                             {
                                 header: 'Name',
                                 cell: (s) => (
-                                    <button
-                                        type="button"
-                                        className="text-left font-medium text-slate-900 hover:text-accent hover:underline cursor-pointer"
-                                        onClick={() => setViewingAccounts(s)}
+                                    <Link
+                                        to={`/admin/settings/servers-config/${s.id}/accounts`}
+                                        className="table-action-link font-medium"
                                         title={`View accounts on ${s.name}`}
                                     >
                                         {s.name}
-                                    </button>
+                                    </Link>
                                 ),
                             },
                             { header: 'Panel', cell: (s) => s.module },
@@ -1309,14 +1362,13 @@ export function ServersPage() {
                             {
                                 header: 'Accounts',
                                 cell: (s) => (
-                                    <button
-                                        type="button"
-                                        className="table-action-link font-medium tabular-nums cursor-pointer"
-                                        onClick={() => setViewingAccounts(s)}
+                                    <Link
+                                        to={`/admin/settings/servers-config/${s.id}/accounts`}
+                                        className="table-action-link font-medium tabular-nums"
                                         title={`View accounts on ${s.name}`}
                                     >
                                         {`${s.services_count}${s.max_accounts ? ` / ${s.max_accounts}` : ''}`}
-                                    </button>
+                                    </Link>
                                 ),
                                 align: 'right',
                             },
@@ -1325,7 +1377,7 @@ export function ServersPage() {
                             { header: 'Profit This Month', cell: (s) => <Profit value={s.this_month.profit} />, align: 'right' },
                             { header: 'Connection', cell: (s) => <ConnectionStatus server={s} checking={checking.includes(s.id)} /> },
                             { header: 'Status', cell: (s) => <Status value={s.is_active ? 'active' : 'cancelled'} /> },
-                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} onDone={refresh} /><Button variant="link" onClick={() => setViewingAccounts(s)}>Accounts</Button><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
+                            { header: '', cell: (s) => <div className="flex justify-end gap-3"><TestButton id={s.id} onDone={refresh} /><Link to={`/admin/settings/servers-config/${s.id}/accounts`} className="table-action-link text-xs font-semibold">Accounts</Link><Button variant="link" onClick={() => setCosts(s)}>Costs</Button><Button variant="link" onClick={() => setEditing(s)}>Edit</Button></div>, align: 'right' },
                         ]}
                     />
                 </QueryState>
@@ -1333,15 +1385,6 @@ export function ServersPage() {
             {query.data && query.data.length > 0 && <ServerProfitReport servers={query.data} />}
             {editing && <ServerForm server={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
             {costs && <ServerCostsModal server={costs} onClose={() => setCosts(null)} />}
-            {viewingAccounts && (
-                <ServerAccountsModal
-                    server={viewingAccounts}
-                    onClose={() => {
-                        setViewingAccounts(null);
-                        refresh();
-                    }}
-                />
-            )}
         </div>
     );
 }

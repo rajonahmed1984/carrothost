@@ -28,6 +28,16 @@ class ServerController extends Controller
         ]);
     }
 
+    public function show(Server $server)
+    {
+        $server->loadCount(['services' => fn ($q) => $q->whereIn('status', ['active', 'suspended'])]);
+
+        return [
+            ...$server->toArray(),
+            'has_credentials' => $server->credentials !== null && $server->credentials !== '',
+        ];
+    }
+
     /** Profit by month: GET servers/profit?from=2026-01&to=2026-11&spread=1&server_id=1 */
     public function profit(Request $request, ServerProfit $profit)
     {

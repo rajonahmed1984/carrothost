@@ -167,5 +167,9 @@ class AdminServiceTest extends TestCase
         $search = $this->getJson("/api/services?server_id={$server1->id}&q=user1")->assertOk();
         $this->assertCount(1, $search->json('data'));
         $this->assertSame($service1->id, $search->json('data.0.id'));
+
+        $serverRes = $this->getJson("/api/servers/{$server1->id}")->assertOk();
+        $this->assertSame('Server One', $serverRes->json('name'));
+        $this->assertSame(1, $serverRes->json('services_count'));
     }
 }
